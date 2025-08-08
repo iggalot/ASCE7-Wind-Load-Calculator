@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ASCE7WindLoadCalculator
 {
@@ -10,16 +11,24 @@ namespace ASCE7WindLoadCalculator
 
         public class OnWindInputCompleteEventArgs : EventArgs
         {
-            public WindParameters_Base _parameters { get; }
-            public ASCE7_Versions _version { get; }
-            public BuildingData _bldg_data { get; }
+            public WindLoadCalculator_Base _windLoadCalculator_CC { get; set; }
+            public WindLoadCalculator_Base _windLoadCalculator_MWFRS_Length { get; set; }
+            public WindLoadCalculator_Base _windLoadCalculator_MWFRS_Width { get; set; }
 
-            public OnWindInputCompleteEventArgs(WindParameters_Base parameters, ASCE7_Versions version)
+
+            public OnWindInputCompleteEventArgs(WindLoadCalculator_Base calc_cc, WindLoadCalculator_Base calc_mwfrs_length, WindLoadCalculator_Base calc_mwfrs_width)
             {
-                _parameters = parameters;
-                _version = version;
+                _windLoadCalculator_CC = calc_cc;
+                _windLoadCalculator_MWFRS_Length = calc_mwfrs_length;
+                _windLoadCalculator_MWFRS_Width = calc_mwfrs_width;
             }
         }
+        public WindLoadCalculator_Base windLoadCalculator { get; set; }
+
+        public WindLoadCalculator_Base windLoadCalculator_MWFRS_Length { get; set; }
+        public WindLoadCalculator_Base windLoadCalculator_MWFRS_Width { get; set; }
+        public WindLoadCalculator_Base windLoadCalculator_CC { get; set; }
+
         public BuildingData buildingData { get; set; } = null;
         public WindParameters_Base Parameters { get; set; } = null;
         public ASCE7_Versions Version { get; set; }
@@ -32,17 +41,7 @@ namespace ASCE7WindLoadCalculator
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
-        public WindLoadInputControl(BuildingData bldg_data, WindParameters_Base parameters = null)
-        {
-            InitializeComponent();
-
-            this.Parameters = parameters;
-            this.buildingData = bldg_data;
-
-            this.Loaded += WindLoadInputControl_Loaded;
-        }
-
-        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions version, WindParameters_Base parameters = null)
+        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions? version = null, WindParameters_Base parameters = null)
         {
             InitializeComponent();
 
@@ -59,9 +58,16 @@ namespace ASCE7WindLoadCalculator
                 else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP) parameters = new HipRoofWindLoadParameters();
                 else throw new Exception("ERROR: In WindLoadInputControl: Unrecognized roof type." + bldg_data.RoofType.ToString());
 
+                version = ASCE7_Versions.ASCE_VER_7_16;
             }
+
+            if (version == null)
+            {
+                version = ASCE7_Versions.ASCE_VER_7_16;
+            }
+
             this.buildingData = bldg_data;
-            this.Version = version;
+            this.Version = (ASCE7_Versions)version;
             this.Parameters = parameters;
 
             this.Loaded += WindLoadInputControl_Loaded;
@@ -118,9 +124,75 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        public virtual void OnWindInputComplete(WindParameters_Base parameters, ASCE7_Versions version)
+        public void UpdateDrawings()
         {
-            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(parameters, version));
+            if (windLoadCalculator_CC != null)
+            {
+
+                foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_CC.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = cnvEffectiveRoofAreas_CC.ActualWidth;
+                    double canvasHeight = cnvEffectiveRoofAreas_CC.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveRoofAreas_CC,
+                        windLoadCalculator_CC.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+                BuildingDrawer.DrawPlan(cnvBuildingPlan_CC, windLoadCalculator_CC.buildingData);
+
+            }
+
+            if (windLoadCalculator_MWFRS_Length != null)
+            {
+                foreach (var area in windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = cnvEffectiveRoofAreas_MWFRS_Length.ActualWidth;
+                    double canvasHeight = cnvEffectiveRoofAreas_MWFRS_Length.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveRoofAreas_MWFRS_Length,
+                        windLoadCalculator_MWFRS_Length.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+                BuildingDrawer.DrawPlan(cnvBuildingPlan_MWFRS_Length, windLoadCalculator_MWFRS_Length.buildingData);
+
+            }
+
+            if (windLoadCalculator_MWFRS_Width != null)
+            {
+                foreach (var area in windLoadCalculator_MWFRS_Width.RoofAreaCalculator.effWindAreas)
+                {
+                    Rect boundingBox = windLoadCalculator_MWFRS_Width.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    double canvasWidth = cnvEffectiveRoofAreas_MWFRS_Width.ActualWidth;
+                    double canvasHeight = cnvEffectiveRoofAreas_MWFRS_Width.ActualHeight;
+
+                    double offsetX = 0;
+                    double offsetY = 0;
+
+                    Brush color = EffectiveWindAreaRenderer.GetColorForRegion(area.Value.Label_Short);
+                    EffectiveWindAreaRenderer.DrawEffectiveWindArea(cnvEffectiveRoofAreas_MWFRS_Width,
+                        windLoadCalculator_MWFRS_Width.buildingData,
+                        area.Value, boundingBox, offsetX, offsetY, color, Brushes.Black, 1);
+                }
+                BuildingDrawer.DrawPlan(cnvBuildingplan_MWFRS_Width, windLoadCalculator_MWFRS_Width.buildingData);
+
+            }
+
+        }
+
+        public virtual void OnWindInputComplete(WindLoadCalculator_Base calc_cc, WindLoadCalculator_Base calc_mwfrs_length, WindLoadCalculator_Base calc_mwfrs_width)
+        {
+            UpdateDrawings();
+            WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(calc_cc, calc_mwfrs_length, calc_mwfrs_width));
         }
 
         // Event handler for the Compute Button click
@@ -148,7 +220,43 @@ namespace ASCE7WindLoadCalculator
             }
             Parameters = GetWindLoadParameters(buildingData.RoofType, version);
 
-            OnWindInputComplete(Parameters, version); // raise the event where input has been completed
+            MakeCalculators();
+
+            OnWindInputComplete(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width); // raise the event where input has been completed
+        }
+
+        /// <summary>
+        /// Creates the two wind load calculators...one for where the wind is acting on the BuildingWidth wall 
+        /// and the other for where the wind is acting on the BuildingLength wall
+        /// </summary>
+        private void MakeCalculators()
+        {
+            // Setup our buildings -- building 1 is the original building
+            // and building 2 is the rotated (flipped) building
+            var bldg_data1 = buildingData;
+            var bldg_data2 = bldg_data1.Clone();
+            bldg_data2.RotateBuilding();
+
+            // Create MWFRS calculators
+            var mwfrs_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.MWFRS);
+            windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
+
+            var mwfrs_calc_building_width = CreateAndComputeCalculator(bldg_data2, WindLoadCalculationTypes.MWFRS);
+            windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
+
+            // Create CC calculator using building data #1
+            var cc_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.COMPONENT_AND_CLADDING);
+            windLoadCalculator_CC = cc_calc_building_length;
+        }
+
+        private WindLoadCalculator_Base CreateAndComputeCalculator(BuildingData building, WindLoadCalculationTypes type)
+        {
+            var parameters = Parameters.Clone();
+            parameters.AnalysisType = type;
+
+            var calculator = WindLoadCalculatorFactory.Create(Version, type, parameters, building);
+            calculator.Initialize();
+            return calculator;
         }
 
         // Method to retrieve parameters from the input fields

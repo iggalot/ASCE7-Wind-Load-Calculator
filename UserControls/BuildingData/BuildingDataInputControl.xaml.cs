@@ -22,7 +22,7 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        public BuildingData bldgData { get; set; } = null;
+        public BuildingData buildingData { get; set; } = null;
         public BuildingData bldgData_temp { get; set; }  // stores the building data while it is being edited
         private bool bFirstLoad = true;
         private bool bIsParsing = false;
@@ -40,7 +40,7 @@ namespace ASCE7WindLoadCalculator
         {
             InitializeComponent();
 
-            bldgData = bldg_data;
+            buildingData = bldg_data;
             
 
             
@@ -49,10 +49,10 @@ namespace ASCE7WindLoadCalculator
 
         private void BuildingDataInputControl_Loaded(object sender, RoutedEventArgs e)
         {
-            if (bldgData == null)
+            if (buildingData == null)
             {
-                bldgData = new BuildingData();
-                bldgData.ValidateRidgeDirection();
+                buildingData = new BuildingData();
+                buildingData.ValidateRidgeDirection();
             }
 
             bUpdatingUI = true;
@@ -69,7 +69,7 @@ namespace ASCE7WindLoadCalculator
                     cmbRidgeDirection.Items.Add(value);
                 }
 
-                switch (bldgData.RidgeDirection)
+                switch (buildingData.RidgeDirection)
                 {
                     case RidgeDirections.RIDGE_DIR_NONE: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_NONE; break;
                     case RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH: cmbRidgeDirection.SelectedIndex = (int)RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH; break;
@@ -83,7 +83,7 @@ namespace ASCE7WindLoadCalculator
                     cmbEnclosure.Items.Add(value);
                 }
 
-                switch (bldgData.EnclosureType)
+                switch (buildingData.EnclosureType)
                 {
                     case BuildingEnclosures.BLDG_ENCLOSED: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_ENCLOSED; break;
                     case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: cmbEnclosure.SelectedIndex = (int)BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED; break;
@@ -99,7 +99,7 @@ namespace ASCE7WindLoadCalculator
                     cmbRoofType.Items.Add(value);
                 }
 
-                switch (bldgData.RoofType)
+                switch (buildingData.RoofType)
                 {
                     case RoofTypes.ROOF_TYPE_FLAT: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_FLAT; break;
                     case RoofTypes.ROOF_TYPE_GABLE: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_GABLE; break;
@@ -107,13 +107,13 @@ namespace ASCE7WindLoadCalculator
                     default: cmbRoofType.SelectedIndex = (int)RoofTypes.ROOF_TYPE_FLAT; break;
                 }
 
-                BuildingHeightTextBox.Text = bldgData.BuildingHeight.ToString();
-                BuildingLengthTextBox.Text = bldgData.BuildingLength.ToString();
-                BuildingWidthTextBox.Text = bldgData.BuildingWidth.ToString();
+                BuildingHeightTextBox.Text = buildingData.BuildingHeight.ToString();
+                BuildingLengthTextBox.Text = buildingData.BuildingLength.ToString();
+                BuildingWidthTextBox.Text = buildingData.BuildingWidth.ToString();
 
-                if (bldgData.RoofType == RoofTypes.ROOF_TYPE_FLAT)
+                if (buildingData.RoofType == RoofTypes.ROOF_TYPE_FLAT)
                 {
-                    bldgData.RoofPitch = 0;
+                    buildingData.RoofPitch = 0;
                     spRoofPitch.Visibility = Visibility.Collapsed;
                 }
                 else
@@ -121,17 +121,28 @@ namespace ASCE7WindLoadCalculator
                     spRoofPitch.Visibility = Visibility.Visible;
                 }
 
-                tbRoofPitch.Text = bldgData.RoofPitch.ToString();
+                tbRoofPitch.Text = buildingData.RoofPitch.ToString();
             } finally
             {
                 bUpdatingUI = false;
             }
 
             bFirstLoad = false;
+
+            UpdateDrawings();
+        }
+
+        public void UpdateDrawings()
+        {
+            // Draw the building
+            BuildingDrawer.DrawPlan(cnvBuildingPlanCanvas, buildingData);
+            BuildingDrawer.DrawElevation_BuildingLength(cnvBuildingLengthCanvas, buildingData);
+            BuildingDrawer.DrawElevation_BuildingWidth(cnvBuildingWidthCanvas, buildingData);
         }
 
         public virtual void OnBuildingDataInputComplete(BuildingData bldg_data)
         {
+            UpdateDrawings();
             BuildingDataInputComplete?.Invoke(this, new OnBuildingDataInputCompleteEventArgs(bldg_data));
         }
 
@@ -168,18 +179,18 @@ namespace ASCE7WindLoadCalculator
                     return;
 
                 // Apply parsed values
-                bldgData.BuildingHeight = height;
-                bldgData.BuildingLength = length;
-                bldgData.BuildingWidth = width;
-                bldgData.RoofPitch = pitch;
+                buildingData.BuildingHeight = height;
+                buildingData.BuildingLength = length;
+                buildingData.BuildingWidth = width;
+                buildingData.RoofPitch = pitch;
 
                 // Update UI safely (optional formatting)
                 bUpdatingUI = true;
 
-                BuildingHeightTextBox.Text = bldgData.BuildingHeight.ToString("0.##");
-                BuildingLengthTextBox.Text = bldgData.BuildingLength.ToString("0.##");
-                BuildingWidthTextBox.Text = bldgData.BuildingWidth.ToString("0.##");
-                tbRoofPitch.Text = bldgData.RoofPitch.ToString("0.#");
+                BuildingHeightTextBox.Text = buildingData.BuildingHeight.ToString("0.##");
+                BuildingLengthTextBox.Text = buildingData.BuildingLength.ToString("0.##");
+                BuildingWidthTextBox.Text = buildingData.BuildingWidth.ToString("0.##");
+                tbRoofPitch.Text = buildingData.RoofPitch.ToString("0.#");
 
                 bUpdatingUI = false;
 
@@ -191,7 +202,7 @@ namespace ASCE7WindLoadCalculator
             }
 
             // **Trigger event here**
-            OnBuildingDataInputComplete(bldgData);
+            OnBuildingDataInputComplete(buildingData);
         }
 
 
@@ -207,8 +218,8 @@ namespace ASCE7WindLoadCalculator
             {
                 if (combo.SelectedItem is RoofTypes selectedEnum)
                 {
-                    bldgData.RoofType = selectedEnum;
-                    bldgData.ValidateRidgeDirection();
+                    buildingData.RoofType = selectedEnum;
+                    buildingData.ValidateRidgeDirection();
 
                     if(selectedEnum == RoofTypes.ROOF_TYPE_FLAT)
                     {
@@ -216,8 +227,8 @@ namespace ASCE7WindLoadCalculator
                         try
                         {
                             spRoofPitch.Visibility = Visibility.Collapsed;
-                            bldgData.RoofPitch = 0;
-                            tbRoofPitch.Text = bldgData.RoofPitch.ToString();
+                            buildingData.RoofPitch = 0;
+                            tbRoofPitch.Text = buildingData.RoofPitch.ToString();
                             spRoofPitch.Visibility = Visibility.Visible;
                         }
                         finally
@@ -230,7 +241,7 @@ namespace ASCE7WindLoadCalculator
                         bUpdatingUI = true;
                         try
                         {
-                            tbRoofPitch.Text = bldgData.RoofPitch.ToString();
+                            tbRoofPitch.Text = buildingData.RoofPitch.ToString();
                             spRoofPitch.Visibility = Visibility.Visible;
                         }
                         finally
@@ -247,7 +258,6 @@ namespace ASCE7WindLoadCalculator
             }
             finally
             {
-
             }
         }
 
@@ -263,8 +273,8 @@ namespace ASCE7WindLoadCalculator
             {
                 if (combo.SelectedItem is RidgeDirections selectedEnum)
                 {
-                    bldgData.RidgeDirection = selectedEnum;
-                    bldgData.ValidateRidgeDirection();
+                    buildingData.RidgeDirection = selectedEnum;
+                    buildingData.ValidateRidgeDirection();
                 }
 
             }
@@ -275,7 +285,6 @@ namespace ASCE7WindLoadCalculator
             }
             finally
             {
-
             }
         }
 
@@ -291,8 +300,8 @@ namespace ASCE7WindLoadCalculator
             {
                 if (combo.SelectedItem is BuildingEnclosures selectedEnum)
                 {
-                    bldgData.EnclosureType = selectedEnum;
-                    bldgData.ValidateRidgeDirection();
+                    buildingData.EnclosureType = selectedEnum;
+                    buildingData.ValidateRidgeDirection();
                 }
 
             }
@@ -304,7 +313,6 @@ namespace ASCE7WindLoadCalculator
             }
             finally
             {
-
             }
         }
 
@@ -326,14 +334,12 @@ namespace ASCE7WindLoadCalculator
             if (bFirstLoad || bIsParsing || bUpdatingUI)
                 return;
 
-            //bIsParsing = true;
             try
             {
                 ParseBuildingData();
             }
             finally
             {
-                //bIsParsing = false;
             }
         }
 
