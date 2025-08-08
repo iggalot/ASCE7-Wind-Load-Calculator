@@ -1,0 +1,123 @@
+﻿<UserControl x:Class="ASCE7WindLoadCalculator.WindLoadResultsControl_CC"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
+             mc:Ignorable="d">
+
+    <Border Padding="10">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Orientation="Vertical">
+
+                <!-- Header -->
+                <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0,0,0,10">
+                    <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock Text="  Components and Cladding Results" FontWeight="Bold" FontSize="18"/>
+                </StackPanel>
+
+                <!-- Main Layout -->
+                <Grid Background="LightBlue">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left Side: Data -->
+                    <StackPanel Name="spResultsAndCanvas"
+                                Grid.Column="0"
+                                Orientation="Vertical"
+                                Margin="10"
+                                HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
+                            <Canvas x:Name="cnvWindLoadResultCanvasCC"
+                                Width="150"
+                                Height="150"
+                                Background="Transparent"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" x:Name="sp_a">
+                            <TextBlock Text="Crit dim, a " Margin="5 0 5 0"/>
+                            <TextBlock x:Name="tbl_a" Margin="5 0 5 0"/>
+                            <TextBlock Text="ft" Margin="5 0 5 0"/>
+                        </StackPanel>
+                        <!-- Scrollable Results -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
+                            <StackPanel Orientation="Vertical">
+                                <TextBlock Text="Roof Zone Pressures" Margin="0,5"/>
+                                <DataGrid x:Name="RoofResultsDataGrid"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+
+                                <TextBlock x:Name="txtTitle_BuildingLengthWalls" Margin="0,5"/>
+                                <DataGrid x:Name="WallsResultsDataGrid_SideWall"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+
+                                <TextBlock x:Name="txtTitle_BuildingWidthWalls" Margin="0,5"/>
+                                <DataGrid x:Name="WallsResultsDataGrid_EndWall"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </StackPanel>
+
+                    <!-- Right Side: Diagrams -->
+                    <StackPanel Orientation="Vertical" Width="250" HorizontalAlignment="Left" Grid.Column="1" Margin="10,10,0,0">
+
+                        <!-- Roof Chart -->
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock x:Name="txtFigureTitle_Roof" Text="Title"
+                                       FontSize="10" FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                            <Canvas x:Name="cnvFigure30_3"
+                                    Width="225"
+                                    Height="225"
+                                    Background="White" x:FieldModifier="public"/>
+                            <TextBlock x:Name="txtFigureCriteria_Roof"
+                                       Text="Criteria"
+                                       Height="25"
+                                       FontSize="10"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
+
+                        <!-- Wall Chart -->
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock x:Name="txtFigureTitle_Walls" Text="Title"
+                                       FontSize="10" FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                            <Canvas x:Name="cnvFigure30_1"
+                                    Width="225"
+                                    Height="225"
+                                    Background="White" x:FieldModifier="public"/>
+                            <TextBlock x:Name="txtFigureCriteria_Walls"
+                                       Text="Criteria"
+                                       Height="25"
+                                       FontSize="10"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

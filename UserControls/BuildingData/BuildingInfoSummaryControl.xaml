@@ -1,0 +1,74 @@
+﻿<UserControl x:Class="ASCE7WindLoadCalculator.BuildingInfoSummaryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
+             mc:Ignorable="d" 
+             >
+    <Grid Width="Auto">
+        <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5">
+            <StackPanel Orientation="Horizontal">
+
+                <StackPanel Orientation="Vertical">
+                    <!-- Building Height -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Wall Ht, H =" VerticalAlignment="Center" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbBuildingHeight" Margin="5 0 5 0"/>
+                        <TextBlock Text="ft" Margin="5 0 5 0"/>
+                    </StackPanel>
+
+                    <!-- Building Length -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Length (L)" VerticalAlignment="Center" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbBuildingLength" Margin="5 0 5 0"/>
+                        <TextBlock Text="ft" Margin="5 0 5 0"/>
+                    </StackPanel>
+
+                    <!-- Building Width -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Width (B)" VerticalAlignment="Center" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbBuildingWidth" Margin="5 0 5 0"/>
+                        <TextBlock Text="ft" Margin="5 0 5 0"/>
+                    </StackPanel>
+
+                    <!-- Roof Type -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Roof Type" VerticalAlignment="Center" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbRoofType"  Margin="5 0 5 0"/>
+                    </StackPanel>
+
+                    <!-- Roof Pitch -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbRoofPitch" Margin="5 0 5 0"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Background="LightBlue">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Mean Roof Ht =" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbMeanRoofHeight" Margin="5 0 5 0"/>
+                        <TextBlock Text="ft" Margin="5 0 5 0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Ridge Ht =" Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbRidgeHeight" Margin="5 0 5 0"/>
+                        <TextBlock Text="ft" Margin="5 0 5 0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="h/B = " Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbh_Over_B" Margin="5 0 5 0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="h/L = " Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbh_Over_L" Margin="5 0 5 0"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="L/B = " Margin="5 0 5 0"/>
+                        <TextBlock x:Name="tbL_Over_B" Margin="5 0 5 0"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>

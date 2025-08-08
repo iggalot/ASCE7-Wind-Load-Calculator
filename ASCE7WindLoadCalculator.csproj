@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{BF46F412-7E29-442D-8DC8-6BB94A8AFA68}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ASCE7WindLoadCalculator</RootNamespace>
+    <AssemblyName>ASCE7WindLoadCalculator</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BuildingInfo\BuildingData.cs" />
+    <Compile Include="Helpers\BuildingDrawer.cs" />
+    <Compile Include="Helpers\DrawingHelpers.cs" />
+    <Compile Include="Helpers\EffectiveWindAreaRenderer.cs" />
+    <Compile Include="Helpers\FigureDrawer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UserControls\BuildingData\BuildingDataInputControl.xaml.cs">
+      <DependentUpon>BuildingDataInputControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\BuildingData\BuildingInfoSummaryControl.xaml.cs">
+      <DependentUpon>BuildingInfoSummaryControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="WindLoadCalculations\ASCE7\AreaCalculator_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\AreaCalculator_ASCE7_16_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\AreaCalculator_CC_ASCE7_16_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\FlatRoofAreaCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\GableRoofAreaCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\HipRoofAreaCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\WallAreaCalculator_GableEnd_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\AreaCalculators\WallAreaCalculator_NonGableEnd_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Chapter30RoofFigureFactory_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_1_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2A_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2B_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2C_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2D_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2E_2F_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2G_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\Figure30_3_ASCE7_16\Figure30_3_2H_2I_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\CC\WindLoadCalculator_CC_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\AreaCalculator_MWFRS_ASCE7_16_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\FlatRoofAreaCalculator_NoRidge_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\GableRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\HipRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\AreaCalculators\WallAreaCalculator_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\Chapter27RoofFigureFactory_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_High_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Low_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Mid_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_High_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_Low_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\MWFRS\WindLoadCalculator_MWFRS_ASCE7_16.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_16\WindLoadCalculator_ASCE7_16_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\AreaCalculator_ASCE7_22_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\AreaCalculator_CC_ASCE7_22_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\FlatRoofAreaCalculator_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\GableRoofAreaCalculator_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\HipRoofAreaCalculator_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\WallAreaCalculator_GableEnd_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\AreaCalculators\WallAreaCalculator_NonGableEnd_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Chapter30RoofFigureFactory_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_1_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2A_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2B_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2C_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2D_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2E_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2F_2G_INTERPOLATED_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2F_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\Figure30_3_ASCE7_22\Figure30_3_2G_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\CC\WindLoadCalculator_CC_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\AreaCalculator_MWFRS_ASCE7_22_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\FlatRoofAreaCalculator_NoRidge_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\GableRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\GableRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\HipRoofAreaCalculator_ParallelToRidge_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\HipRoofAreaCalculator_PerpToRidge_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\AreaCalculators\WallAreaCalculator_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\Chapter27RoofFigureFactory_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_High_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Low_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\NormToRidge_LargeSlope_Roof_Mid_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_High_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\Figure27_3_1_ASCE7_16\ParallelToRidge_LowSlope_Roof_Low_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\MWFRS\WindLoadCalculator_MWFRS_ASCE7_22.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ASCE7_22\WindLoadCalculator_ASCE7_22_Base.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\Chapter27and30_GCpCurveBase.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\EffectiveWindArea.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\ExternalGCpCurve.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\InterpolatedCpCurve.cs" />
+    <Compile Include="WindLoadCalculations\ASCE7\PressureData.cs" />
+    <Compile Include="WindLoadCalculations\Core\Interfaces\IEffectiveWindAreaCalculator.cs" />
+    <Compile Include="WindLoadCalculations\Core\Interfaces\IWindLoadCalculator_CC_Base.cs" />
+    <Compile Include="WindLoadCalculations\Core\Interfaces\IWindLoadCalculator_MWFRS_Base.cs" />
+    <Compile Include="WindLoadCalculations\Core\WindInputParameters\FlatRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Core\WindInputParameters\GableRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Core\WindInputParameters\HipRoofWindLoadParameters.cs" />
+    <Compile Include="WindLoadCalculations\Core\WindInputParameters\WindParameters_Base.cs" />
+    <Compile Include="WindLoadCalculations\Factories\RoofAreaCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\Factories\WallAreaCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\Factories\WindLoadCalculatorFactory.cs" />
+    <Compile Include="WindLoadCalculations\Factories\WindLoadParameterFactory.cs" />
+    <Compile Include="WindLoadCalculations\WindLoadCalculator_Base.cs" />
+    <Compile Include="UserControls\WindLoadsUserControls\WindLoadGraphicCanvas.xaml.cs">
+      <DependentUpon>WindLoadGraphicCanvas.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\WindLoadsUserControls\WindLoadInputControl.xaml.cs">
+      <DependentUpon>WindLoadInputControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\WindLoadsUserControls\WindLoadResultsControl_CC.xaml.cs">
+      <DependentUpon>WindLoadResultsControl_CC.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UserControls\WindLoadsUserControls\WindLoadResultsControl_MWFRS.xaml.cs">
+      <DependentUpon>WindLoadResultsControl_MWFRS.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="WindLoadCalculations\Core\Results\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="UserControls\BuildingData\BuildingDataInputControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\BuildingData\BuildingInfoSummaryControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\WindLoadsUserControls\WindLoadGraphicCanvas.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\WindLoadsUserControls\WindLoadInputControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\WindLoadsUserControls\WindLoadResultsControl_CC.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\WindLoadsUserControls\WindLoadResultsControl_MWFRS.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

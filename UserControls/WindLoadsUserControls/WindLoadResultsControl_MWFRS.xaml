@@ -1,0 +1,110 @@
+﻿<UserControl x:Class="ASCE7WindLoadCalculator.WindLoadResultsControl_MWFRS"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
+             mc:Ignorable="d" 
+             Width="Auto" Height="Auto"
+             >
+    <Border Padding="10" Background="LightBlue">
+        <StackPanel Orientation="Vertical">
+
+            <!-- Header -->
+            <StackPanel Orientation="Horizontal" Background="AliceBlue" Margin="0,0,0,10">
+                <TextBlock x:Name="tbVersion" Text="VERSION XXX" FontSize="18" FontWeight="Bold"/>
+                <TextBlock Text="  MWFRS" FontWeight="Bold" FontSize="18"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <!-- Main Layout -->
+                <Grid >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="horizontal">
+
+
+                        <!-- Left Side: Data -->
+                        <StackPanel Name="spResultsAndCanvas"
+                                Grid.Column="0"
+                                Orientation="Vertical"
+                                HorizontalAlignment="Left">
+
+                            <!-- Building Data -->
+                            <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
+
+
+                            <!-- Scrollable Results -->
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="Roof Zone Pressures" Margin="0,5"/>
+                                    <DataGrid x:Name="MWFRS_RoofResultsDataGrid"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+
+                                    <TextBlock x:Name="txtTitle_BuildingLengthWalls" Margin="0,5"/>
+                                    <DataGrid x:Name="MWFRS_WallResultsDataGrid"
+                                          AutoGenerateColumns="False"
+                                          HeadersVisibility="Column"
+                                          CanUserAddRows="False"
+                                          IsReadOnly="True"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          Margin="0,0,0,10"
+                                          ColumnWidth="Auto"
+                                          FontSize="10"/>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </StackPanel>
+
+                </Grid>
+                <!-- Right Side: Diagrams -->
+                <StackPanel Grid.Column="1" Orientation="Vertical">
+                    <Canvas x:Name="cnvEffectiveRoofAreas" Width="125" Height="125" Margin="5" x:FieldModifier="public"/>
+                    <TextBlock Text="Roof" FontWeight="Bold" />
+
+                    <Canvas x:Name="cnvEffectiveWallAreas_WW" Width="125" Height="125" Margin="0, 5, 0, 0" x:FieldModifier="public"/>
+                    <TextBlock Text="WW Wall" FontWeight="Bold" />
+
+                    <TextBlock x:Name="tbLW_title"/>
+                    <Canvas x:Name="cnvEffectiveWallAreas_LW" Width="125" Height="125" Margin="0, 5, 0, 0" x:FieldModifier="public"/>
+                    <TextBlock Text="LW Wall" FontWeight="Bold" />
+
+                    <Canvas x:Name="cnvEffectiveWallAreas_SW" Width="125" Height="125" Margin="0, 5, 0, 0" x:FieldModifier="public"/>
+                    <TextBlock Text="SW Wall" FontWeight="Bold" />
+
+                </StackPanel>
+
+                <!-- Building Figures -->
+                <StackPanel Orientation="Vertical">
+                    <Canvas x:Name="cnvMWFRSPlan"
+                                    Width="200"
+                                    Height="200"
+                                    Background="White"
+                                    Margin="10" x:FieldModifier="public"/>
+
+                    <Canvas x:Name="cnvMWFRSElevation_BuildingLength"
+                                    Width="200"
+                                    Height="200"
+                                    Background="White"
+                                    Margin="10" x:FieldModifier="public"/>
+
+                    <Canvas x:Name="cnvMWFRSElevation_BuildingWidth"
+                                    Width="200"
+                                    Height="200"
+                                    Background="White"
+                                    Margin="10" x:FieldModifier="public"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

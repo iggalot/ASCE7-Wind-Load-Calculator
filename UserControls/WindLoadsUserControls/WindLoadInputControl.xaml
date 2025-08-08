@@ -1,0 +1,83 @@
+﻿<UserControl x:Class="ASCE7WindLoadCalculator.WindLoadInputControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
+             mc:Ignorable="d">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Input Panel -->
+        <StackPanel Grid.Column="0" Orientation="Vertical" Margin="5">
+            <!-- Building Data Placeholder -->
+            <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
+
+            <!-- ASCE Version -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center"/>
+                <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
+            </StackPanel>
+
+            <!-- Wind Speed -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
+                <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5"/>
+            </StackPanel>
+
+            <!-- Kzt -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="Kzt" VerticalAlignment="Center" Margin="5"/>
+                <TextBox x:Name="KztTextBox" Width="150" Margin="5"/>
+            </StackPanel>
+
+            <!-- Importance Factor -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
+                <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5"/>
+            </StackPanel>
+
+            <!-- Risk Category -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="Risk Category" VerticalAlignment="Center" Margin="5"/>
+                <ComboBox x:Name="RiskCategoryComboBox" Width="150" Margin="5">
+                    <ComboBoxItem Content="I"/>
+                    <ComboBoxItem Content="II" IsSelected="True"/>
+                    <ComboBoxItem Content="III"/>
+                    <ComboBoxItem Content="IV"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Exposure Category -->
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <TextBlock Text="Exposure Category" VerticalAlignment="Center" Margin="5"/>
+                <ComboBox x:Name="ExposureCategoryComboBox" Width="150" Margin="5">
+                    <ComboBoxItem Content="B"/>
+                    <ComboBoxItem Content="C" IsSelected="True"/>
+                    <ComboBoxItem Content="D"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Compute Button -->
+            <Button Content="Update Calculations" Width="150" Margin="10" Click="ComputeButton_Click"/>
+        </StackPanel>
+
+        <!-- Effective Roof Areas -->
+        <StackPanel Grid.Column="1" Orientation="Vertical">
+            <Canvas x:Name="cnvEffectiveRoofAreas_CC" Width="200" Height="200" Margin="30" Background="Lavender" x:FieldModifier="public"/>
+            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Length" Width="200" Height="200" Margin="30" Background="Lavender" x:FieldModifier="public"/>
+            <Canvas x:Name="cnvEffectiveRoofAreas_MWFRS_Width" Width="200" Height="200" Margin="30" Background="Lavender" x:FieldModifier="public"/>
+        </StackPanel>
+
+        <!-- Building Plans -->
+        <StackPanel Grid.Column="2" Orientation="Vertical">
+            <Canvas x:Name="cnvBuildingPlan_CC" Width="200" Height="200" Margin="30" x:FieldModifier="public"/>
+            <Canvas x:Name="cnvBuildingPlan_MWFRS_Length" Width="200" Height="200" Margin="30" x:FieldModifier="public"/>
+            <Canvas x:Name="cnvBuildingplan_MWFRS_Width" Width="200" Height="200" Margin="30" x:FieldModifier="public"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

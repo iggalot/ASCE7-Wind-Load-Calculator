@@ -1,0 +1,86 @@
+﻿<UserControl x:Class="ASCE7WindLoadCalculator.BuildingDataInputControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
+             mc:Ignorable="d" 
+             >
+    <Grid Margin="10" x:Name="RootGrid" PreviewKeyDown="RootGrid_PreviewKeyDown">
+        <!-- Define Grid Layout -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Left" Margin="5">
+                    <!-- Building Height -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Plate Height (h)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="BuildingHeightTextBox" Width="150" Margin="5" Text="30"          
+                                 KeyDown="BuildingData_KeyDown"
+                                 LostFocus="BuildingData_LostFocus" />
+                    </StackPanel>
+
+                    <!-- Building Length -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Length (L)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="BuildingLengthTextBox" Width="150" Margin="5" Text="60"           
+                                 KeyDown="BuildingData_KeyDown"
+                                 LostFocus="BuildingData_LostFocus" />
+                    </StackPanel>
+
+                    <!-- Building Width -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Building Width (B)" VerticalAlignment="Center" Margin="5"/>
+                        <TextBox x:Name="BuildingWidthTextBox" Width="150" Margin="5" Text="30"           
+                                 KeyDown="BuildingData_KeyDown"
+                                 LostFocus="BuildingData_LostFocus" />
+                    </StackPanel>
+
+                    <!-- Roof Type -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Roof Type" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="cmbRoofType" Width="150" Margin="5"  SelectionChanged="cmbRoofType_SelectionChanged"/>
+                    </StackPanel>
+
+                    <!-- Roof Pitch -->
+                    <StackPanel x:Name="spRoofPitch" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Roof Pitch (θ)" VerticalAlignment="Center" Margin="5"/>
+                            <TextBox x:Name="tbRoofPitch" Width="150" Margin="5" Text="15"           
+                                 KeyDown="BuildingData_KeyDown"
+                                 LostFocus="BuildingData_LostFocus" />
+                        </StackPanel>
+
+                    <!-- Ridge Direction (Default to Perpendicular to Wind) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Ridge Direction" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="cmbRidgeDirection" Width="250" Margin="5" SelectionChanged="cmbRidgeDirection_SelectionChanged"/>
+                    </StackPanel>
+
+                    <!-- Enclosure Classification (Default to Partially Enclosed) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Enclosure Classification" VerticalAlignment="Center" Margin="5"/>
+                        <ComboBox x:Name="cmbEnclosure" Width="150" Margin="5" SelectionChanged="cmbBuildingEnclosure_SelectionChanged"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Canvas Name="cnvBuildingPlanCanvas" Width="200" Height="200" Margin="10"  Background="LightGreen" x:FieldModifier="public"></Canvas>
+                        <Canvas Name="cnvBuildingWidthCanvas" Width="200" Height="200" Margin="10"  Background="LightBlue" x:FieldModifier="public"></Canvas>
+                        <Canvas Name="cnvBuildingLengthCanvas" Width="200" Height="200" Margin="10"  Background="LightCyan" x:FieldModifier="public"></Canvas>
+                    </StackPanel>
+
+                    <!-- Compute Button -->
+                    <!--<Button Content="Create Building" Width="150" Margin="10" Grid.ColumnSpan="2" Click="ComputeButton_Click"/>-->
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+    </Grid>
+</UserControl>
