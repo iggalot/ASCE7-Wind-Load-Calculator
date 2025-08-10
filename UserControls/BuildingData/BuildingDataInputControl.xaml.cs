@@ -58,7 +58,6 @@ namespace ASCE7WindLoadCalculator
             bUpdatingUI = true;
             try
             {
-
                 cmbRoofType.Items.Clear();
                 cmbEnclosure.Items.Clear();
                 cmbRidgeDirection.Items.Clear();
@@ -129,7 +128,7 @@ namespace ASCE7WindLoadCalculator
 
             bFirstLoad = false;
 
-            UpdateDrawings();
+            UpdateDrawings(); 
         }
 
         public void UpdateDrawings()
@@ -145,14 +144,6 @@ namespace ASCE7WindLoadCalculator
             UpdateDrawings();
             BuildingDataInputComplete?.Invoke(this, new OnBuildingDataInputCompleteEventArgs(bldg_data));
         }
-
-        //// Event handler for the Compute Button click
-        //private void ComputeButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    ParseBuildingData();
-
-        //    OnBuildingDataInputComplete(buildingData); // raise the event where input has been completed
-        //}
 
         public void ParseBuildingData()
         {

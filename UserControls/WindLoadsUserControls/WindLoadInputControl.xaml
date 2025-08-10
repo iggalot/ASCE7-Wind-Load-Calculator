@@ -20,31 +20,38 @@
             <!-- ASCE Version -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center"/>
-                <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5"/>
+                <ComboBox x:Name="cmbASCEVersion" Width="150" Margin="5" SelectionChanged="cmbASCEVersion_SelectionChanged"/>
             </StackPanel>
 
             <!-- Wind Speed -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Wind Speed (V)" VerticalAlignment="Center" Margin="5"/>
-                <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5"/>
+                <TextBox x:Name="WindSpeedTextBox" Width="150" Margin="5"
+                         KeyDown="WindParameters_KeyDown"
+                         LostFocus="WindParameters_LostFocus"/>
             </StackPanel>
 
             <!-- Kzt -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Kzt" VerticalAlignment="Center" Margin="5"/>
-                <TextBox x:Name="KztTextBox" Width="150" Margin="5"/>
+                <TextBox x:Name="KztTextBox" Width="150" Margin="5"
+                         KeyDown="WindParameters_KeyDown"
+                         LostFocus="WindParameters_LostFocus"/>
             </StackPanel>
 
             <!-- Importance Factor -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
-                <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5"/>
+                <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5"
+                        KeyDown="WindParameters_KeyDown"
+                        LostFocus="WindParameters_LostFocus"/>
             </StackPanel>
 
             <!-- Risk Category -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Risk Category" VerticalAlignment="Center" Margin="5"/>
-                <ComboBox x:Name="RiskCategoryComboBox" Width="150" Margin="5">
+                <ComboBox x:Name="RiskCategoryComboBox" Width="150" Margin="5"
+                          SelectionChanged="cmbRiskCategory_SelectionChanged">
                     <ComboBoxItem Content="I"/>
                     <ComboBoxItem Content="II" IsSelected="True"/>
                     <ComboBoxItem Content="III"/>
@@ -55,7 +62,8 @@
             <!-- Exposure Category -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Exposure Category" VerticalAlignment="Center" Margin="5"/>
-                <ComboBox x:Name="ExposureCategoryComboBox" Width="150" Margin="5">
+                <ComboBox x:Name="ExposureCategoryComboBox" Width="150" Margin="5" 
+                          SelectionChanged="cmbExposureCategory_SelectionChanged">
                     <ComboBoxItem Content="B"/>
                     <ComboBoxItem Content="C" IsSelected="True"/>
                     <ComboBoxItem Content="D"/>
@@ -63,7 +71,7 @@
             </StackPanel>
 
             <!-- Compute Button -->
-            <Button Content="Update Calculations" Width="150" Margin="10" Click="ComputeButton_Click"/>
+            <!--<Button Content="Update Calculations" Width="150" Margin="10" Click="ComputeButton_Click"/>-->
         </StackPanel>
 
         <!-- Effective Roof Areas -->

@@ -119,38 +119,39 @@ namespace ASCE7WindLoadCalculator
         {
             switch (region)
             {
-                case "1":
-                    return Brushes.Red;
                 case "1'":
-                    return Brushes.IndianRed;
+                    return Brushes.LightCyan;
+                case "1":
+                    return Brushes.Aquamarine;
+
                 case "2":
-                    return Brushes.Yellow;
+                    return Brushes.PaleGreen;
                 case "2e":
-                    return Brushes.LightYellow;
+                    return Brushes.MediumAquamarine;
                 case "2r":
-                    return Brushes.Goldenrod;
+                    return Brushes.MediumSeaGreen;
                 case "2n":
-                    return Brushes.YellowGreen;
+                    return Brushes.SeaGreen;
                 case "3":
-                    return Brushes.Green;
+                    return Brushes.ForestGreen;
                 case "3e":
-                    return Brushes.GreenYellow;
+                    return Brushes.DarkOliveGreen;
                 case "3r":
-                    return Brushes.LightGreen;
+                    return Brushes.DarkGreen;
                 case "4":
                     return Brushes.MediumOrchid;
                 case "5":
-                    return Brushes.Purple;
+                    return Brushes.DarkOrchid;
                 case "WWR":
                     return Brushes.LightGray;
                 case "LWR":
-                    return Brushes.Gray;
+                    return Brushes.DarkGray;
                 case "WW":
                     return Brushes.LightGray;
                 case "LW":
-                    return Brushes.Gray;
-                case "SW":
                     return Brushes.DarkGray;
+                case "SW":
+                    return Brushes.Gray;
                 default:
                     return Brushes.Black;
             }

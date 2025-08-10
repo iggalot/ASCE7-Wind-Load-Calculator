@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace ASCE7WindLoadCalculator
 {
+    /// <summary>
+    /// Creates the user input control or inputting ASCE7 Wind Load input parameters
+    /// </summary>
     public partial class WindLoadInputControl : UserControl
     {
         public event EventHandler<OnWindInputCompleteEventArgs> WindInputComplete;  // the event that signals that the drawing has been updated -- controls will listen for this at the time they are created.
@@ -24,7 +28,6 @@ namespace ASCE7WindLoadCalculator
             }
         }
         public WindLoadCalculator_Base windLoadCalculator { get; set; }
-
         public WindLoadCalculator_Base windLoadCalculator_MWFRS_Length { get; set; }
         public WindLoadCalculator_Base windLoadCalculator_MWFRS_Width { get; set; }
         public WindLoadCalculator_Base windLoadCalculator_CC { get; set; }
@@ -32,6 +35,10 @@ namespace ASCE7WindLoadCalculator
         public BuildingData buildingData { get; set; } = null;
         public WindParameters_Base Parameters { get; set; } = null;
         public ASCE7_Versions Version { get; set; }
+
+        private bool bFirstLoad = true;
+        private bool bIsParsing = false;
+        private bool bUpdatingUI = false;  // new flag to prevent infinite UI feedback loop
 
 
         public WindLoadInputControl()
@@ -41,9 +48,11 @@ namespace ASCE7WindLoadCalculator
             this.Loaded += WindLoadInputControl_Loaded;
         }
 
-        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions? version = null, WindParameters_Base parameters = null)
+        public WindLoadInputControl(BuildingData bldg_data, ASCE7_Versions version = ASCE7_Versions.ASCE_VER_7_16, WindParameters_Base parameters = null)
         {
             InitializeComponent();
+
+            Parameters = parameters;
 
             // in case we don't have a building defined (usually first run)
             if (bldg_data == null)
@@ -61,66 +70,75 @@ namespace ASCE7WindLoadCalculator
                 version = ASCE7_Versions.ASCE_VER_7_16;
             }
 
-            if (version == null)
-            {
-                version = ASCE7_Versions.ASCE_VER_7_16;
-            }
-
             this.buildingData = bldg_data;
             this.Version = (ASCE7_Versions)version;
             this.Parameters = parameters;
 
             this.Loaded += WindLoadInputControl_Loaded;
+
+            bFirstLoad = false;
         }
 
         private void WindLoadInputControl_Loaded(object sender, RoutedEventArgs e)
         {
-            // populate the bulding data summary
-            if(this.buildingData == null)
+            bUpdatingUI = true;
+            try
             {
-                spBuildingData.Visibility = Visibility.Collapsed;
-            } else
-            {
-                spBuildingData.Visibility = Visibility.Visible;
-            
-                spBuildingData.Children.Clear();
-                BuildingInfoSummaryControl ctrl = new BuildingInfoSummaryControl(buildingData);
-                spBuildingData.Children.Add(ctrl);
-            }
-
-            // populate the combo boxes.
-            cmbASCEVersion.Items.Clear();
-
-            foreach (var value in Enum.GetValues(typeof(ASCE7_Versions)))
-            {
-                cmbASCEVersion.Items.Add(value);
-            }
-
-            // populate existing parameters if any
-            if (this.Parameters != null)
-            {
-                WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
-                KztTextBox.Text = Parameters.Kzt.ToString();
-                ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
-
-                bool found_version = false;
-                foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
+                // populate the bulding data summary
+                if (this.buildingData == null)
                 {
-                    if (item == Version)
+                    spBuildingData.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    spBuildingData.Visibility = Visibility.Visible;
+
+                    spBuildingData.Children.Clear();
+                    BuildingInfoSummaryControl ctrl = new BuildingInfoSummaryControl(buildingData);
+                    spBuildingData.Children.Add(ctrl);
+                }
+
+                // populate the combo boxes.
+                cmbASCEVersion.Items.Clear();
+
+                foreach (var value in Enum.GetValues(typeof(ASCE7_Versions)))
+                {
+                    cmbASCEVersion.Items.Add(value);
+                }
+                cmbASCEVersion.SelectedIndex = (int)Version;
+
+                // populate existing parameters if any
+                if (this.Parameters != null)
+                {
+                    WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
+                    KztTextBox.Text = Parameters.Kzt.ToString();
+                    ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
+
+                    bool found_version = false;
+                    foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
                     {
-                        cmbASCEVersion.SelectedIndex = (int)item;
-                        found_version = true;
-                        break;
+                        if (item == Version)
+                        {
+                            cmbASCEVersion.SelectedIndex = (int)item;
+                            found_version = true;
+                            break;
+                        }
                     }
-                }
-                if (found_version == false)
-                {
-                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + Version.ToString() + " not found.");
-                }
+                    if (found_version == false)
+                    {
+                        throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + Version.ToString() + " not found.");
+                    }
 
-            } else
+                }
+                else
+                {
+                    cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
+                }
+            }
+            finally
             {
-                cmbASCEVersion.SelectedIndex = (int)ASCE7_Versions.ASCE_VER_7_16;
+                bUpdatingUI = false;
+                Update();
             }
         }
 
@@ -195,34 +213,15 @@ namespace ASCE7WindLoadCalculator
             WindInputComplete?.Invoke(this, new OnWindInputCompleteEventArgs(calc_cc, calc_mwfrs_length, calc_mwfrs_width));
         }
 
-        // Event handler for the Compute Button click
-        private void ComputeButton_Click(object sender, RoutedEventArgs e)
+
+        public void Update()
         {
-            if(buildingData == null)
-            {
-                MessageBox.Show("Please input building data first");
-                return;
-            }
-
-            var version_index = cmbASCEVersion.SelectedIndex;
-            ASCE7_Versions version;
-            switch (version_index)
-            {
-                case (int)ASCE7_Versions.ASCE_VER_7_16:
-                    version = ASCE7_Versions.ASCE_VER_7_16;
-                    break;
-                case (int)ASCE7_Versions.ASCE_VER_7_22:
-                    version = ASCE7_Versions.ASCE_VER_7_22;
-                    break;
-                default:
-                    throw new Exception("ERROR:  In WindLoadInputControl_Loaded() -- Version " + version_index.ToString() + " not found.");
-
-            }
-            Parameters = GetWindLoadParameters(buildingData.RoofType, version);
+            ParseWindLoadParameters(buildingData.RoofType, Version);
 
             MakeCalculators();
 
             OnWindInputComplete(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width); // raise the event where input has been completed
+
         }
 
         /// <summary>
@@ -231,6 +230,8 @@ namespace ASCE7WindLoadCalculator
         /// </summary>
         private void MakeCalculators()
         {
+            if (buildingData == null) return;
+
             // Setup our buildings -- building 1 is the original building
             // and building 2 is the rotated (flipped) building
             var bldg_data1 = buildingData;
@@ -260,47 +261,104 @@ namespace ASCE7WindLoadCalculator
         }
 
         // Method to retrieve parameters from the input fields
-        private WindParameters_Base GetWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
+        private void ParseWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
-            Version = version;
+            if (bIsParsing || bUpdatingUI)
+                return;
 
-            double windSpeed = double.Parse(WindSpeedTextBox.Text);
-            double kzt = double.Parse(KztTextBox.Text);
-            double importance = double.Parse(ImportanceFactorTextBox.Text);
-            string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
-            //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
-            string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
-            WindExposureCategories exposure;
-
-            switch (exposure_string)
+            bIsParsing = true;
+            try
             {
-                case "B":
-                    exposure = WindExposureCategories.WIND_EXP_CAT_B;
-                    break;
-                case "C":
-                    exposure = WindExposureCategories.WIND_EXP_CAT_C;
-                    break;
-                case "D":
-                    exposure = WindExposureCategories.WIND_EXP_CAT_D;
-                    break;
-                default:
-                    exposure = WindExposureCategories.WIND_EXP_CAT_C;
-                    break;
+
+                Version = version;
+
+                double windSpeed = double.Parse(WindSpeedTextBox.Text);
+                double kzt = double.Parse(KztTextBox.Text);
+                double importance = double.Parse(ImportanceFactorTextBox.Text);
+                string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
+                //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
+                string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
+                WindExposureCategories exposure;
+
+                switch (exposure_string)
+                {
+                    case "B":
+                        exposure = WindExposureCategories.WIND_EXP_CAT_B;
+                        break;
+                    case "C":
+                        exposure = WindExposureCategories.WIND_EXP_CAT_C;
+                        break;
+                    case "D":
+                        exposure = WindExposureCategories.WIND_EXP_CAT_D;
+                        break;
+                    default:
+                        exposure = WindExposureCategories.WIND_EXP_CAT_C;
+                        break;
+                }
+
+                Parameters = WindLoadParametersFactory.Create(
+                    roof_type,
+                    risk,
+                    windSpeed,
+                    exposure,
+                    kzt,
+                    importance
+                    );
+
+                bUpdatingUI = false;
+            }
+            finally
+            {
+                bIsParsing = false;
+            }
+        }
+
+        private void cmbASCEVersion_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (bFirstLoad || bIsParsing)
+            {
+                return;
             }
 
-            var windParams = WindLoadParametersFactory.Create(
-                roof_type, 
-                risk, 
-                windSpeed, 
-                exposure, 
-                kzt, 
-                importance
-                
-                //, 
-                //analysis_type
-                );
+            var combo = sender as ComboBox;
+            if(combo?.SelectedIndex >= 0)
+            {
+                Version = (ASCE7_Versions)combo.SelectedIndex;
+                Update();
+            }
+        }
 
-            return windParams;
+        private void cmbRiskCategory_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (bFirstLoad || bIsParsing)
+            {
+                return;
+            }
+
+            Update();
+        }
+
+        private void cmbExposureCategory_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (bFirstLoad || bIsParsing)
+            {
+                return;
+            }
+
+            Update();
+        }
+
+        private void WindParameters_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                Update();
+            }
+        }
+
+        private void WindParameters_LostFocus(object sender, RoutedEventArgs e)
+        {
+            Update();
         }
     }
 }
