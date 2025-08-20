@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -216,6 +217,12 @@ namespace ASCE7WindLoadCalculator
 
         public void Update()
         {
+            // create an arbitrary building just in case
+            if(buildingData == null)
+            {
+                buildingData = new BuildingData();
+            }
+
             ParseWindLoadParameters(buildingData.RoofType, Version);
 
             MakeCalculators();
@@ -263,6 +270,12 @@ namespace ASCE7WindLoadCalculator
         // Method to retrieve parameters from the input fields
         private void ParseWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
+            // If parameters are already made, make a default set.
+            if(Parameters is null)
+            {
+                Parameters = WindLoadParametersFactory.Create(buildingData.RoofType, "I", 115, WindExposureCategories.WIND_EXP_CAT_C, 1.0, 1.0);
+            }
+
             if (bIsParsing || bUpdatingUI)
                 return;
 
@@ -272,13 +285,40 @@ namespace ASCE7WindLoadCalculator
 
                 Version = version;
 
-                double windSpeed = double.Parse(WindSpeedTextBox.Text);
-                double kzt = double.Parse(KztTextBox.Text);
-                double importance = double.Parse(ImportanceFactorTextBox.Text);
+                double windSpeed;
+                double kzt;
+                double importance;
+
+                // Use InvariantCulture if you want dot (.) as decimal separator always
+                if (!double.TryParse(WindSpeedTextBox.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out windSpeed))
+                {
+                    MessageBox.Show("Invalid wind speed value. Please enter a valid number.");
+                    return;
+                }
+
+                if (!double.TryParse(KztTextBox.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out kzt))
+                {
+                    MessageBox.Show("Invalid Kzt value. Please enter a valid number.");
+                    return;
+                }
+
+                if (!double.TryParse(ImportanceFactorTextBox.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out importance))
+                {
+                    MessageBox.Show("Invalid importance factor. Please enter a valid number.");
+                    return;
+                }
+
+                // ComboBox selections
                 string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
-                //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
+                // WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
                 string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
+
                 WindExposureCategories exposure;
+                if (!Enum.TryParse(exposure_string, out exposure))
+                {
+                    MessageBox.Show("Invalid exposure category selected.");
+                    return;
+                }
 
                 switch (exposure_string)
                 {
