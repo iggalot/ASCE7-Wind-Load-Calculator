@@ -13,7 +13,7 @@
         public Figure30_3_2C_ASCE7_22()
         {
             // ---- Roof: Negative ExternalPressure Zones ----
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.0),
                 (10,  -3.0),
@@ -24,7 +24,7 @@
                 (500, -1.4),
                 (1000, -1.4),
             });
-            RoofCurves_Neg["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.5),
                 (10,  -2.5),
@@ -35,7 +35,7 @@
                 (500, -1.2),
                 (1000, -1.2),
             });
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.5),
                 (10,  -1.5),
@@ -48,7 +48,7 @@
             });
 
             // ---- Roof: Positive ExternalPressure Zones ----
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.6),
                 (10,  0.6),
@@ -59,7 +59,7 @@
                 (500, 0.3),
                 (1000, 0.3),
             });
-            RoofCurves_Pos["Zone2"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.6),
                 (10,  0.6),
@@ -70,7 +70,7 @@
                 (500, 0.3),
                 (1000, 0.3),
             });
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.6),
                 (10,  0.6),

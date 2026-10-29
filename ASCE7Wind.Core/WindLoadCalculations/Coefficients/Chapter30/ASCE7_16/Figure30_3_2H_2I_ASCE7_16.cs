@@ -19,7 +19,7 @@
             double amax = 280 - 5.0 * slope;
 
             // Roof Negative Curves
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, a),
                 (10, a),
@@ -30,7 +30,7 @@
                 (500, b1),
                 (1000, b1)
             });
-            RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, c),
                 (3, c),
@@ -41,7 +41,7 @@
                 (500, -0.8),
                 (1000, -0.8)
             });
-            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, d),
                 (7, d),
@@ -52,7 +52,7 @@
                 (500, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, e),
                 (5, e),
@@ -65,7 +65,7 @@
             });
 
             // Roof Positive Curves (fixed values)
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.9),
                 (3, 0.9),
@@ -76,7 +76,7 @@
                 (200, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.9),
                 (3, 0.9),
@@ -87,7 +87,7 @@
                 (200, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.9),
                 (3, 0.9),
@@ -98,7 +98,7 @@
                 (200, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.9),
                 (3, 0.9),
@@ -118,7 +118,7 @@
             double k = 0.45 - 0.108 * slope;
 
             // Overhang Curves
-            OverhangCurves["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, k),
                 (5, k),
@@ -129,7 +129,7 @@
                 (200, -1.8),
                 (1000, -1.8)
             });
-            OverhangCurves["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, j),
                 (3, j),
@@ -140,7 +140,7 @@
                 (200, -1.8),
                 (1000, -1.8)
             });
-            OverhangCurves["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, i),
                 (3, i),
@@ -151,7 +151,7 @@
                 (200, -1.6),
                 (1000, -1.6)
             });
-            OverhangCurves["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, f),
                 (10, f),

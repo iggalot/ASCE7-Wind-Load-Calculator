@@ -44,6 +44,9 @@
                 (20, -0.6),
                 (80, -0.6)
             });
+
+            // Fig. 27.3-1 gives one leeward-roof value; it applies to both load cases.
+            RoofCurves_Pos["ZoneLWR"] = RoofCurves_Neg["ZoneLWR"];
         }
 
         private double GetReductionFactor(double area)

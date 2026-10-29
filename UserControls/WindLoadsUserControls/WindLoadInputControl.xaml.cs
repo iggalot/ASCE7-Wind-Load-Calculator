@@ -108,7 +108,6 @@ namespace ASCE7WindLoadCalculator
                 {
                     WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
                     KztTextBox.Text = Parameters.Kzt.ToString();
-                    ImportanceFactorTextBox.Text = Parameters.ImportanceFactor.ToString();
 
                     bool found_version = false;
                     foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
@@ -294,7 +293,6 @@ namespace ASCE7WindLoadCalculator
 
                 double windSpeed = TryParseOrDefault(WindSpeedTextBox.Text, 115.0);   // fallback: 115 mph
                 double kzt = TryParseOrDefault(KztTextBox.Text, 1.0);           // fallback: 1.0
-                double importance = TryParseOrDefault(ImportanceFactorTextBox.Text, 1.0); // fallback: 1.0
                 string risk = TryGetComboBoxString(RiskCategoryComboBox, "II"); // fallback to Risk Category II
                 //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
                 string exposure_string = TryGetComboBoxString(ExposureCategoryComboBox, "C"); // fallback to Risk Category II
@@ -322,7 +320,6 @@ namespace ASCE7WindLoadCalculator
                     WindSpeed = windSpeed,
                     ExposureCategory = exposure,
                     Kzt = kzt,
-                    ImportanceFactor = importance,
                 };
 
                 bUpdatingUI = false;

@@ -40,7 +40,7 @@ namespace ASCE7WindLoadCalculator
                     effWindAreas.Add(30, new EffectiveWindArea("ZoneSW", new List<Vec2> { E, F, G, ridge, H }, null));
                 } else
                 {
-                    ridge = new Vec2(0.5 * width, buildingData.BuildingHeight + Math.Tan(buildingData.RoofPitch * Math.PI / 180.0) * length / 2.0);
+                    ridge = new Vec2(0.5 * width, buildingData.BuildingHeight + Math.Tan(buildingData.RoofPitch * Math.PI / 180.0) * width / 2.0);  // gable spans the width when the ridge runs along the length
                     effWindAreas.Add(10, new EffectiveWindArea("ZoneWW", new List<Vec2> { A, B, C, ridge, D }, null));
                     effWindAreas.Add(20, new EffectiveWindArea("ZoneLW", new List<Vec2> { A, B, C, ridge, D }, null));
                     effWindAreas.Add(30, new EffectiveWindArea("ZoneSW", new List<Vec2> { E, F, G, H }, null));

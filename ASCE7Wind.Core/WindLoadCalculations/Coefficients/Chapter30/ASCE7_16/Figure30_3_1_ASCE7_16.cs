@@ -13,24 +13,24 @@
         public Figure30_3_1_ASCE7_16()
         {
             // Positive ExternalPressure Wall Zones
-            WallCurves_Pos["Zone5"] = new ExternalGCpCurve(new (double X, double Y)[]
+            WallCurves_Pos["Zone5"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 1.0),
                 (10,  1.0),
                 (20, 0.94),
-                (50, 0.83),
+                (50, 0.88),
                 (100, 0.81),
                 (200, 0.78),
                 (500, 0.7),
                 (1000, 0.7)
             });
 
-            WallCurves_Pos["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            WallCurves_Pos["Zone4"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 1.0),
                 (10,  1.0),
                 (20, 0.94),
-                (50, 0.83),
+                (50, 0.88),
                 (100, 0.81),
                 (200, 0.78),
                 (500, 0.7),
@@ -38,7 +38,7 @@
             });
 
             // Negative ExternalPressure Wall Zones
-            WallCurves_Neg["Zone5"] = new ExternalGCpCurve(new (double X, double Y)[]
+            WallCurves_Neg["Zone5"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.4),
                 (10, -1.4),
@@ -49,7 +49,7 @@
                 (500, -0.8),
                 (1000, -0.8)
             });
-            WallCurves_Neg["Zone4"] = new ExternalGCpCurve(new (double X, double Y)[]
+            WallCurves_Neg["Zone4"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.1),
                 (10, -1.1),

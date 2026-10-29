@@ -46,11 +46,21 @@ namespace ASCE7WindLoadCalculator
             this.Loaded += WindLoadResultsControl_MWFRS_Loaded;
         }
 
+        /// <summary>Shows why results are missing or limited (e.g. building outside the method limits).</summary>
+        private void ShowValidationMessages()
+        {
+            var messages = windLoadCalculator?.ValidationMessages;
+            bool any = messages != null && messages.Count > 0;
+            bdWarnings.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            tbWarnings.Text = any ? string.Join(System.Environment.NewLine, messages) : string.Empty;
+        }
+
         private void WindLoadResultsControl_MWFRS_Loaded(object sender, RoutedEventArgs e)
         {
             if (windLoadCalculator != null)
             {
-                tbVersion.Text = windLoadCalculator.ASCEVersion.ToString();
+                tbVersion.Text = windLoadCalculator.Edition.Name;
+                ShowValidationMessages();
 
                 // populate the bulding data summary
                 if (windLoadCalculator.buildingData == null)

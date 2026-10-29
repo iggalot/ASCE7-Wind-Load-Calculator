@@ -13,7 +13,7 @@
         public Figure30_3_2G_ASCE7_16()
         {
             // Roof Negative ExternalPressure Zones
-            RoofCurves_Neg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.0),
                 (10, -2.0),
@@ -24,7 +24,7 @@
                 (500, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.0),
                 (10, -2.0),
@@ -35,7 +35,7 @@
                 (500, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.0),
                 (10, -2.0),
@@ -46,7 +46,7 @@
                 (500, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.4),
                 (10, -1.4),
@@ -59,7 +59,7 @@
             });
 
             // Roof Positive ExternalPressure Zones
-            RoofCurves_Pos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -70,7 +70,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -81,7 +81,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -92,7 +92,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -105,7 +105,7 @@
             });
 
             // Overhang Zones
-            OverhangCurves["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.1),
                 (7, -3.1),
@@ -116,7 +116,7 @@
                 (200, -1.5),
                 (1000, -1.5)
             });
-            OverhangCurves["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.5),
                 (7, -2.5),
@@ -127,7 +127,7 @@
                 (200, -2.0),
                 (1000, -2.0)
             });
-            OverhangCurves["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.5),
                 (7, -2.5),
@@ -138,7 +138,7 @@
                 (200, -2.0),
                 (1000, -2.0)
             });
-            OverhangCurves["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.9),
                 (7, -1.9),

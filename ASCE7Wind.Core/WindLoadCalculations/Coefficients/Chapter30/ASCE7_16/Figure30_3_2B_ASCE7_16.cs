@@ -15,7 +15,7 @@
         {
 
             // ---- Roof: Negative ExternalPressure Zones ----
-            RoofCurves_Neg["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.6),
                 (10,  -3.6),
@@ -26,7 +26,7 @@
                 (500, -1.8),
                 (1000, -1.8)
             });
-            RoofCurves_Neg["Zone3e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone3e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.0),
                 (10,  -3.0),
@@ -37,7 +37,7 @@
                 (250, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone2n"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2n"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.0),
                 (10,  -3.0),
@@ -48,7 +48,7 @@
                 (250, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.0),
                 (10,  -3.0),
@@ -59,7 +59,7 @@
                 (250, -1.0),
                 (1000, -1.0)
             });
-            RoofCurves_Neg["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.0),
                 (10,  -2.0),
@@ -70,7 +70,7 @@
                 (250, -0.5),
                 (1000, -0.5)
             });
-            RoofCurves_Neg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.0),
                 (10,  -2.0),
@@ -83,7 +83,7 @@
             });
 
             // ---- Roof: Positive ExternalPressure Zones ----
-            RoofCurves_Pos["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -94,7 +94,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone3e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone3e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -105,7 +105,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2n"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2n"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -116,7 +116,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -127,7 +127,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -138,7 +138,7 @@
                 (500, 0.3),
                 (1000, 0.3)
             });
-            RoofCurves_Pos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            RoofCurves_Pos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (2.0, 0.7),
@@ -151,7 +151,7 @@
             });
 
             // ---- Overhang: Negative ExternalPressure Zones ----
-            OverhangCurves["Zone3r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone3r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -4.7),
                 (10,  -4.7),
@@ -162,7 +162,7 @@
                 (500, -2.3),
                 (1000, -2.3)
             });
-            OverhangCurves["Zone3e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone3e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -4.1),
                 (10,  -4.1),
@@ -173,7 +173,7 @@
                 (250, -1.5),
                 (1000, -1.5)
             });
-            OverhangCurves["Zone2n"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2n"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.5),
                 (10,  -3.5),
@@ -184,7 +184,7 @@
                 (250, -2.0),
                 (1000, -2.0)
             });
-            OverhangCurves["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.5),
                 (10,  -3.5),
@@ -195,7 +195,7 @@
                 (250, -2.0),
                 (1000, -2.0)
             });
-            OverhangCurves["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.5),
                 (10,  -2.5),
@@ -206,7 +206,7 @@
                 (500, -1.5),
                 (1000, -1.5)
             });
-            OverhangCurves["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.5),
                 (10,  -2.5),

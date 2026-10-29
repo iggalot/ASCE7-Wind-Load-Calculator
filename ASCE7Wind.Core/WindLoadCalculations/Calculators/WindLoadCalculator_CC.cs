@@ -11,13 +11,28 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Upper limit of mean roof height for Chapter 30 Part 1 (ft).</summary>
         public const double MaxMeanRoofHeight = 60.0;
 
+        /// <summary>Steepest roof covered by the Chapter 30 Part 1 roof figures (deg).</summary>
+        public const double MaxRoofSlope = 45.0;
+
         public WindLoadCalculator_CC(Asce7Edition edition, WindParameters_Base p, BuildingData bldg_data)
             : base(edition, p, bldg_data)
         {
-            if (buildingData.MeanRoofHeight <= MaxMeanRoofHeight)
+            if (buildingData.MeanRoofHeight > MaxMeanRoofHeight)
             {
-                CreateExtGcpCurves();
+                AddValidationMessage(
+                    $"Mean roof height {buildingData.MeanRoofHeight:0.#} ft is above the {MaxMeanRoofHeight:0} ft limit " +
+                    "for the low-rise cladding method (Chapter 30 Part 1); cladding pressures were not calculated.");
+                return;
             }
+
+            if (buildingData.RoofTypeIsSloped() && buildingData.RoofPitch > MaxRoofSlope)
+            {
+                AddValidationMessage(
+                    $"Roof slope {buildingData.RoofPitch:0.#} deg is steeper than the {MaxRoofSlope:0} deg covered by the " +
+                    "Chapter 30 roof figures; the 27-45 deg values were used and should be checked.");
+            }
+
+            CreateExtGcpCurves();
         }
 
         public void CreateExtGcpCurves()
@@ -28,6 +43,9 @@ namespace ASCE7WindLoadCalculator
 
         public override void CalculateExternalPressures()
         {
+            if (extGCpCurve_Roof == null || extGCpCurve_Wall == null)
+                return; // outside the method's limits; see ValidationMessages
+
             double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
             Func<EffectiveWindArea, double> byArea = a => a.Area;
 

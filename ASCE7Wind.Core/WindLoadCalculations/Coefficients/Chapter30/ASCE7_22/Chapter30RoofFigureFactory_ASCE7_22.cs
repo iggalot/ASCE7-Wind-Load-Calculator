@@ -1,45 +1,36 @@
-﻿using System;
+using System;
 
 namespace ASCE7WindLoadCalculator
 {
+    /// <summary>
+    /// ASCE 7-22 Chapter 30 Part 1 roof figure selection.
+    /// Gable: 2A (theta &lt;= 7), 2B (7-20), 2C (20-27), 2D (27-45).
+    /// Hip:   2A (theta &lt;= 7), 2E (7-20), 2F (20-27), 2G (27-45).
+    /// Slope ranges are steps: a figure applies across its whole range, with no blending between figures.
+    /// </summary>
     public static class Chapter30RoofFigureFactory_ASCE7_22
     {
         public static Chapter27and30_GCpCurveBase CreateRoofFigure_ASCE7_22(BuildingData buildingData)
         {
-            RidgeDirections ridgeDirection = buildingData.RidgeDirection;
-            RoofTypes roofType = buildingData.RoofType;
-            double roofSlope = buildingData.RoofPitch;
+            double slope = buildingData.RoofPitch;
 
-            switch (roofType)
+            switch (buildingData.RoofType)
             {
                 case RoofTypes.ROOF_TYPE_FLAT:
-                    // return flat roof figure instance(s), maybe based on slope or h, b?
-                    return new Figure30_3_2A_ASCE7_22(); // example class
-
+                    return new Figure30_3_2A_ASCE7_22();
                 case RoofTypes.ROOF_TYPE_GABLE:
-                    if (roofSlope <= 7)
-                        return new Figure30_3_2A_ASCE7_22();
-                    else if (roofSlope <= 20)
-                        return new Figure30_3_2B_ASCE7_22();
-                    else if (roofSlope <= 27)
-                        return new Figure30_3_2C_ASCE7_22();
-                    else
-                        return new Figure30_3_2D_ASCE7_22();
-
+                    if (slope <= 7) return new Figure30_3_2A_ASCE7_22();
+                    if (slope <= 20) return new Figure30_3_2B_ASCE7_22();
+                    if (slope <= 27) return new Figure30_3_2C_ASCE7_22();
+                    return new Figure30_3_2D_ASCE7_22();
                 case RoofTypes.ROOF_TYPE_HIP:
-                    if (roofSlope <= 20)
-                        return new Figure30_3_2E_ASCE7_22();
-                    else if (roofSlope <= 27)
-                        return new Figure30_3_2F_ASCE7_22();
-                    else if (roofSlope >= 45)
-                        return new Figure30_3_2G_ASCE7_22();
-                    else
-                        return new Figure30_3_2F_2G_INTERPOLATED_ASCE7_22(new Figure30_3_2F_ASCE7_22(), 27, new Figure30_3_2G_ASCE7_22(), 45, roofSlope);
-
+                    if (slope <= 7) return new Figure30_3_2A_ASCE7_22();
+                    if (slope <= 20) return new Figure30_3_2E_ASCE7_22();
+                    if (slope <= 27) return new Figure30_3_2F_ASCE7_22();
+                    return new Figure30_3_2G_ASCE7_22();
                 default:
-                    throw new ArgumentException("ERROR: Invalid roof type" + roofType + " in Chapter30FigureFactory");
+                    throw new ArgumentException("Invalid roof type: " + buildingData.RoofType);
             }
         }
     }
-
 }

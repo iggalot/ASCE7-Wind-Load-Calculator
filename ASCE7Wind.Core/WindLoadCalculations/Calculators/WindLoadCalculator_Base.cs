@@ -79,6 +79,19 @@ namespace ASCE7WindLoadCalculator
 
         public Asce7Edition Edition { get; }
         public ASCE7_Versions ASCEVersion => Edition.Version;
+
+        private readonly List<string> validationMessages = new List<string>();
+
+        /// <summary>
+        /// Plain-language reasons the results are incomplete or outside the method's limits
+        /// (for example, a mean roof height above the Chapter 30 Part 1 limit). Empty when valid.
+        /// </summary>
+        public IReadOnlyList<string> ValidationMessages => validationMessages;
+
+        /// <summary>True when the building is within the limits of the selected procedure.</summary>
+        public bool IsValid => validationMessages.Count == 0;
+
+        protected void AddValidationMessage(string message) => validationMessages.Add(message);
         public WindParameters_Base Parameters { get; set; }
         public BuildingData buildingData { get; set; }
 
@@ -119,26 +132,27 @@ namespace ASCE7WindLoadCalculator
         // ---------------------------------------------------------------------------------------
 
         /// <summary>
-        /// Velocity pressure qz (psf) at height z (ft). Includes Kd only when the edition puts Kd in q
-        /// (see <see cref="Asce7Edition.KdInVelocityPressure"/>).
+        /// Velocity pressure qz (psf) at height z (ft), Eq. 26.10-1: qz = 0.00256 Kz Kzt Ke [Kd] V^2.
+        /// Includes Kd only when the edition puts Kd in q (see <see cref="Asce7Edition.KdInVelocityPressure"/>).
+        /// There is no importance factor: risk category is built into the ASCE 7-16/7-22 wind-speed maps.
+        /// The ground elevation factor Ke is taken as 1.0 (permitted for all elevations, 26.9).
         /// </summary>
         public double CalculateDynamicWindPressure(double z)
         {
             if (Parameters == null)
-                return -1000;
+                throw new InvalidOperationException("Wind parameters are not set.");
 
             WindParameters_Base p = Parameters;
             double V = p.WindSpeed;
             double Kzt = p.Kzt;
-            double I = p.ImportanceFactor;
             double Kz = GetKz(z, p.ExposureCategory);
 
             if (Edition.KdInVelocityPressure)
             {
                 double Kd = GetKd(Parameters.AnalysisType);
-                return 0.00256 * Kz * Kzt * Kd * V * V * I;
+                return 0.00256 * Kz * Kzt * Kd * V * V;
             }
-            return 0.00256 * Kz * Kzt * V * V * I;
+            return 0.00256 * Kz * Kzt * V * V;
         }
 
         /// <summary>Velocity pressure exposure coefficient Kz (power-law form, z not less than 15 ft).</summary>
@@ -195,14 +209,15 @@ namespace ASCE7WindLoadCalculator
             RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, Edition);
             RoofAreaCalculator?.ComputeEffectiveWindAreas();
 
-            // The shorter walls are the gable ends; a square building assigns the gable to the width walls.
-            bool length_is_gable = buildingData.BuildingLength < buildingData.BuildingWidth;
-            bool width_is_gable = !length_is_gable;
+            // Gable-end walls are the walls perpendicular to the ridge.
+            bool gable = buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE;
+            bool length_is_gable = gable && buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH;
+            bool width_is_gable = gable && buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
 
-            WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, length_is_gable);
+            WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, length_is_gable, buildingData.BuildingLength);
             WallAreaCalculator_BldgLength?.ComputeEffectiveWindAreas();
 
-            WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, width_is_gable);
+            WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, width_is_gable, buildingData.BuildingWidth);
             WallAreaCalculator_BldgWidth?.ComputeEffectiveWindAreas();
         }
 

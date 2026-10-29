@@ -63,7 +63,6 @@ namespace ASCE7Wind.Tests
                                         {
                                             WindSpeed = 115,
                                             ExposureCategory = exp,
-                                            EnclosureClassification = enc,
                                             Kzt = 1.0,
                                             AnalysisType = type,
                                         };

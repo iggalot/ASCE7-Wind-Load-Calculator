@@ -50,7 +50,7 @@ namespace ASCE7WindLoadCalculator
         public abstract AreaCalculator_Base CreateCCRoofZones(BuildingData building);
 
         /// <summary>Chapter 30 wall zone layout.</summary>
-        public abstract AreaCalculator_Base CreateCCWallZones(BuildingData building, bool isGableEndWall);
+        public abstract AreaCalculator_Base CreateCCWallZones(BuildingData building, bool isGableEndWall, double wallLength);
 
         public override string ToString() => Name;
     }
@@ -83,15 +83,15 @@ namespace ASCE7WindLoadCalculator
             switch (b.RoofType)
             {
                 case RoofTypes.ROOF_TYPE_FLAT: return new FlatRoofAreaCalculator_CC(b);
-                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch < 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new GableRoofAreaCalculator_CC_ASCE7_16(b);
-                case RoofTypes.ROOF_TYPE_HIP: return b.RoofPitch < 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new HipRoofAreaCalculator_CC_ASCE7_16(b);
+                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new GableRoofAreaCalculator_CC_ASCE7_16(b);
+                case RoofTypes.ROOF_TYPE_HIP: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new HipRoofAreaCalculator_CC_ASCE7_16(b);
                 default: throw new NotSupportedException("Unsupported roof type: " + b.RoofType);
             }
         }
 
-        // ASCE 7-16 Fig. 30.3-1 zoning does not distinguish gable-end walls.
-        public override AreaCalculator_Base CreateCCWallZones(BuildingData b, bool isGableEndWall) =>
-            new WallAreaCalculator_NonGableEnd_CC(b);
+        // ASCE 7-16 Fig. 30.3-1 zoning is applied to the rectangular wall below the eave.
+        public override AreaCalculator_Base CreateCCWallZones(BuildingData b, bool isGableEndWall, double wallLength) =>
+            new WallAreaCalculator_NonGableEnd_CC(b, wallLength);
     }
 
     internal sealed class Asce7Edition22 : Asce7Edition
@@ -99,10 +99,19 @@ namespace ASCE7WindLoadCalculator
         public override ASCE7_Versions Version => ASCE7_Versions.ASCE_VER_7_22;
         public override string Name => "ASCE 7-22";
         public override bool KdInVelocityPressure => false;
-        public override double KzCoefficient => 2.01;
+        public override double KzCoefficient => 2.41;
 
-        public override (double alpha, double zg) TerrainConstants(WindExposureCategories exposure) =>
-            ASCE7_16.TerrainConstants(exposure);
+        // ASCE 7-22 Table 26.11-1 (revised from 7-16: gradient heights and alpha re-derived; with the
+        // 2.41 coefficient this reproduces the tabulated Kz at 15 ft: 0.57 / 0.85 / 1.03).
+        public override (double alpha, double zg) TerrainConstants(WindExposureCategories exposure)
+        {
+            switch (exposure)
+            {
+                case WindExposureCategories.WIND_EXP_CAT_B: return (7.5, 3280.0);
+                case WindExposureCategories.WIND_EXP_CAT_D: return (11.5, 1935.0);
+                default: return (9.8, 2460.0);
+            }
+        }
 
         public override Chapter27and30_GCpCurveBase CreateCCRoofFigure(BuildingData building) =>
             Chapter30RoofFigureFactory_ASCE7_22.CreateRoofFigure_ASCE7_22(building);
@@ -114,15 +123,15 @@ namespace ASCE7WindLoadCalculator
             switch (b.RoofType)
             {
                 case RoofTypes.ROOF_TYPE_FLAT: return new FlatRoofAreaCalculator_CC(b);
-                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch < 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new GableRoofAreaCalculator_CC_ASCE7_22(b);
-                case RoofTypes.ROOF_TYPE_HIP: return b.RoofPitch < 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new HipRoofAreaCalculator_CC_ASCE7_22(b);
+                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new GableRoofAreaCalculator_CC_ASCE7_22(b);
+                case RoofTypes.ROOF_TYPE_HIP: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new HipRoofAreaCalculator_CC_ASCE7_22(b);
                 default: throw new NotSupportedException("Unsupported roof type: " + b.RoofType);
             }
         }
 
-        public override AreaCalculator_Base CreateCCWallZones(BuildingData b, bool isGableEndWall) =>
+        public override AreaCalculator_Base CreateCCWallZones(BuildingData b, bool isGableEndWall, double wallLength) =>
             b.RoofType == RoofTypes.ROOF_TYPE_GABLE && isGableEndWall
-                ? (AreaCalculator_Base)new WallAreaCalculator_GableEnd_CC(b)
-                : new WallAreaCalculator_NonGableEnd_CC(b);
+                ? (AreaCalculator_Base)new WallAreaCalculator_GableEnd_CC(b, wallLength)
+                : new WallAreaCalculator_NonGableEnd_CC(b, wallLength);
     }
 }

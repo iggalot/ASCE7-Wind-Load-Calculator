@@ -25,7 +25,7 @@ namespace ASCE7WindLoadCalculator
             var high = new FigureDataSet();
 
             // Low h/B <= 0.5
-            low.RoofNeg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofNeg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.8),
                 (10, -1.8),
@@ -36,7 +36,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.1),
                 (1000, -1.1)
             });
-            low.RoofNeg["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofNeg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.8),
                 (10, -1.8),
@@ -47,7 +47,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.1),
                 (1000, -1.1)
             });
-            low.RoofNeg["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofNeg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.4),
                 (10, -2.4),
@@ -58,7 +58,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.3),
                 (1000, -1.3)
             });
-            low.RoofNeg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofNeg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.3),
                 (10, -1.3),
@@ -70,7 +70,7 @@ namespace ASCE7WindLoadCalculator
                 (1000, -1.0)
             });
 
-            low.RoofPos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofPos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -81,7 +81,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            low.RoofPos["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofPos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -92,7 +92,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            low.RoofPos["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofPos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -103,7 +103,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            low.RoofPos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.RoofPos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -115,7 +115,7 @@ namespace ASCE7WindLoadCalculator
                 (1000, 0.3)
             });
 
-            low.Overhang["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.Overhang["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.9),
                 (10, -2.9),
@@ -126,7 +126,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.6),
                 (1000, -1.6)
             });
-            low.Overhang["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.Overhang["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.9),
                 (10, -2.9),
@@ -137,7 +137,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -2.3),
                 (1000, -2.3)
             });
-            low.Overhang["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.Overhang["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.3),
                 (10, -2.3),
@@ -148,7 +148,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -2.1),
                 (1000, -2.1)
             });
-            low.Overhang["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            low.Overhang["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.8),
                 (10, -1.8),
@@ -161,7 +161,7 @@ namespace ASCE7WindLoadCalculator
             });
 
             // High h/B >= 0.8
-            high.RoofNeg["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofNeg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.6),
                 (10, -2.6),
@@ -172,7 +172,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.4),
                 (1000, -1.4)
             });
-            high.RoofNeg["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofNeg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.6),
                 (10, -2.6),
@@ -183,7 +183,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.4),
                 (1000, -1.4)
             });
-            high.RoofNeg["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofNeg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.4),
                 (10, -2.4),
@@ -194,7 +194,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.3),
                 (1000, -1.3)
             });
-            high.RoofNeg["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofNeg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -1.8),
                 (10, -1.8),
@@ -206,7 +206,7 @@ namespace ASCE7WindLoadCalculator
                 (1000, -1.0)
             });
 
-            high.RoofPos["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofPos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -217,7 +217,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            high.RoofPos["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofPos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -228,7 +228,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            high.RoofPos["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofPos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -239,7 +239,7 @@ namespace ASCE7WindLoadCalculator
                 (500, 0.3),
                 (1000, 0.3)
             });
-            high.RoofPos["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.RoofPos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, 0.7),
                 (10, 0.7),
@@ -251,7 +251,7 @@ namespace ASCE7WindLoadCalculator
                 (1000, 0.3)
             });
 
-            high.Overhang["Zone3"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.Overhang["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.7),
                 (10, -3.7),
@@ -262,7 +262,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -1.9),
                 (1000, -1.9)
             });
-            high.Overhang["Zone2e"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.Overhang["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -3.1),
                 (10, -3.1),
@@ -273,7 +273,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -2.4),
                 (1000, -2.4)
             });
-            high.Overhang["Zone2r"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.Overhang["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.9),
                 (10, -2.9),
@@ -284,7 +284,7 @@ namespace ASCE7WindLoadCalculator
                 (500, -2.3),
                 (1000, -2.3)
             });
-            high.Overhang["Zone1"] = new ExternalGCpCurve(new (double X, double Y)[]
+            high.Overhang["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
                 (1.0, -2.3),
                 (10, -2.3),
@@ -356,7 +356,7 @@ namespace ASCE7WindLoadCalculator
                 resultPoints[i] = (xLow, y); // Use X from either low or high (they are assumed equal)
             }
 
-            return new ExternalGCpCurve(resultPoints);
+            return new ExternalGCpCurve(resultPoints, low.LogX);
         }
 
 

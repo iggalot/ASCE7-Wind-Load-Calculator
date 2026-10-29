@@ -12,6 +12,8 @@ namespace ASCE7WindLoadCalculator
     {
         public static void DrawCurvesOnCanvas(Canvas canvas, Chapter27and30_GCpCurveBase figure)
         {
+            if (canvas == null || figure == null) return; // nothing to draw (e.g. building outside the method limits)
+
             double canvasWidth = canvas.ActualWidth > 0 ? canvas.ActualWidth : canvas.Width;
             double canvasHeight = canvas.ActualHeight > 0 ? canvas.ActualHeight : canvas.Height;
 

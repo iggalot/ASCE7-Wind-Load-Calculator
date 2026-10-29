@@ -14,18 +14,14 @@ namespace ASCE7WindLoadCalculator
         public double Cp_SW { get; set; } = -0.7; // sidewalls
         public double Cp_LW { get => GetLWCpValues(); } // leeward walls
 
+        /// <summary>Leeward wall Cp, Fig. 27.3-1: L/B 0-1: -0.5, 2: -0.3, &gt;= 4: -0.2 (linear between).</summary>
         private double GetLWCpValues()
         {
             double x = buildingData.L_Over_B;
-
-            if (x < 1) return -0.5;
-            if (x >= 4) return -0.2;
-
-            // Linear interpolation between (1, -0.5) and (4, -0.2)
-            double x0 = 1.0, y0 = -0.5;
-            double x1 = 4.0, y1 = -0.2;
-
-            return y0 + (x - x0) * ((y1 - y0) / (x1 - x0));
+            if (x <= 1) return -0.5;
+            if (x <= 2) return -0.5 + (x - 1) * (0.2 / 1.0);
+            if (x < 4) return -0.3 + (x - 2) * (0.1 / 2.0);
+            return -0.2;
         }
 
         public WindLoadCalculator_MWFRS(Asce7Edition edition, WindParameters_Base p, BuildingData bldg_data)
@@ -43,12 +39,20 @@ namespace ASCE7WindLoadCalculator
 
         public override void CalculateExternalPressures()
         {
-            const double G = 0.85; // gust-effect factor, rigid building (26.11.1)
+            if (extGCpCurve_Roof == null)
+            {
+                AddValidationMessage("No Fig. 27.3-1 roof coefficients apply to this roof geometry.");
+                return;
+            }
+
+            double G = Parameters.GustFactor; // gust-effect factor; 0.85 for rigid buildings (26.11.1)
             double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
 
-            // Normal to the ridge, roof Cp is read against roof slope; otherwise against area (area reduction).
-            bool bySlope = buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH;
-            Func<EffectiveWindArea, double> curveX = a => bySlope ? buildingData.RoofPitch : a.Area;
+            // Roof planes facing the wind (windward/leeward roof) read Cp against roof slope; distance
+            // zones 1-4 read against area (the -1.3 area reduction).
+            double slope = buildingData.RoofPitch;
+            Func<EffectiveWindArea, double> curveX = a =>
+                a.Label_Full == "ZoneWWR" || a.Label_Full == "ZoneLWR" ? slope : a.Area;
 
             AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Pos, curveX, qh, G, windPressureRoof_Pos_External);
             AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Neg, curveX, qh, G, windPressureRoof_Neg_External);

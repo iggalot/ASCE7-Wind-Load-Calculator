@@ -39,14 +39,6 @@
                          LostFocus="WindParameters_LostFocus"/>
             </StackPanel>
 
-            <!-- Importance Factor -->
-            <StackPanel Orientation="Horizontal" Margin="5">
-                <TextBlock Text="Importance Factor (I)" VerticalAlignment="Center" Margin="5"/>
-                <TextBox x:Name="ImportanceFactorTextBox" Width="150" Margin="5"
-                        KeyDown="WindParameters_KeyDown"
-                        LostFocus="WindParameters_LostFocus"/>
-            </StackPanel>
-
             <!-- Risk Category -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="Risk Category" VerticalAlignment="Center" Margin="5"/>
