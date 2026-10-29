@@ -17,7 +17,8 @@ namespace ASCE7Wind.UI.Tests
     [TestClass]
     public class WindSetupControlTests
     {
-        private const int W = 1360, H = 900;
+        // The Wind Setup tab beside the 750 px drawing canvas on a maximized 1920 x 1080 window.
+        private const int W = 1130, H = 790;
 
         private static WindSetupControl Make(BuildingData b = null)
         {
@@ -60,31 +61,60 @@ namespace ASCE7Wind.UI.Tests
                 Layout(c);
                 for (int p = 0; p < 3; p++)
                     Assert.AreEqual(p == step ? Visibility.Visible : Visibility.Collapsed, Find<UIElement>(c, panels[p]).Visibility, $"step {step} panel {p}");
-                Assert.AreEqual(step == 0 ? Visibility.Collapsed : Visibility.Visible, Find<UIElement>(c, "pnlRight").Visibility);
+                var viewerHost = step == 1 ? "ccViewerBuilding" : step == 2 ? "ccViewerResults" : null;
+                if (viewerHost != null) Assert.AreSame(c.Viewer, Find<ContentControl>(c, viewerHost).Content, "the 3D view moves to the current step");
                 Snapshot(c, "setup_step" + (step + 1));
             }
             Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "btnSend").Visibility);
             Assert.IsTrue(Find<UIElement>(c, "btnSend").IsEnabled);
         }
 
-        /// <summary>Beside the shear-wall drawing the screen is narrow: columns stack instead of squeezing.</summary>
+        /// <summary>
+        /// Every step fits the tab with nothing to scroll, including the worst case for each step: a gable
+        /// roof (slope, ridge choice) and the longest checklist (over 60 ft, warnings).
+        /// </summary>
         [STATestMethod]
-        public void NarrowWidth_StacksTheColumns()
+        [DataRow(15.0)]
+        [DataRow(70.0)]
+        public void EveryStep_FitsWithoutScrolling(double wallHeight)
         {
-            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_HIP, RoofPitch = 25 });
-            var right = Find<UIElement>(c, "pnlRight");
-            Assert.AreEqual(0, Grid.GetRow(right), "wide: the 3D view sits beside the inputs");
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = wallHeight, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            Find<ToggleButton>(c, "rbHillYes").IsChecked = true; // shows the Kzt box
+            var scrollers = new[] { "pnlSite", "svBuildingInputs", "svResultsSide" };
+            for (int step = 0; step < 3; step++)
+            {
+                c.GoToStep(step);
+                Layout(c);
+                var sv = Find<ScrollViewer>(c, scrollers[step]);
+                Assert.AreEqual(0, sv.ScrollableHeight, 0.5, $"step {step + 1} must not scroll (h = {wallHeight} ft)");
+                Snapshot(c, $"fit_step{step + 1}_h{wallHeight:0}");
+            }
+        }
 
-            c.Width = 820;
-            c.Measure(new Size(820, H));
-            c.Arrange(new Rect(0, 0, 820, H));
-            c.UpdateLayout();
-            Assert.AreEqual(1, Grid.GetRow(right), "narrow: the 3D view goes below the inputs");
-            Assert.AreEqual(2, Grid.GetRow(Find<UIElement>(c, "siteRight")), "narrow: the site cards stack");
+        [STATestMethod]
+        public void LinkedToShearWalls_HidesSend_AndShowsTheLink()
+        {
+            var c = Make();
+            c.GoToStep(WindSetupControl.ResultsStep);
+            c.SetShearWallLink(true, "Shear walls use these wind loads.");
+            Assert.AreEqual(Visibility.Collapsed, Find<UIElement>(c, "btnSend").Visibility);
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "bdLinked").Visibility);
+            c.SetShearWallLink(false, null);
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "btnSend").Visibility);
+            Assert.AreEqual(Visibility.Collapsed, Find<UIElement>(c, "bdLinked").Visibility);
+        }
 
-            c.GoToStep(WindSetupControl.BuildingStep);
-            c.UpdateLayout();
-            Snapshot(c, "setup_narrow_building");
+        [STATestMethod]
+        public void SetOnlyCases1And3_UpdatesWithoutNotifying()
+        {
+            var c = Make();
+            int raised = 0;
+            c.InputsChanged += (s, e) => raised++;
+            c.SetOnlyCases1And3(true);
+            c.FlushPendingChange();
+            Assert.IsTrue(c.OnlyCases1And3);
+            Assert.AreEqual(4, c.Summary.Lateral.LoadCases.Count);
+            Assert.AreEqual(0, raised);
         }
 
         [STATestMethod]

@@ -65,11 +65,10 @@ namespace ASCE7WindLoadCalculator
         {
             InitializeComponent();
             Viewer.ShowSummaryCard = false; // the Results step shows these numbers itself
-            ccViewer.Content = Viewer;
+
             notifyTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
             notifyTimer.Tick += (s, e) => { notifyTimer.Stop(); InputsChanged?.Invoke(this, EventArgs.Empty); };
             BuildStepIndicator();
-            SizeChanged += (s, e) => ApplyLayout(e.NewSize.Width);
             SetInputs(building, version, parameters);
             GoToStep(SiteStep);
         }
@@ -139,19 +138,23 @@ namespace ASCE7WindLoadCalculator
             pnlSite.Visibility = Step == SiteStep ? Visibility.Visible : Visibility.Collapsed;
             pnlBuilding.Visibility = Step == BuildingStep ? Visibility.Visible : Visibility.Collapsed;
             pnlResults.Visibility = Step == ResultsStep ? Visibility.Visible : Visibility.Collapsed;
-            pnlRight.Visibility = Step == SiteStep ? Visibility.Collapsed : Visibility.Visible;
-            ugBuildingNumbers.Visibility = Step == BuildingStep ? Visibility.Visible : Visibility.Collapsed;
+            tbStepTitle.Text = StepTitles[Step];
+
+            // One 3D view, moved to whichever step shows it (keeps the camera and the chosen view).
+            ccViewerBuilding.Content = null;
+            ccViewerResults.Content = null;
+            if (Step == BuildingStep) ccViewerBuilding.Content = Viewer;
+            if (Step == ResultsStep) ccViewerResults.Content = Viewer;
 
             btnBack.Visibility = Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
             btnNext.Visibility = Step == ResultsStep ? Visibility.Collapsed : Visibility.Visible;
             btnNext.Content = Step == SiteStep ? "Next: Building" : "See results";
-            btnSend.Visibility = Step == ResultsStep && ShowSendButton ? Visibility.Visible : Visibility.Collapsed;
-            tbSendStatus.Text = string.Empty;
             tbStepOf.Text = $"Step {Step + 1} of 3";
             UpdateStepIndicator();
             UpdateSendState();
-            svContent.ScrollToTop();
         }
+
+        private static readonly string[] StepTitles = { "Where is the building?", "Describe the building", "Wind results" };
 
         private void BuildStepIndicator()
         {
@@ -199,30 +202,6 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        /// <summary>Below these widths the two columns stack into one (e.g. beside the drawing canvas).</summary>
-        public const double StackSiteBelow = 900, StackViewBelow = 1150;
-
-        private void ApplyLayout(double width)
-        {
-            if (double.IsNaN(width) || width <= 0) return;
-
-            bool stackSite = width < StackSiteBelow;
-            Grid.SetRow(siteRight, stackSite ? 2 : 1);
-            Grid.SetColumn(siteRight, stackSite ? 0 : 2);
-            Grid.SetColumnSpan(siteLeft, stackSite ? 3 : 1);
-            Grid.SetColumnSpan(siteRight, stackSite ? 3 : 1);
-
-            bool stackView = width < StackViewBelow;
-            Grid.SetRow(pnlRight, stackView ? 1 : 0);
-            Grid.SetColumn(pnlRight, stackView ? 0 : 1);
-            Grid.SetColumnSpan(pnlRight, stackView ? 2 : 1);
-            foreach (var p in new FrameworkElement[] { pnlBuilding, pnlResults })
-            {
-                Grid.SetColumnSpan(p, stackView ? 2 : 1);
-                p.Margin = stackView ? new Thickness(0) : new Thickness(0, 0, 20, 0);
-            }
-        }
-
         private void Next_Click(object sender, RoutedEventArgs e) => GoToStep(Step + 1);
         private void Back_Click(object sender, RoutedEventArgs e) => GoToStep(Step - 1);
 
@@ -235,7 +214,37 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Lets the host report what happened to the sent loads (shown next to the button).</summary>
         public void ShowSendStatus(string text) => tbSendStatus.Text = text ?? string.Empty;
 
-        private void UpdateSendState() => btnSend.IsEnabled = Summary?.Lateral != null;
+        /// <summary>
+        /// True once the host keeps the shear walls on these wind loads: any later change re-sends them
+        /// automatically, so the button is no longer needed.
+        /// </summary>
+        public bool LinkedToShearWalls { get; private set; }
+
+        /// <summary>Sets the Fig. 27.3-8 exception (e.g. chosen in another dialog) without notifying the host.</summary>
+        public void SetOnlyCases1And3(bool value)
+        {
+            if (OnlyCases1And3 == value) return;
+            loading = true;
+            cbOnlyCases13.IsChecked = value;
+            loading = false;
+            Recalculate(notify: false);
+        }
+
+        /// <summary>Shows whether (and how) the shear walls follow these wind loads.</summary>
+        public void SetShearWallLink(bool linked, string detail)
+        {
+            LinkedToShearWalls = linked;
+            tbLinked.Text = detail ?? string.Empty;
+            bdLinked.Visibility = linked && !string.IsNullOrEmpty(detail) ? Visibility.Visible : Visibility.Collapsed;
+            UpdateSendState();
+        }
+
+        private void UpdateSendState()
+        {
+            btnSend.Visibility = Step == ResultsStep && ShowSendButton && !LinkedToShearWalls ? Visibility.Visible : Visibility.Collapsed;
+            btnSend.IsEnabled = Summary?.Lateral != null;
+            if (LinkedToShearWalls || Step != ResultsStep) tbSendStatus.Text = string.Empty;
+        }
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
@@ -406,7 +415,8 @@ namespace ASCE7WindLoadCalculator
             SetForce(valSouth, subSouth, s?.FromSouth);
 
             var rows = new List<CheckRow>();
-            foreach (var i in Issues)
+            // Building-level limits (e.g. over 60 ft) are also reported by the engine in s.Checks; show them once.
+            foreach (var i in Issues.Where(i => s == null || i.Field != WindInputField.Building))
                 rows.Add(new CheckRow(false, i.Message));
             if (calcError != null)
                 rows.Add(new CheckRow(false, "These inputs cannot be calculated: " + calcError));

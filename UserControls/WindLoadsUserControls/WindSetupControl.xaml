@@ -24,13 +24,13 @@
             <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="18,14,18,16"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="Padding" Value="16,10,16,12"/>
+            <Setter Property="Margin" Value="0"/>
         </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
         <Style x:Key="Hint" TargetType="TextBlock">
@@ -46,9 +46,9 @@
 
         <!-- Large selectable card (radio button): a title line plus a description -->
         <Style x:Key="Card" TargetType="RadioButton">
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="MinHeight" Value="52"/>
-            <Setter Property="Padding" Value="14,9"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="12,7"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
@@ -81,8 +81,8 @@
         <!-- Compact choice (radio button) -->
         <Style x:Key="Chip" TargetType="RadioButton">
             <Setter Property="Margin" Value="0,0,8,0"/>
-            <Setter Property="MinHeight" Value="40"/>
-            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="14,6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Foreground" Value="{StaticResource InkPrimary}"/>
@@ -119,7 +119,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Background" Value="White"/>
-            <Setter Property="Height" Value="42"/>
+            <Setter Property="Height" Value="38"/>
             <Setter Property="Padding" Value="10,0"/>
         </Style>
         <Style x:Key="NumberBox" TargetType="TextBox">
@@ -206,15 +206,17 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="Margin" Value="0,0,12,12"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
         </Style>
         <Style x:Key="StatValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,2"/>
         </Style>
     </UserControl.Resources>
 
+    <!-- Laid out to fit the Wind Setup tab beside the drawing canvas (about 1130 x 790 at 1920 x 1080)
+         without scrolling. Scroll bars appear only if the window is made smaller than that. -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -223,377 +225,377 @@
         </Grid.RowDefinitions>
 
         <!-- ===== Header with the step indicator ===== -->
-        <Border Grid.Row="0" Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="28,10">
+        <Border Grid.Row="0" Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="20,4">
             <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <TextBlock Text="Wind setup" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="Three steps. Results update as you type." Style="{StaticResource Hint}"/>
-                </StackPanel>
+                <TextBlock x:Name="tbStepTitle" DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="20" FontWeight="SemiBold" Text="Where is the building?"/>
                 <StackPanel x:Name="spSteps" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
 
-        <!-- ===== Step content ===== -->
-        <ScrollViewer Grid.Row="1" x:Name="svContent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Grid x:Name="gridContent" Margin="28,20,28,12" MaxWidth="1400">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="5*"/>
-                    <ColumnDefinition x:Name="colRight" Width="7*"/>
-                </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1" Margin="20,12,20,12">
 
-                <!-- ========== STEP 1: SITE ========== -->
-                <Grid x:Name="pnlSite" Grid.ColumnSpan="2">
+            <!-- ========== STEP 1: SITE ========== -->
+            <ScrollViewer x:Name="pnlSite" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.ColumnSpan="3" Margin="0,0,0,16">
-                        <TextBlock Text="Where is the building?" FontSize="24" FontWeight="SemiBold"/>
-                        <TextBlock Style="{StaticResource Hint}" FontSize="14" Text="These choices set how strong the wind is at your site."/>
-                    </StackPanel>
 
-                    <StackPanel x:Name="siteLeft" Grid.Row="1" Grid.Column="0">
-                        <Border Style="{StaticResource Section}">
+                    <!-- Row 1: edition | wind speed | hill -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource Section}" Margin="0,0,10,0">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="Building code edition"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Code edition"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="rbEd22" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-22" Checked="Input_Changed"/>
-                                    <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-16" Checked="Input_Changed"/>
+                                    <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Margin="0" Content="ASCE 7-16" Checked="Input_Changed"/>
                                 </StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="Use the edition your building department enforces."/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Use the one your building department enforces."/>
                             </StackPanel>
                         </Border>
-
-                        <Border Style="{StaticResource Section}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}">How important is the building? <Run Foreground="#52514E" FontWeight="Normal">(Risk Category)</Run></TextBlock>
-                                <UniformGrid Columns="2">
-                                    <RadioButton x:Name="rbRisk1" GroupName="risk" Style="{StaticResource Card}" Margin="0,0,8,8" Checked="Input_Changed">
-                                        <StackPanel><TextBlock FontWeight="SemiBold" Text="Risk Category I"/><TextBlock Style="{StaticResource Hint}" Text="Low hazard to people: barns, sheds, minor storage"/></StackPanel>
-                                    </RadioButton>
-                                    <RadioButton x:Name="rbRisk2" GroupName="risk" Style="{StaticResource Card}" Margin="0,0,0,8" Checked="Input_Changed">
-                                        <StackPanel><TextBlock FontWeight="SemiBold" Text="Risk Category II"/><TextBlock Style="{StaticResource Hint}" Text="Most buildings: homes, offices, shops"/></StackPanel>
-                                    </RadioButton>
-                                    <RadioButton x:Name="rbRisk3" GroupName="risk" Style="{StaticResource Card}" Margin="0,0,8,8" Checked="Input_Changed">
-                                        <StackPanel><TextBlock FontWeight="SemiBold" Text="Risk Category III"/><TextBlock Style="{StaticResource Hint}" Text="Many people at once: schools, large venues"/></StackPanel>
-                                    </RadioButton>
-                                    <RadioButton x:Name="rbRisk4" GroupName="risk" Style="{StaticResource Card}" Margin="0,0,0,8" Checked="Input_Changed">
-                                        <StackPanel><TextBlock FontWeight="SemiBold" Text="Risk Category IV"/><TextBlock Style="{StaticResource Hint}" Text="Essential: hospitals, fire and police stations"/></StackPanel>
-                                    </RadioButton>
-                                </UniformGrid>
-                                <TextBlock Style="{StaticResource Hint}" Text="This picks which ASCE 7 wind-speed map to read. It does not multiply the loads."/>
-                            </StackPanel>
+                        <Border Grid.Column="1" Style="{StaticResource Section}" Margin="0,0,10,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Basic wind speed V"/>
+                                    <Border x:Name="bdV" Style="{StaticResource NumberFrame}">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="mph"/>
+                                            <TextBox x:Name="tbV" Style="{StaticResource NumberBox}" FontSize="18" TextChanged="Input_Changed"
+                                                     AutomationProperties.Name="Wind speed V in mph"/>
+                                        </DockPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock TextWrapping="Wrap"><Run FontWeight="SemiBold">Where do I find this?</Run> Read V for <Run x:Name="runRisk" FontWeight="SemiBold" Text="Risk Category II"/> at your address on the
+                                        <Hyperlink NavigateUri="https://ascehazardtool.org" RequestNavigate="Hyperlink_RequestNavigate">ASCE Hazard Tool</Hyperlink> (free).</TextBlock>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Coming later: look up V from the site address."/>
+                                </StackPanel>
+                                <TextBlock x:Name="msgV" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource FieldMessage}"/>
+                            </Grid>
                         </Border>
-
-                        <Border Style="{StaticResource Section}">
+                        <Border Grid.Column="2" Style="{StaticResource Section}" MinWidth="250">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="Basic wind speed"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="170"/>
-                                        <ColumnDefinition Width="16"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Wind speed V"/>
-                                        <Border x:Name="bdV" Style="{StaticResource NumberFrame}">
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="mph"/>
-                                                <TextBox x:Name="tbV" Style="{StaticResource NumberBox}" FontSize="18" TextChanged="Input_Changed"
-                                                         AutomationProperties.Name="Wind speed V in mph"/>
-                                            </DockPanel>
-                                        </Border>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" VerticalAlignment="Bottom">
-                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Where do I find this?"/>
-                                        <TextBlock TextWrapping="Wrap">Read V for <Run x:Name="runRisk" FontWeight="SemiBold" Text="Risk Category II"/> at your address on the
-                                            <Hyperlink NavigateUri="https://ascehazardtool.org" RequestNavigate="Hyperlink_RequestNavigate">ASCE Hazard Tool</Hyperlink> (free web lookup).</TextBlock>
-                                    </StackPanel>
-                                </Grid>
-                                <TextBlock x:Name="msgV" Style="{StaticResource FieldMessage}"/>
-                                <Border Margin="0,12,0,0" Padding="10,8" CornerRadius="6" BorderBrush="{StaticResource Control}" BorderThickness="1">
-                                    <TextBlock Style="{StaticResource Hint}" Text="Coming later: type the site address and the app fills in V automatically (needs an ASCE Hazard Tool account)."/>
-                                </Border>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <StackPanel x:Name="siteRight" Grid.Row="1" Grid.Column="2">
-                        <Border Style="{StaticResource Section}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}">What is the ground like upwind of the site? <Run Foreground="#52514E" FontWeight="Normal">(Exposure)</Run></TextBlock>
-                                <RadioButton x:Name="rbExpB" GroupName="exp" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <DockPanel>
-                                        <Canvas DockPanel.Dock="Left" Width="84" Height="40" Margin="0,0,14,0">
-                                            <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
-                                            <Path Stroke="#52514E" StrokeThickness="1.5" Data="M6,18 h12 v20 h-12 z M22,10 h10 v28 h-10 z M38,38 V24 l7,-6 7,6 v14 M70,38 V22 l6,-5 6,5 v16"/>
-                                            <Ellipse Canvas.Left="55" Canvas.Top="17" Width="14" Height="14" Stroke="#52514E" StrokeThickness="1.5"/>
-                                            <Path Stroke="#52514E" StrokeThickness="1.5" Data="M62,31 V38"/>
-                                        </Canvas>
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="B: Suburbs, towns, wooded areas"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Houses or trees close together for at least 2,600 ft upwind (1,500 ft if the mean roof height is 30 ft or less), or 20 × the building height if that is more."/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="rbExpC" GroupName="exp" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <DockPanel>
-                                        <Canvas DockPanel.Dock="Left" Width="84" Height="40" Margin="0,0,14,0">
-                                            <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
-                                            <Path Stroke="#52514E" StrokeThickness="1.5" Data="M12,38 V28 l6,-5 6,5 v10 M52,34 v4"/>
-                                            <Ellipse Canvas.Left="47" Canvas.Top="24" Width="10" Height="10" Stroke="#52514E" StrokeThickness="1.5"/>
-                                        </Canvas>
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="C: Open country, farmland, scattered buildings"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Anywhere B or D does not apply. The usual choice when in doubt."/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="rbExpD" GroupName="exp" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <DockPanel>
-                                        <Canvas DockPanel.Dock="Left" Width="84" Height="40" Margin="0,0,14,0">
-                                            <Path Stroke="#52514E" StrokeThickness="1.5" Data="M2,30 c8,-4 14,4 22,0 s14,-4 22,0 14,4 22,0 10,-3 14,-1"/>
-                                            <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
-                                        </Canvas>
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="D: Shorelines, open water, flat unobstructed land"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Only if water or flat open land runs at least 5,000 ft upwind, or 20 × the building height if that is more. Also applies within 600 ft (or 20 × height) downwind of it."/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </RadioButton>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource Section}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="Is the site on a hill, ridge or bluff?"/>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="On a hill, ridge or bluff?"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="rbHillNo" GroupName="hill" Style="{StaticResource Chip}" Content="No, fairly flat" Checked="Input_Changed"/>
                                     <RadioButton x:Name="rbHillYes" GroupName="hill" Style="{StaticResource Chip}" Content="Yes" Checked="Input_Changed"/>
-                                </StackPanel>
-                                <Grid x:Name="pnlKzt" Margin="0,12,0,0" Visibility="Collapsed">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140"/>
-                                        <ColumnDefinition Width="14"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Topographic factor Kzt"/>
-                                        <Border x:Name="bdKzt" Style="{StaticResource NumberFrame}">
-                                            <TextBox x:Name="tbKzt" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Topographic factor Kzt"/>
+                                    <StackPanel x:Name="pnlKzt" Orientation="Horizontal" Visibility="Collapsed">
+                                        <Border x:Name="bdKzt" Style="{StaticResource NumberFrame}" Width="96">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,6,0" Text="Kzt"/>
+                                                <TextBox x:Name="tbKzt" Style="{StaticResource NumberBox}" MinWidth="40" TextChanged="Input_Changed" AutomationProperties.Name="Topographic factor Kzt"/>
+                                            </DockPanel>
                                         </Border>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="2" VerticalAlignment="Bottom" Style="{StaticResource Hint}"
-                                               Text="From ASCE 7 Section 26.8. Wind speeds up over hills, so Kzt is 1.0 or more."/>
-                                </Grid>
+                                </StackPanel>
+                                <TextBlock x:Name="tbKztHint" Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Hills speed up the wind (Kzt, Section 26.8)."/>
                                 <TextBlock x:Name="msgKzt" Style="{StaticResource FieldMessage}"/>
                             </StackPanel>
                         </Border>
+                    </Grid>
 
-                        <Border Style="{StaticResource Section}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}">How open is the building? <Run Foreground="#52514E" FontWeight="Normal">(Enclosure)</Run></TextBlock>
+                    <!-- Row 2: risk category -->
+                    <Border Grid.Row="1" Style="{StaticResource Section}" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}">How important is the building? <Run Foreground="#52514E" FontWeight="Normal">(Risk Category: picks which wind-speed map to read; it does not multiply the loads)</Run></TextBlock>
+                            <UniformGrid Columns="4">
+                                <RadioButton x:Name="rbRisk1" GroupName="risk" Style="{StaticResource Card}" Checked="Input_Changed">
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="I: Low hazard"/><TextBlock Style="{StaticResource Hint}" Text="Barns, sheds, minor storage"/></StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="rbRisk2" GroupName="risk" Style="{StaticResource Card}" Checked="Input_Changed">
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="II: Most buildings"/><TextBlock Style="{StaticResource Hint}" Text="Homes, offices, shops"/></StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="rbRisk3" GroupName="risk" Style="{StaticResource Card}" Checked="Input_Changed">
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="III: Many people"/><TextBlock Style="{StaticResource Hint}" Text="Schools, large venues"/></StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="rbRisk4" GroupName="risk" Style="{StaticResource Card}" Margin="0" Checked="Input_Changed">
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="IV: Essential"/><TextBlock Style="{StaticResource Hint}" Text="Hospitals, fire and police stations"/></StackPanel>
+                                </RadioButton>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Row 3: exposure -->
+                    <Border Grid.Row="2" Style="{StaticResource Section}" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}">What is the ground like upwind of the site? <Run Foreground="#52514E" FontWeight="Normal">(Exposure)</Run></TextBlock>
+                            <UniformGrid Columns="3">
+                                <RadioButton x:Name="rbExpB" GroupName="exp" Style="{StaticResource Card}" VerticalContentAlignment="Top" Checked="Input_Changed">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <Canvas DockPanel.Dock="Left" Width="60" Height="28" Margin="0,0,10,0">
+                                                <Canvas.RenderTransform><ScaleTransform ScaleX="0.7" ScaleY="0.7"/></Canvas.RenderTransform>
+                                                <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
+                                                <Path Stroke="#52514E" StrokeThickness="1.5" Data="M6,18 h12 v20 h-12 z M22,10 h10 v28 h-10 z M38,38 V24 l7,-6 7,6 v14 M70,38 V22 l6,-5 6,5 v16"/>
+                                                <Ellipse Canvas.Left="55" Canvas.Top="17" Width="14" Height="14" Stroke="#52514E" StrokeThickness="1.5"/>
+                                                <Path Stroke="#52514E" StrokeThickness="1.5" Data="M62,31 V38"/>
+                                            </Canvas>
+                                            <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="B: Suburbs, towns, woods"/>
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Houses or trees close together for at least 2,600 ft upwind (1,500 ft if the mean roof height is 30 ft or less), or 20 × the building height if more."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="rbExpC" GroupName="exp" Style="{StaticResource Card}" VerticalContentAlignment="Top" Checked="Input_Changed">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <Canvas DockPanel.Dock="Left" Width="60" Height="28" Margin="0,0,10,0">
+                                                <Canvas.RenderTransform><ScaleTransform ScaleX="0.7" ScaleY="0.7"/></Canvas.RenderTransform>
+                                                <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
+                                                <Path Stroke="#52514E" StrokeThickness="1.5" Data="M12,38 V28 l6,-5 6,5 v10 M52,34 v4"/>
+                                                <Ellipse Canvas.Left="47" Canvas.Top="24" Width="10" Height="10" Stroke="#52514E" StrokeThickness="1.5"/>
+                                            </Canvas>
+                                            <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="C: Open country, farmland"/>
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Scattered buildings or trees. Anywhere B or D does not apply; the usual choice when in doubt."/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="rbExpD" GroupName="exp" Style="{StaticResource Card}" Margin="0" VerticalContentAlignment="Top" Checked="Input_Changed">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <Canvas DockPanel.Dock="Left" Width="60" Height="28" Margin="0,0,10,0">
+                                                <Canvas.RenderTransform><ScaleTransform ScaleX="0.7" ScaleY="0.7"/></Canvas.RenderTransform>
+                                                <Path Stroke="#52514E" StrokeThickness="1.5" Data="M2,30 c8,-4 14,4 22,0 s14,-4 22,0 14,4 22,0 10,-3 14,-1"/>
+                                                <Path Stroke="#898781" StrokeThickness="1.5" Data="M2,38 H82"/>
+                                            </Canvas>
+                                            <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="D: Shoreline, open water"/>
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Only if water or flat open land runs at least 5,000 ft upwind, or 20 × the building height if more. Also within 600 ft (or 20 × height) downwind of it."/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Row 4: enclosure -->
+                    <Border Grid.Row="3" Style="{StaticResource Section}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}">How open is the building? <Run Foreground="#52514E" FontWeight="Normal">(Enclosure)</Run></TextBlock>
+                            <UniformGrid Columns="4">
                                 <RadioButton x:Name="rbEncEnclosed" GroupName="enc" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Enclosed"/><TextBlock Style="{StaticResource Hint}" Text="Normal walls with doors and windows (most buildings)"/></StackPanel>
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Enclosed"/><TextBlock Style="{StaticResource Hint}" Text="Normal walls, doors and windows (most buildings)"/></StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="rbEncPartEnc" GroupName="enc" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Partially enclosed"/><TextBlock Style="{StaticResource Hint}" Text="One wall has much more opening than the others, e.g. a large door often left open"/></StackPanel>
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Partially enclosed"/><TextBlock Style="{StaticResource Hint}" Text="One wall much more open, e.g. a large door often left open"/></StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="rbEncPartOpen" GroupName="enc" Style="{StaticResource Card}" Checked="Input_Changed">
-                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Partially open"/><TextBlock Style="{StaticResource Hint}" Text="Neither enclosed, partially enclosed nor open"/></StackPanel>
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Partially open"/><TextBlock Style="{StaticResource Hint}" Text="None of the other three"/></StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="rbEncOpen" GroupName="enc" Style="{StaticResource Card}" Margin="0" Checked="Input_Changed">
-                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Open"/><TextBlock Style="{StaticResource Hint}" Text="Every wall at least 80% open, e.g. a carport or pavilion"/></StackPanel>
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Open"/><TextBlock Style="{StaticResource Hint}" Text="Every wall at least 80% open, e.g. a carport"/></StackPanel>
                                 </RadioButton>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- ========== STEP 2: BUILDING — inputs left, 3D view right ========== -->
+            <Grid x:Name="pnlBuilding" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="14"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <ScrollViewer x:Name="svBuildingInputs" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <Border Style="{StaticResource Section}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Roof shape"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton x:Name="rbRoofFlat" GroupName="roof" Style="{StaticResource Chip}" Checked="Input_Changed">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Canvas Width="30" Height="18" Margin="0,0,8,0"><Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" StrokeThickness="1.5" Data="M3,7 h24 v10 h-24 z M2,7 h26"/></Canvas>
+                                            <TextBlock Text="Flat" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="rbRoofGable" GroupName="roof" Style="{StaticResource Chip}" Checked="Input_Changed">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Canvas Width="30" Height="18" Margin="0,0,8,0"><Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M4,9 h22 v8 h-22 z M2,10 L15,1 28,10"/></Canvas>
+                                            <TextBlock Text="Gable" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="rbRoofHip" GroupName="roof" Style="{StaticResource Chip}" Margin="0" Checked="Input_Changed">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Canvas Width="30" Height="18" Margin="0,0,8,0"><Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" StrokeThickness="1.5" StrokeLineJoin="Round" Data="M4,9 h22 v8 h-22 z M2,10 L9,2 21,2 28,10"/></Canvas>
+                                            <TextBlock Text="Hip" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
-                    </StackPanel>
-                </Grid>
 
-                <!-- ========== STEP 2: BUILDING (left column) ========== -->
-                <StackPanel x:Name="pnlBuilding" Grid.Column="0" Margin="0,0,20,0" Visibility="Collapsed">
-                    <TextBlock Text="Describe the building" FontSize="24" FontWeight="SemiBold"/>
-                    <TextBlock Style="{StaticResource Hint}" FontSize="14" Margin="0,0,0,16" Text="The 3D view updates as you type. Measure the plan to the outside of the walls."/>
-
-                    <Border Style="{StaticResource Section}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Roof shape"/>
-                            <UniformGrid Columns="3">
-                                <RadioButton x:Name="rbRoofFlat" GroupName="roof" Style="{StaticResource Card}" Margin="0,0,8,0" Checked="Input_Changed">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Canvas Width="64" Height="40"><Path Stroke="#0B0B0B" StrokeThickness="1.8" Data="M8,16 h48 v20 h-48 z"/><Path Stroke="#0B0B0B" StrokeThickness="3" Data="M6,16 h52"/></Canvas>
-                                        <TextBlock Text="Flat" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <Border Style="{StaticResource Section}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Size (to the outside of the walls)"/>
+                                <UniformGrid Columns="3">
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Length L (west-east)"/>
+                                        <Border x:Name="bdL" Style="{StaticResource NumberFrame}">
+                                            <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                                <TextBox x:Name="tbL" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Length L in feet"/></DockPanel>
+                                        </Border>
                                     </StackPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="rbRoofGable" GroupName="roof" Style="{StaticResource Card}" Margin="0,0,8,0" Checked="Input_Changed">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Canvas Width="64" Height="40"><Path Stroke="#0B0B0B" StrokeThickness="1.8" Data="M10,20 h44 v16 h-44 z M6,22 L32,5 58,22" StrokeLineJoin="Round"/></Canvas>
-                                        <TextBlock Text="Gable" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <StackPanel Margin="0,0,10,0">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Width B (south-north)"/>
+                                        <Border x:Name="bdB" Style="{StaticResource NumberFrame}">
+                                            <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                                <TextBox x:Name="tbB" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Width B in feet"/></DockPanel>
+                                        </Border>
                                     </StackPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="rbRoofHip" GroupName="roof" Style="{StaticResource Card}" Margin="0" Checked="Input_Changed">
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Canvas Width="64" Height="40"><Path Stroke="#0B0B0B" StrokeThickness="1.8" Data="M10,20 h44 v16 h-44 z M6,22 L20,8 44,8 58,22" StrokeLineJoin="Round"/></Canvas>
-                                        <TextBlock Text="Hip" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Wall height to eave"/>
+                                        <Border x:Name="bdH" Style="{StaticResource NumberFrame}">
+                                            <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                                <TextBox x:Name="tbH" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Wall height to eave in feet"/></DockPanel>
+                                        </Border>
                                     </StackPanel>
-                                </RadioButton>
-                            </UniformGrid>
-                        </StackPanel>
-                    </Border>
+                                </UniformGrid>
+                                <TextBlock x:Name="msgSize" Style="{StaticResource FieldMessage}"/>
+                            </StackPanel>
+                        </Border>
 
-                    <Border Style="{StaticResource Section}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Size"/>
-                            <UniformGrid Columns="3">
-                                <StackPanel Margin="0,0,12,0">
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Length L (west to east)"/>
-                                    <Border x:Name="bdL" Style="{StaticResource NumberFrame}">
-                                        <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
-                                            <TextBox x:Name="tbL" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Length L in feet"/></DockPanel>
-                                    </Border>
-                                </StackPanel>
-                                <StackPanel Margin="0,0,12,0">
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Width B (south to north)"/>
-                                    <Border x:Name="bdB" Style="{StaticResource NumberFrame}">
-                                        <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
-                                            <TextBox x:Name="tbB" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Width B in feet"/></DockPanel>
-                                    </Border>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Wall height to eave"/>
-                                    <Border x:Name="bdH" Style="{StaticResource NumberFrame}">
-                                        <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
-                                            <TextBox x:Name="tbH" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Wall height to eave in feet"/></DockPanel>
-                                    </Border>
-                                </StackPanel>
-                            </UniformGrid>
-                            <TextBlock x:Name="msgSize" Style="{StaticResource FieldMessage}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border x:Name="secSlope" Style="{StaticResource Section}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Roof slope"/>
-                            <StackPanel Orientation="Horizontal">
-                                <StackPanel Width="140">
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Pitch"/>
-                                    <Border x:Name="bdPitch" Style="{StaticResource NumberFrame}">
+                        <Border x:Name="secSlope" Style="{StaticResource Section}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Roof slope"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="bdPitch" Style="{StaticResource NumberFrame}" Width="120">
                                         <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="deg"/>
                                             <TextBox x:Name="tbPitch" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Roof pitch in degrees"/></DockPanel>
                                     </Border>
+                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource InkSecondary}">
+                                        = <Run x:Name="runRise" FontWeight="SemiBold" Foreground="#0B0B0B" Text="-"/> (rise per 12 in. of run)</TextBlock>
                                 </StackPanel>
-                                <TextBlock VerticalAlignment="Bottom" Margin="16,0,0,11" Foreground="{StaticResource InkSecondary}">
-                                    = <Run x:Name="runRise" FontWeight="SemiBold" Foreground="#0B0B0B" Text="-"/> (rise per 12 in. of run)</TextBlock>
-                            </StackPanel>
-                            <StackPanel x:Name="pnlRidge" Margin="0,14,0,0">
-                                <TextBlock Style="{StaticResource FieldLabel}" Text="The ridge runs"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="rbRidgeAlong" GroupName="ridge" Style="{StaticResource Chip}" Content="Along the length (west to east)" Checked="Input_Changed"/>
-                                    <RadioButton x:Name="rbRidgeAcross" GroupName="ridge" Style="{StaticResource Chip}" Content="Across the width (south to north)" Checked="Input_Changed"/>
+                                <StackPanel x:Name="pnlRidge" Margin="0,10,0,0">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="The ridge runs"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton x:Name="rbRidgeAlong" GroupName="ridge" Style="{StaticResource Chip}" Content="Along the length (west-east)" Checked="Input_Changed"/>
+                                        <RadioButton x:Name="rbRidgeAcross" GroupName="ridge" Style="{StaticResource Chip}" Margin="0" Content="Across the width (south-north)" Checked="Input_Changed"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                            <TextBlock x:Name="tbHipNote" Style="{StaticResource Hint}" Margin="0,10,0,0" Text="A hip roof's ridge runs along the longer side."/>
-                            <TextBlock x:Name="msgPitch" Style="{StaticResource FieldMessage}"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- ========== STEP 3: RESULTS (left column) ========== -->
-                <StackPanel x:Name="pnlResults" Grid.Column="0" Margin="0,0,20,0" Visibility="Collapsed">
-                    <TextBlock Text="Wind results" FontSize="24" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="tbResultsSub" Style="{StaticResource Hint}" FontSize="14" Margin="0,0,0,16"/>
-
-                    <UniformGrid Columns="2" Margin="0,0,-12,0">
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Text="Highest roof uplift (cladding)"/>
-                                <TextBlock x:Name="valRoof" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                                <TextBlock x:Name="subRoof" Style="{StaticResource Hint}"/>
+                                <TextBlock x:Name="tbHipNote" Style="{StaticResource Hint}" Margin="0,8,0,0" Text="A hip roof's ridge runs along the longer side."/>
+                                <TextBlock x:Name="msgPitch" Style="{StaticResource FieldMessage}"/>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Text="Highest wall suction (cladding)"/>
-                                <TextBlock x:Name="valWall" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                                <TextBlock x:Name="subWall" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Text="Wind force on the building, from the west"/>
-                                <TextBlock x:Name="valWest" Style="{StaticResource StatValue}"/>
-                                <TextBlock x:Name="subWest" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Text="Wind force on the building, from the south"/>
-                                <TextBlock x:Name="valSouth" Style="{StaticResource StatValue}"/>
-                                <TextBlock x:Name="subSouth" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                        </Border>
-                    </UniformGrid>
 
-                    <Border Style="{StaticResource Section}" Margin="0,4,0,16">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Checks"/>
-                            <ItemsControl x:Name="icChecks">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <DockPanel Margin="0,0,0,6">
-                                            <TextBlock DockPanel.Dock="Left" Width="22" FontWeight="Bold" Text="{Binding Mark}" Foreground="{Binding MarkBrush}"/>
-                                            <TextBlock TextWrapping="Wrap"><Run FontWeight="SemiBold" Text="{Binding Lead, Mode=OneWay}"/> <Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
-                                        </DockPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
+                        <UniformGrid x:Name="ugBuildingNumbers" Columns="3">
+                            <Border Style="{StaticResource StatCard}" Padding="12,8">
+                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" Padding="12,8">
+                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Ridge height"/><TextBlock x:Name="valRidgeH" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" Padding="12,8" Margin="0">
+                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Cladding method"/><TextBlock x:Name="valCC" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                        </UniformGrid>
+                        <TextBlock x:Name="msgBuilding" Style="{StaticResource FieldMessage}"/>
+                    </StackPanel>
+                </ScrollViewer>
 
-                    <Border Style="{StaticResource Section}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="Shear walls"/>
-                            <CheckBox x:Name="cbOnlyCases13" VerticalContentAlignment="Top" Checked="Input_Changed" Unchecked="Input_Changed">
-                                <TextBlock TextWrapping="Wrap" Text="One story with mean roof height 30 ft or less, or two stories or less with light-frame construction or flexible diaphragms (ASCE 7 Fig. 27.3-8: use load cases 1 and 3 only)"/>
-                            </CheckBox>
-                            <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- ========== Right column on steps 2 and 3: the live 3D view ========== -->
-                <StackPanel x:Name="pnlRight" Grid.Column="1" Visibility="Collapsed">
-                    <Border Style="{StaticResource Section}" Padding="0" Height="600" ClipToBounds="True">
-                        <ContentControl x:Name="ccViewer"/>
-                    </Border>
-                    <UniformGrid x:Name="ugBuildingNumbers" Columns="3" Margin="0,0,-12,0">
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="20" FontWeight="SemiBold"/></StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Ridge height"/><TextBlock x:Name="valRidgeH" FontSize="20" FontWeight="SemiBold"/></StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource StatCard}">
-                            <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Cladding method"/><TextBlock x:Name="valCC" FontSize="20" FontWeight="SemiBold"/></StackPanel>
-                        </Border>
-                    </UniformGrid>
-                    <TextBlock x:Name="msgBuilding" Style="{StaticResource FieldMessage}" Margin="0,0,0,12"/>
-                </StackPanel>
+                <Border Grid.Column="2" Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
+                    <ContentControl x:Name="ccViewerBuilding"/>
+                </Border>
             </Grid>
-        </ScrollViewer>
+
+            <!-- ========== STEP 3: RESULTS — the prototype layout ========== -->
+            <Grid x:Name="pnlResults" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="tbResultsSub" Style="{StaticResource Hint}" FontSize="14" Margin="0,0,0,10"/>
+
+                <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
+                    <Border Style="{StaticResource StatCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Text="Highest roof uplift"/>
+                            <TextBlock x:Name="valRoof" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
+                            <TextBlock x:Name="subRoof" Style="{StaticResource Hint}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource StatCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Text="Highest wall suction"/>
+                            <TextBlock x:Name="valWall" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
+                            <TextBlock x:Name="subWall" Style="{StaticResource Hint}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource StatCard}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Text="Wind force, from the west"/>
+                            <TextBlock x:Name="valWest" Style="{StaticResource StatValue}"/>
+                            <TextBlock x:Name="subWest" Style="{StaticResource Hint}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource StatCard}" Margin="0">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Text="Wind force, from the south"/>
+                            <TextBlock x:Name="valSouth" Style="{StaticResource StatValue}"/>
+                            <TextBlock x:Name="subSouth" Style="{StaticResource Hint}"/>
+                        </StackPanel>
+                    </Border>
+                </UniformGrid>
+
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="360"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
+                        <ContentControl x:Name="ccViewerResults"/>
+                    </Border>
+                    <ScrollViewer x:Name="svResultsSide" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <Border Style="{StaticResource Section}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Checks"/>
+                                    <ItemsControl x:Name="icChecks">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel Margin="0,0,0,6">
+                                                    <TextBlock DockPanel.Dock="Left" Width="20" FontWeight="Bold" Text="{Binding Mark}" Foreground="{Binding MarkBrush}"/>
+                                                    <TextBlock TextWrapping="Wrap" FontSize="13"><Run FontWeight="SemiBold" Text="{Binding Lead, Mode=OneWay}"/> <Run Text="{Binding Text, Mode=OneWay}"/></TextBlock>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Section}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Shear walls"/>
+                                    <CheckBox x:Name="cbOnlyCases13" VerticalContentAlignment="Top" Checked="Input_Changed" Unchecked="Input_Changed">
+                                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="One story with h ≤ 30 ft, or two stories or less with light-frame construction or flexible diaphragms (Fig. 27.3-8: load cases 1 and 3 only)"/>
+                                    </CheckBox>
+                                    <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                                    <Border x:Name="bdLinked" Margin="0,10,0,0" Padding="10,8" CornerRadius="6" Background="#EAF4EA" Visibility="Collapsed">
+                                        <TextBlock x:Name="tbLinked" TextWrapping="Wrap" FontSize="13" Foreground="#004D00"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
 
         <!-- ===== Footer navigation ===== -->
-        <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="28,10">
+        <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Hairline}" BorderThickness="0,1,0,0" Padding="20,8">
             <Grid>
                 <Button x:Name="btnBack" HorizontalAlignment="Left" Style="{StaticResource SecondaryButton}" Content="Back" Click="Back_Click"/>
                 <TextBlock x:Name="tbStepOf" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource Hint}"/>
