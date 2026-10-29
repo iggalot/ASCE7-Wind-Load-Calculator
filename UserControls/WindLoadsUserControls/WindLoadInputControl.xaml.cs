@@ -216,6 +216,10 @@ namespace ASCE7WindLoadCalculator
 
         public void Update()
         {
+            if(buildingData == null)
+            {
+                buildingData = new BuildingData();
+            }
             ParseWindLoadParameters(buildingData.RoofType, Version);
 
             MakeCalculators();
@@ -260,6 +264,26 @@ namespace ASCE7WindLoadCalculator
             return calculator;
         }
 
+        /// <summary>
+        /// Safe parser that returns a double. Falls back to a default if invalid.
+        /// </summary>
+        private static double TryParseOrDefault(string text, double defaultValue)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return defaultValue;
+
+            return double.TryParse(text, out double result) ? result : defaultValue;
+        }
+
+        private static string TryGetComboBoxString(ComboBox comboBox, string defaultValue)
+        {
+            if (comboBox?.SelectedItem is ComboBoxItem item && item.Content is string content)
+                return content;
+
+            return defaultValue; // fallback if nothing valid
+        }
+
+
         // Method to retrieve parameters from the input fields
         private void ParseWindLoadParameters(RoofTypes roof_type, ASCE7_Versions version)
         {
@@ -272,12 +296,12 @@ namespace ASCE7WindLoadCalculator
 
                 Version = version;
 
-                double windSpeed = double.Parse(WindSpeedTextBox.Text);
-                double kzt = double.Parse(KztTextBox.Text);
-                double importance = double.Parse(ImportanceFactorTextBox.Text);
-                string risk = ((ComboBoxItem)RiskCategoryComboBox.SelectedItem).Content.ToString();
+                double windSpeed = TryParseOrDefault(WindSpeedTextBox.Text, 115.0);   // fallback: 115 mph
+                double kzt = TryParseOrDefault(KztTextBox.Text, 1.0);           // fallback: 1.0
+                double importance = TryParseOrDefault(ImportanceFactorTextBox.Text, 1.0); // fallback: 1.0
+                string risk = TryGetComboBoxString(RiskCategoryComboBox, "II"); // fallback to Risk Category II
                 //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
-                string exposure_string = ((ComboBoxItem)ExposureCategoryComboBox.SelectedItem).Content.ToString();
+                string exposure_string = TryGetComboBoxString(ExposureCategoryComboBox, "C"); // fallback to Risk Category II
                 WindExposureCategories exposure;
 
                 switch (exposure_string)
