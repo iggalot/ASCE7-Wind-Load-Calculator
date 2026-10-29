@@ -85,12 +85,26 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Supplies (or replaces) the results to show.</summary>
         public void SetResults(BuildingData building, WindLoadCalculator_Base cladding,
             WindLoadCalculator_Base mwfrsAlongLength, WindLoadCalculator_Base mwfrsAlongWidth)
+            => SetResults(building, cladding, mwfrsAlongLength, mwfrsAlongWidth, keepCamera: false);
+
+        /// <summary>
+        /// Supplies (or replaces) the results. With <paramref name="keepCamera"/> the viewing angle is kept
+        /// and the model is only re-framed (so a refresh does not throw away the user's view).
+        /// </summary>
+        public void SetResults(BuildingData building, WindLoadCalculator_Base cladding,
+            WindLoadCalculator_Base mwfrsAlongLength, WindLoadCalculator_Base mwfrsAlongWidth, bool keepCamera)
         {
+            bool hadScene = scene != null;
             this.building = building;
             this.cladding = cladding;
             mwfrsLength = mwfrsAlongLength;
             mwfrsWidth = mwfrsAlongWidth;
-            Rebuild(resetCamera: true);
+            Rebuild(resetCamera: !(keepCamera && hadScene));
+            if (keepCamera && hadScene)
+            {
+                FrameModel();
+                ApplyCamera();
+            }
         }
 
         // ---------------------------------------------------------------------------------------
@@ -119,6 +133,17 @@ namespace ASCE7WindLoadCalculator
             try
             {
                 scene = WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
+
+                // Never leave the designer looking at a building with no pressures (e.g. cladding above the
+                // 60 ft limit): fall back to whole-building wind, which always applies, and say why.
+                if (!scene.Zones.Any(z => z.HasPressure) && !IsWholeBuilding(Mode) && mwfrsLength != null)
+                {
+                    var reasons = scene.Messages.ToList();
+                    SetModeSilently(WindViewMode.MwfrsAlongLength);
+                    scene = WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
+                    scene.Messages.Insert(0, "Roofing & siding (cladding) pressures do not apply to this building, so the whole-building view is shown."
+                        + (reasons.Count > 0 ? " " + string.Join(" ", reasons) : ""));
+                }
             }
             catch (ArgumentException ex)
             {
@@ -728,6 +753,21 @@ namespace ASCE7WindLoadCalculator
             if (!IsInitialized || suppressModeEvents || sceneRoot == null) return;
             UpdateRoofCaseAvailability();
             Rebuild(resetCamera: false);
+        }
+
+        private static bool IsWholeBuilding(WindViewMode m) =>
+            m == WindViewMode.MwfrsAlongLength || m == WindViewMode.MwfrsAlongWidth;
+
+        /// <summary>Changes the selected view without triggering another rebuild.</summary>
+        private void SetModeSilently(WindViewMode m)
+        {
+            suppressModeEvents = true;
+            rbCladSuction.IsChecked = m == WindViewMode.CladdingSuction;
+            rbCladPressure.IsChecked = m == WindViewMode.CladdingPressure;
+            rbWindWest.IsChecked = m == WindViewMode.MwfrsAlongLength;
+            rbWindSouth.IsChecked = m == WindViewMode.MwfrsAlongWidth;
+            suppressModeEvents = false;
+            UpdateRoofCaseAvailability();
         }
 
         private void UpdateRoofCaseAvailability()

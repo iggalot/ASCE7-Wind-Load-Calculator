@@ -75,26 +75,26 @@
         <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="10,8">
             <StackPanel>
                 <WrapPanel VerticalAlignment="Center">
-                    <TextBlock Text="Roofing &amp; siding" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
-                                 Content="Pulled off" Checked="Mode_Checked"
+                    <TextBlock Text="Cladding (roofing, siding, windows)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}"
+                                 Content="Suction (pull-off)" Checked="Mode_Checked"
                                  ToolTip="Wind trying to pull roofing and siding away (suction / uplift). Worst case from any wind direction. Used to fasten coverings."/>
                     <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
-                                 Content="Pushed in" Checked="Mode_Checked"
+                                 Content="Pressure (push-in)" Checked="Mode_Checked"
                                  ToolTip="Wind pushing roofing and siding inward. Worst case from any wind direction."/>
-                    <TextBlock Text="Whole building" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}"
+                    <TextBlock Text="Whole building (shear walls)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
                                  Content="Wind from West" Checked="Mode_Checked"
                                  ToolTip="Pressures on the whole structure with wind blowing from the west (along the building length). These load the shear walls."/>
                     <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
                                  Content="Wind from South" Checked="Mode_Checked"
                                  ToolTip="Pressures on the whole structure with wind blowing from the south (along the building width). These load the shear walls."/>
                     <StackPanel x:Name="spRoofCase" Orientation="Horizontal">
-                        <TextBlock Text="Roof case" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="More suction" Checked="Mode_Checked"
-                                     ToolTip="Roof coefficients giving the larger uplift"/>
-                        <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Content="Alternate" Checked="Mode_Checked"
-                                     ToolTip="The other roof coefficients ASCE 7 requires you to check"/>
+                        <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Larger uplift" Checked="Mode_Checked"
+                                     ToolTip="Fig. 27.3-1 gives two Cp values for many roof zones (e.g. -0.3 and +0.2). This uses the more negative one (larger uplift)."/>
+                        <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Content="Other value" Checked="Mode_Checked"
+                                     ToolTip="The second Fig. 27.3-1 roof Cp (positive or less negative). ASCE 7 requires checking both."/>
                     </StackPanel>
                 </WrapPanel>
                 <WrapPanel VerticalAlignment="Center" Margin="0,6,0,0">

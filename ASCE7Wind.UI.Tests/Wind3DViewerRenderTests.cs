@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -142,6 +143,41 @@ namespace ASCE7Wind.UI.Tests
             Render(v, "no_results");
             var warn = (FrameworkElement)v.FindName("bdWarnings");
             Assert.AreEqual(Visibility.Visible, warn.Visibility, "tells the user to enter wind inputs");
+        }
+
+        [STATestMethod]
+        public void OpensOnWholeBuildingWindFromWest()
+        {
+            var r = Results(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
+            var v = new Wind3DViewerControl(r.b, r.cc, r.mL, r.mW);
+            Assert.AreEqual(WindViewMode.MwfrsAlongLength, v.Mode);
+            Assert.IsTrue(v.Scene.Zones.Any(z => z.HasPressure && z.Kind == SurfaceKind.Wall));
+        }
+
+        /// <summary>A cladding view with no valid pressures must not leave the designer looking at a gray building.</summary>
+        [STATestMethod]
+        public void CladdingNotApplicable_SwitchesToWholeBuilding_AndSaysWhy()
+        {
+            var r = Results(new BuildingData { BuildingLength = 100, BuildingWidth = 50, BuildingHeight = 70 });
+            var v = new Wind3DViewerControl(r.b, r.cc, r.mL, r.mW) { Width = W, Height = H };
+            v.Mode = WindViewMode.CladdingSuction;
+            v.Measure(new Size(W, H)); v.Arrange(new Rect(0, 0, W, H));
+            Render(v, "auto_switch_70ft");
+            Assert.AreEqual(WindViewMode.MwfrsAlongLength, v.Mode);
+            Assert.IsTrue(v.Scene.Zones.Any(z => z.HasPressure), "whole-building pressures shown");
+            StringAssert.Contains(v.Scene.Messages[0], "do not apply");
+        }
+
+        /// <summary>Refreshing with new results (e.g. a changed height) replaces the scene; nothing stays stale.</summary>
+        [STATestMethod]
+        public void SetResults_ReplacesStaleBuilding()
+        {
+            var a = Results(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
+            var v = new Wind3DViewerControl(a.b, a.cc, a.mL, a.mW);
+            var b = Results(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 40 });
+            v.SetResults(b.b, b.cc, b.mL, b.mW, keepCamera: true);
+            double top = v.Scene.Zones.Where(z => z.Kind == SurfaceKind.Wall).SelectMany(z => z.Triangles).Max(p => p.Z);
+            Assert.AreEqual(40, top, 1e-9, "walls colored to the new 40 ft height");
         }
 
         [STATestMethod]

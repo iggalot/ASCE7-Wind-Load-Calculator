@@ -158,7 +158,7 @@ namespace ASCE7WindLoadCalculator
         private static void BuildCladding(WindScene scene, WindLoadCalculator_Base calc, bool suction)
         {
             var edition = calc?.Edition?.Name ?? "ASCE 7";
-            scene.Title = suction ? "Cladding wind suction" : "Cladding wind pressure";
+            scene.Title = suction ? "Cladding suction (pull-off)" : "Cladding pressure (push-in)";
             scene.Subtitle = $"{edition} components & cladding (Chapter 30) - worst case for any wind direction";
             if (calc == null) { scene.Messages.Add("No cladding results yet - enter the wind inputs."); return; }
             scene.Messages.AddRange(calc.ValidationMessages);
@@ -179,7 +179,7 @@ namespace ASCE7WindLoadCalculator
             var edition = calc?.Edition?.Name ?? "ASCE 7";
             scene.Title = alongWidth ? "Whole-building wind, from the south" : "Whole-building wind, from the west";
             scene.Subtitle = $"{edition} main wind force resisting system (Chapter 27) - " +
-                             (roofCase == MwfrsRoofCase.MaxSuction ? "roof case with larger suction" : "alternate roof case");
+                             (roofCase == MwfrsRoofCase.MaxSuction ? "roof Cp giving larger uplift" : "other required roof Cp");
             scene.WindDirection = alongWidth ? Vec3.UnitY : Vec3.UnitX;
             if (calc == null) { scene.Messages.Add("No whole-building results yet - enter the wind inputs."); return; }
             scene.Messages.AddRange(calc.ValidationMessages);
