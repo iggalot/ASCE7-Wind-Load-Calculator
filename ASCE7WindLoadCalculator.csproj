@@ -71,6 +71,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\GeometryInterop.cs" />
+    <Compile Include="UserControls\WindLoadsUserControls\Wind3DViewerControl.xaml.cs">
+      <DependentUpon>Wind3DViewerControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="ASCE7Wind.Core\ASCE7Wind.Core.csproj">
@@ -83,6 +86,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="UserControls\BuildingData\BuildingInfoSummaryControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="UserControls\WindLoadsUserControls\Wind3DViewerControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

@@ -75,7 +75,7 @@ namespace ASCE7WindLoadCalculator
         public void Frame(Vec3 center, double radius)
         {
             Target = center;
-            double d = 1.15 * radius / Math.Sin(FieldOfViewDeg * Math.PI / 360);
+            double d = 1.02 * radius / Math.Sin(FieldOfViewDeg * Math.PI / 360);
             MinDistance = Math.Max(0.5, 0.15 * radius);
             MaxDistance = 20 * radius + 10;
             Distance = Clamp(d, MinDistance, MaxDistance);

@@ -1,0 +1,188 @@
+<UserControl x:Class="ASCE7WindLoadCalculator.Wind3DViewerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="640" d:DesignWidth="960"
+             Background="#FCFCFB" FontFamily="Segoe UI" FontSize="13">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="InkPrimary" Color="#0B0B0B"/>
+        <SolidColorBrush x:Key="InkSecondary" Color="#52514E"/>
+        <SolidColorBrush x:Key="InkMuted" Color="#898781"/>
+        <SolidColorBrush x:Key="Hairline" Color="#E1E0D9"/>
+        <SolidColorBrush x:Key="Card" Color="#F2FCFCFB"/>
+
+        <Style x:Key="Segment" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource InkPrimary}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="4" BorderThickness="1" BorderBrush="{StaticResource Hairline}"
+                                Background="White" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#0B0B0B"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#0B0B0B"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#898781"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ViewButton" TargetType="Button">
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="4" BorderThickness="1" BorderBrush="{StaticResource Hairline}"
+                                Background="White" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#898781"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="10,8">
+            <WrapPanel VerticalAlignment="Center">
+                <TextBlock Text="Show" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
+                             Content="Cladding: suction" Checked="Mode_Checked"
+                             ToolTip="Peak outward pressures on roofing and siding (uplift / pull-off), any wind direction"/>
+                <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}"
+                             Content="Cladding: inward" Checked="Mode_Checked"
+                             ToolTip="Peak inward pressures on roofing and siding, any wind direction"/>
+                <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}"
+                             Content="Whole building: wind from west" Checked="Mode_Checked"
+                             ToolTip="Main wind force resisting system - wind blowing along the building length"/>
+                <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,16,0"
+                             Content="from south" Checked="Mode_Checked"
+                             ToolTip="Main wind force resisting system - wind blowing along the building width"/>
+
+                <StackPanel x:Name="spRoofCase" Orientation="Horizontal" Margin="0,0,16,0">
+                    <TextBlock Text="Roof case" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="More suction" Checked="Mode_Checked"/>
+                    <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Content="Alternate" Checked="Mode_Checked"/>
+                </StackPanel>
+
+                <TextBlock Text="View" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Button Style="{StaticResource ViewButton}" Content="3D" Click="ViewIso_Click" ToolTip="Angled view (double-click the model also resets)"/>
+                <Button Style="{StaticResource ViewButton}" Content="Top" Click="ViewTop_Click"/>
+                <Button Style="{StaticResource ViewButton}" Content="South" Click="ViewSouth_Click"/>
+                <Button Style="{StaticResource ViewButton}" Content="West" Click="ViewWest_Click" Margin="0,0,12,0"/>
+                <CheckBox x:Name="cbOutlines" Content="Zone outlines" IsChecked="True" VerticalAlignment="Center"
+                          Foreground="{StaticResource InkSecondary}" Checked="Outlines_Changed" Unchecked="Outlines_Changed"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- 3D area with overlays -->
+        <Grid Grid.Row="1" x:Name="viewHost" Background="#FCFCFB" ClipToBounds="True"
+              MouseDown="View_MouseDown"
+              MouseMove="View_MouseMove" MouseUp="View_MouseUp" MouseWheel="View_MouseWheel" MouseLeave="View_MouseLeave">
+
+            <Viewport3D x:Name="viewport">
+                <Viewport3D.Camera>
+                    <PerspectiveCamera x:Name="camera" FieldOfView="40" NearPlaneDistance="0.5" FarPlaneDistance="100000"/>
+                </Viewport3D.Camera>
+                <ModelVisual3D>
+                    <ModelVisual3D.Content>
+                        <Model3DGroup x:Name="sceneRoot"/>
+                    </ModelVisual3D.Content>
+                </ModelVisual3D>
+            </Viewport3D>
+
+            <!-- Labels pinned to 3D points (north arrow, wind arrow), positioned by projecting through the camera -->
+            <Canvas x:Name="labelLayer" IsHitTestVisible="False">
+                <TextBlock x:Name="lblNorth" Text="N" FontWeight="SemiBold" FontSize="14" Foreground="#52514E"/>
+                <TextBlock x:Name="lblWind" Text="Wind" FontWeight="SemiBold" FontSize="14" Foreground="#52514E"/>
+            </Canvas>
+
+            <!-- Title -->
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,12,0,0" IsHitTestVisible="False">
+                <TextBlock x:Name="tbTitle" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" Text="Wind pressures"/>
+                <TextBlock x:Name="tbSubtitle" Foreground="{StaticResource InkSecondary}" Text="Enter building and wind inputs to see results"/>
+            </StackPanel>
+
+            <!-- Warnings -->
+            <Border x:Name="bdWarnings" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,64,0,0"
+                    MaxWidth="460" Background="#FFF4E5" BorderBrush="#E8A33D" BorderThickness="1" CornerRadius="4" Padding="10,6"
+                    IsHitTestVisible="False">
+                <TextBlock x:Name="tbWarnings" TextWrapping="Wrap" Foreground="#7A4B00"/>
+            </Border>
+
+            <!-- Legend -->
+            <Border x:Name="bdLegend" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,16,0" Padding="12,10"
+                    Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="6"
+                    IsHitTestVisible="False">
+                <StackPanel>
+                    <TextBlock Text="Net pressure (psf)" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" Margin="0,0,0,6"/>
+                    <TextBlock Text="Pushes on surface" Foreground="{StaticResource InkSecondary}" FontSize="12"/>
+                    <Grid Margin="0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border x:Name="legendBar" Grid.Column="0" Height="180" CornerRadius="3"/>
+                        <Canvas x:Name="legendTicks" Grid.Column="1" Width="44" Height="180" Margin="6,0,0,0"/>
+                    </Grid>
+                    <TextBlock Text="Pulls away (suction)" Foreground="{StaticResource InkSecondary}" FontSize="12"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Summary -->
+            <Border x:Name="bdSummary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16,0,0,16" Padding="12,10"
+                    Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="6"
+                    IsHitTestVisible="False" MaxWidth="420">
+                <StackPanel x:Name="spSummary"/>
+            </Border>
+
+            <!-- Controls hint -->
+            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,12" FontSize="12"
+                       Foreground="{StaticResource InkMuted}" IsHitTestVisible="False"
+                       Text="Drag to rotate  ·  Right-drag to pan  ·  Wheel to zoom  ·  Double-click to reset"/>
+
+            <!-- Hover card -->
+            <Border x:Name="bdHover" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Background="White" BorderBrush="#C3C2B7" BorderThickness="1" CornerRadius="4" Padding="10,7"
+                    IsHitTestVisible="False" MaxWidth="320">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.18"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock x:Name="tbHoverValue" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}"/>
+                    <TextBlock x:Name="tbHoverWhat" Foreground="{StaticResource InkPrimary}" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="tbHoverWhere" Foreground="{StaticResource InkSecondary}" FontSize="12" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
