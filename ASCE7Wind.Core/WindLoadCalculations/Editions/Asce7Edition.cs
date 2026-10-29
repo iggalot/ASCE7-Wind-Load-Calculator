@@ -89,9 +89,11 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        // ASCE 7-16 Fig. 30.3-1 zoning is applied to the rectangular wall below the eave.
+        // Fig. 30.3-1 zones cover the whole wall surface, including the gable triangle on gable ends.
         public override AreaCalculator_Base CreateCCWallZones(BuildingData b, bool isGableEndWall, double wallLength) =>
-            new WallAreaCalculator_NonGableEnd_CC(b, wallLength);
+            b.RoofType == RoofTypes.ROOF_TYPE_GABLE && isGableEndWall
+                ? (AreaCalculator_Base)new WallAreaCalculator_GableEnd_CC(b, wallLength)
+                : new WallAreaCalculator_NonGableEnd_CC(b, wallLength);
     }
 
     internal sealed class Asce7Edition22 : Asce7Edition

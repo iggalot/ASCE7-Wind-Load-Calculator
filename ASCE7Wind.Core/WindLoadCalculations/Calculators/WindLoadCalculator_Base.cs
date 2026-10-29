@@ -207,7 +207,7 @@ namespace ASCE7WindLoadCalculator
         private void CreateAreaCalculators()
         {
             RoofAreaCalculator = RoofAreaCalculatorFactory.Create(buildingData, Parameters, Edition);
-            RoofAreaCalculator?.ComputeEffectiveWindAreas();
+            ComputeZones(RoofAreaCalculator, "roof");
 
             // Gable-end walls are the walls perpendicular to the ridge.
             bool gable = buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE;
@@ -215,10 +215,16 @@ namespace ASCE7WindLoadCalculator
             bool width_is_gable = gable && buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
 
             WallAreaCalculator_BldgLength = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, length_is_gable, buildingData.BuildingLength);
-            WallAreaCalculator_BldgLength?.ComputeEffectiveWindAreas();
+            ComputeZones(WallAreaCalculator_BldgLength, "length walls");
 
             WallAreaCalculator_BldgWidth = WallAreaCalculatorFactory.Create(buildingData, Parameters, Edition, width_is_gable, buildingData.BuildingWidth);
-            WallAreaCalculator_BldgWidth?.ComputeEffectiveWindAreas();
+            ComputeZones(WallAreaCalculator_BldgWidth, "width walls");
+        }
+
+        private void ComputeZones(AreaCalculator_Base zones, string surface)
+        {
+            if (zones != null && !zones.Compute())
+                AddValidationMessage($"The {surface} zone layout could not be completed for a building this size; some zones may be missing.");
         }
 
         /// <summary>Fills the pressure tables from the zones and coefficient curves.</summary>
@@ -312,43 +318,6 @@ namespace ASCE7WindLoadCalculator
             sb.Append(title).Append('\n');
             foreach (var item in items)
                 sb.Append("----").Append(item.Key).Append(": ").Append(item.Value).Append('\n');
-        }
-
-        // ---------------------------------------------------------------------------------------
-        // MWFRS roof zone helpers (Fig. 27.3-1 distances 0.5h, h, 2h from the windward edge)
-        // ---------------------------------------------------------------------------------------
-
-        /// <summary>Number of MWFRS roof zones that fit along a roof of the given length.</summary>
-        public static int GetNumberRoofZones_MWFRS(double mean_roof_ht, double length)
-        {
-            double offset1 = 0.5 * mean_roof_ht;
-            double offset2 = 1.0 * mean_roof_ht;
-            double offset3 = 2.0 * mean_roof_ht;
-
-            if (length > offset1 && length <= offset2)
-                return 2;
-            else if (length > offset2 && length <= offset3)
-                return 3;
-            else if (length > offset3)
-                return 4;
-            else
-                return 1;
-        }
-
-        /// <summary>
-        /// MWFRS roof zone number of a point: 4 nearest the windward edge, 1 farthest.
-        /// Points on an offset line belong to the zone on the windward side.
-        /// </summary>
-        public static int GetRoofZoneNumber(Vec2 point, double mean_roof_ht, double length)
-        {
-            double offset1 = 0.5 * mean_roof_ht;
-            double offset2 = 1.0 * mean_roof_ht;
-            double offset3 = 2.0 * mean_roof_ht;
-
-            if (point.X <= offset1) return 4;
-            else if (point.X <= offset2) return 3;
-            else if (point.X <= offset3) return 2;
-            else return 1;
         }
     }
 }

@@ -29,8 +29,9 @@ namespace ASCE7WindLoadCalculator
         private readonly Dictionary<GeometryModel3D, Material> normalMaterial = new Dictionary<GeometryModel3D, Material>();
         private readonly Dictionary<GeometryModel3D, Material> highlightMaterial = new Dictionary<GeometryModel3D, Material>();
         private GeometryModel3D hovered;
-        private GeometryModel3D outlines;
+        private Model3D outlines;
         private Vec3? northLabelAt, windLabelAt;
+        private readonly HashSet<Model3D> envelopeModels = new HashSet<Model3D>(); // solid building parts that can hide labels
 
         private Point lastMouse, downMouse;
         private MouseButton? dragButton;
@@ -105,6 +106,7 @@ namespace ASCE7WindLoadCalculator
             hovered = null;
             outlines = null;
             northLabelAt = windLabelAt = null;
+            envelopeModels.Clear();
             bdHover.Visibility = Visibility.Collapsed;
 
             if (building == null)
@@ -135,6 +137,7 @@ namespace ASCE7WindLoadCalculator
             AddEnvelope(model, size);
             AddZones(size);
             AddOutlines(size);
+            AddEnvelopeEdges(model, size);
             if (scene.WindDirection.HasValue) AddWindArrow(model, scene.WindDirection.Value, size);
 
             if (resetCamera)
@@ -195,19 +198,48 @@ namespace ASCE7WindLoadCalculator
                     tris.Add(o[0] + shift); tris.Add(o[i] + shift); tris.Add(o[i + 1] + shift);
                 }
             }
-            sceneRoot.Children.Add(Model(tris, Color.FromRgb(0xD8, 0xD7, 0xD0)));
+            var shell = Model(tris, Color.FromRgb(0xD8, 0xD7, 0xD0));
+            envelopeModels.Add(shell);
+            sceneRoot.Children.Add(shell);
         }
 
+        /// <summary>Tallest pressure block, as a fraction of the building size, for the strongest pressure shown.</summary>
+        private const double MaxBlockFraction = 0.22;
+
+        private double BlockScale(double size) =>
+            cbBlocks.IsChecked == true && scale.MaxAbs > 0 ? MaxBlockFraction * size / scale.MaxAbs : 0;
+
+        /// <summary>
+        /// One model per zone (so hover can identify it): the zone's surface patch and, when pressure blocks are
+        /// on, a block standing on it whose height is proportional to |pressure| at each point (the windward
+        /// wall's block tapers with height). Suction and pressure blocks both stand outside the surface; color
+        /// carries the sign.
+        /// </summary>
         private void AddZones(double size)
         {
             double lift = size / 4000;
+            double k = BlockScale(size);
             foreach (var z in scene.Zones)
             {
                 if (z.Triangles.Count == 0) continue;
-                var shift = z.Normal * lift;
-                var color = ToColor(scale.ColorFor(z.PressurePsf));
-                var gm = Model(z.Triangles.Select(p => p + shift).ToList(), color, freeze: false);
+                var n = z.Normal;
+                var tris = new List<Vec3>(z.Triangles.Count * 3);
+                Vec3 Top(Vec3 p) => p + n * (lift + k * Math.Abs(SafePsf(z.PressureAtPoint(p))));
 
+                foreach (var p in z.Triangles) tris.Add(p + n * lift);
+                if (k > 0 && z.HasPressure)
+                {
+                    foreach (var p in z.Triangles) tris.Add(Top(p));
+                    foreach (var (a, b) in BoundaryEdges(z.Triangles))
+                    {
+                        var a0 = a + n * lift; var b0 = b + n * lift;
+                        tris.Add(a0); tris.Add(b0); tris.Add(Top(b));
+                        tris.Add(a0); tris.Add(Top(b)); tris.Add(Top(a));
+                    }
+                }
+
+                var color = ToColor(scale.ColorFor(z.PressurePsf));
+                var gm = Model(tris, color, freeze: false);
                 var hi = new MaterialGroup();
                 hi.Children.Add(new DiffuseMaterial(new SolidColorBrush(color)));
                 hi.Children.Add(new EmissiveMaterial(new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF))));
@@ -220,15 +252,60 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
+        private static double SafePsf(double psf) => double.IsNaN(psf) ? 0 : psf;
+
+        /// <summary>Edges used by exactly one triangle: the outline of a triangle patch.</summary>
+        private static IEnumerable<(Vec3, Vec3)> BoundaryEdges(IList<Vec3> tris)
+        {
+            (long, long, long) Key(Vec3 p) => ((long)Math.Round(p.X * 1e5), (long)Math.Round(p.Y * 1e5), (long)Math.Round(p.Z * 1e5));
+            var count = new Dictionary<((long, long, long), (long, long, long)), (Vec3 a, Vec3 b, int n)>();
+            for (int i = 0; i + 2 < tris.Count; i += 3)
+                for (int e = 0; e < 3; e++)
+                {
+                    var a = tris[i + e]; var b = tris[i + (e + 1) % 3];
+                    var ka = Key(a); var kb = Key(b);
+                    var key = ka.CompareTo(kb) < 0 ? (ka, kb) : (kb, ka);
+                    count[key] = count.TryGetValue(key, out var c) ? (c.a, c.b, c.n + 1) : (a, b, 1);
+                }
+            foreach (var v in count.Values)
+                if (v.n == 1) yield return (v.a, v.b);
+        }
+
+        /// <summary>
+        /// Zone outlines: a light halo under a dark line, so the lines read against both light and dark
+        /// colors. Drawn on the block tops when blocks are on.
+        /// </summary>
         private void AddOutlines(double size)
         {
-            var strips = new List<Vec3>();
-            double w = size / 450, lift = size / 1500;
+            var halo = new List<Vec3>();
+            var ink = new List<Vec3>();
+            double w = size / 260, lift = size / 1500, k = BlockScale(size);
             foreach (var z in scene.Zones)
+            {
+                var n = z.Normal;
+                Vec3 At(Vec3 p, double extra) => p + n * (lift + extra + k * Math.Abs(SafePsf(z.PressureAtPoint(p))));
                 foreach (var (a, b) in z.Edges)
-                    AddFlatStrip(strips, a + z.Normal * lift, b + z.Normal * lift, z.Normal, w);
-            outlines = Model(strips, Color.FromRgb(0x52, 0x51, 0x4E));
+                {
+                    AddFlatStrip(halo, At(a, 0), At(b, 0), n, 2.2 * w);
+                    AddFlatStrip(ink, At(a, lift), At(b, lift), n, w);
+                }
+            }
+            var group = new Model3DGroup();
+            group.Children.Add(Model(halo, Color.FromRgb(0xFC, 0xFC, 0xFB)));
+            group.Children.Add(Model(ink, Color.FromRgb(0x24, 0x24, 0x22)));
+            outlines = group;
             if (cbOutlines.IsChecked == true) sceneRoot.Children.Add(outlines);
+        }
+
+        /// <summary>Building edges - eaves, rakes, ridge and hip lines - always drawn so the roof shape reads clearly.</summary>
+        private void AddEnvelopeEdges(BuildingModel m, double size)
+        {
+            var strips = new List<Vec3>();
+            double w = size / 220, lift = size / 1200;
+            foreach (var s in m.Surfaces)
+                for (int i = 0, c = s.Outline.Count; i < c; i++)
+                    AddFlatStrip(strips, s.Outline[i] + s.Normal * lift, s.Outline[(i + 1) % c] + s.Normal * lift, s.Normal, w);
+            sceneRoot.Children.Add(Model(strips, Color.FromRgb(0x24, 0x24, 0x22)));
         }
 
         private void AddWindArrow(BuildingModel m, Vec3 dir, double size)
@@ -236,8 +313,9 @@ namespace ASCE7WindLoadCalculator
             // Arrow upwind of the building, at mid eave height, pointing downwind.
             var center = new Vec3(m.L / 2, m.B / 2, m.EaveHeight * 0.5);
             double half = dir.X != 0 ? m.L / 2 : m.B / 2;
-            var tip = center - dir * (half + 0.08 * size);
-            var tail = center - dir * (half + 0.45 * size);
+            double clear = 0.08 * size + (cbBlocks.IsChecked == true ? MaxBlockFraction * size : 0); // stay clear of the pressure blocks
+            var tip = center - dir * (half + clear);
+            var tail = tip - dir * (0.37 * size);
             var side = dir.Cross(Vec3.UnitZ).Normalized();
             windLabelAt = tail - dir * (0.04 * size) + Vec3.UnitZ * (0.04 * size);
             double r = 0.025 * size, head = 0.09 * size;
@@ -314,6 +392,7 @@ namespace ASCE7WindLoadCalculator
             var center = new Vec3(m.L / 2, m.B / 2, m.RidgeHeight / 2);
             double radius = 0.5 * Math.Sqrt(m.L * m.L + m.B * m.B + m.RidgeHeight * m.RidgeHeight);
             if (scene.WindDirection.HasValue) radius *= 1.2; // leave room for the wind arrow
+            if (cbBlocks.IsChecked == true) radius *= 1 + MaxBlockFraction; // and for the pressure blocks
             cam.Frame(center, radius);
         }
 
@@ -340,12 +419,37 @@ namespace ASCE7WindLoadCalculator
             return new Point(w / 2 + rel.Dot(cam.Right) / zc * focal, h / 2 - rel.Dot(cam.ScreenUp) / zc * focal);
         }
 
+        /// <summary>
+        /// True when something in the scene (the building or a pressure block) is between the camera and the
+        /// labeled point, so a label pinned there should be hidden rather than drawn on top of the building.
+        /// </summary>
+        private bool IsHidden(Vec3 at, Point screen)
+        {
+            double toPoint = (at - cam.Position).Length;
+            bool hidden = false;
+            var vp = viewHost.TranslatePoint(screen, viewport);
+            VisualTreeHelper.HitTest(viewport, null, r =>
+            {
+                if (r is RayMeshGeometry3DHitTestResult mesh && mesh.DistanceToRayOrigin < toPoint * 0.98)
+                {
+                    // only the building and its zones count; the ground and the arrows never hide a label
+                    if (zoneByModel.ContainsKey(mesh.ModelHit as GeometryModel3D) || envelopeModels.Contains(mesh.ModelHit))
+                    {
+                        hidden = true;
+                        return HitTestResultBehavior.Stop;
+                    }
+                }
+                return HitTestResultBehavior.Continue;
+            }, new PointHitTestParameters(vp));
+            return hidden;
+        }
+
         private void UpdatePinnedLabels()
         {
             void Pin(TextBlock label, Vec3? at)
             {
                 var s = at.HasValue ? Project(at.Value) : null;
-                label.Visibility = s.HasValue ? Visibility.Visible : Visibility.Collapsed;
+                label.Visibility = s.HasValue && !IsHidden(at.Value, s.Value) ? Visibility.Visible : Visibility.Collapsed;
                 if (!s.HasValue) return;
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Canvas.SetLeft(label, s.Value.X - label.DesiredSize.Width / 2);
@@ -381,6 +485,9 @@ namespace ASCE7WindLoadCalculator
             cam.Apply(p);
             ApplyCamera();
         }
+
+        /// <summary>Looks straight down on the roof (plan view).</summary>
+        public void ShowTopView() => ShowPreset(OrbitCamera.Preset.Top);
 
         private void ViewIso_Click(object sender, RoutedEventArgs e) => ShowPreset(OrbitCamera.Preset.Isometric);
         private void ViewTop_Click(object sender, RoutedEventArgs e) => ShowPreset(OrbitCamera.Preset.Top);
@@ -528,10 +635,16 @@ namespace ASCE7WindLoadCalculator
             bool mwfrs = scene.Mode == WindViewMode.MwfrsAlongLength || scene.Mode == WindViewMode.MwfrsAlongWidth;
             if (mwfrs)
             {
-                var ww = scene.Zones.FirstOrDefault(z => z.Label == "ZoneWW");
+                var wwBands = scene.Zones.Where(z => z.Label == "ZoneWW" && z.HasPressure).ToList();
                 var lw = scene.Zones.FirstOrDefault(z => z.Label == "ZoneLW");
                 var roof = scene.Zones.Where(z => z.Kind == SurfaceKind.Roof && z.HasPressure).OrderBy(z => z.PressurePsf).FirstOrDefault();
-                if (ww != null && lw != null) AddSummary("Walls", $"windward {FormatPsf(ww.PressurePsf)},  leeward {FormatPsf(lw.PressurePsf)}");
+                if (wwBands.Count > 0 && lw != null)
+                {
+                    double lo = wwBands.Min(z => z.PressurePsf), hi = wwBands.Max(z => z.PressurePsf);
+                    string windward = Math.Abs(hi - lo) < 0.05 ? FormatPsf(hi) : $"{FormatPsf(lo)} near the ground to {FormatPsf(hi)} at the top";
+                    AddSummary("Windward wall", windward);
+                    AddSummary("Leeward wall", FormatPsf(lw.PressurePsf));
+                }
                 if (roof != null) AddSummary("Strongest roof suction", $"{FormatPsf(roof.PressurePsf)}  at the {Short(roof.Description)}");
                 if (scene.BaseShearKips.HasValue) AddSummary("Wind force on the walls", $"{scene.BaseShearKips.Value:0.0} kips in the wind direction");
             }
@@ -622,6 +735,12 @@ namespace ASCE7WindLoadCalculator
             if (spRoofCase == null) return;
             var m = Mode;
             spRoofCase.IsEnabled = m == WindViewMode.MwfrsAlongLength || m == WindViewMode.MwfrsAlongWidth;
+        }
+
+        private void Display_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsInitialized || sceneRoot == null) return;
+            Rebuild(resetCamera: false);
         }
 
         private void Outlines_Changed(object sender, RoutedEventArgs e)

@@ -227,37 +227,33 @@ namespace ASCE7WindLoadCalculator
         /// Creates the two wind load calculators...one for where the wind is acting on the BuildingWidth wall 
         /// and the other for where the wind is acting on the BuildingLength wall
         /// </summary>
+        /// <summary>Why the last calculation failed, or null when it succeeded.</summary>
+        public string LastError { get; private set; }
+
+        /// <summary>
+        /// Runs the cladding calculation and the whole-building calculation for both wind directions.
+        /// Never throws: on bad input the calculators are cleared and the reason is shown on the screen.
+        /// </summary>
         private void MakeCalculators()
         {
             if (buildingData == null) return;
-
-            // Setup our buildings -- building 1 is the original building
-            // and building 2 is the rotated (flipped) building
-            var bldg_data1 = buildingData;
-            var bldg_data2 = bldg_data1.Clone();
-            bldg_data2.RotateBuilding();
-
-            // Create MWFRS calculators
-            var mwfrs_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.MWFRS);
-            windLoadCalculator_MWFRS_Length = mwfrs_calc_building_length;
-
-            var mwfrs_calc_building_width = CreateAndComputeCalculator(bldg_data2, WindLoadCalculationTypes.MWFRS);
-            windLoadCalculator_MWFRS_Width = mwfrs_calc_building_width;
-
-            // Create CC calculator using building data #1
-            var cc_calc_building_length = CreateAndComputeCalculator(bldg_data1, WindLoadCalculationTypes.COMPONENT_AND_CLADDING);
-            windLoadCalculator_CC = cc_calc_building_length;
+            try
+            {
+                var r = WindAnalysis.Run(Version, Parameters, buildingData);
+                windLoadCalculator_CC = r.Cladding;
+                windLoadCalculator_MWFRS_Length = r.MwfrsAlongLength;
+                windLoadCalculator_MWFRS_Width = r.MwfrsAlongWidth;
+                LastError = null;
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NotSupportedException || ex is NotImplementedException)
+            {
+                windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
+                LastError = ex.Message;
+            }
+            tbCalcError.Text = LastError ?? string.Empty;
+            tbCalcError.Visibility = LastError == null ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        private WindLoadCalculator_Base CreateAndComputeCalculator(BuildingData building, WindLoadCalculationTypes type)
-        {
-            var parameters = Parameters.Clone();
-            parameters.AnalysisType = type;
-
-            var calculator = WindLoadCalculatorFactory.Create(Version, type, parameters, building);
-            calculator.Initialize();
-            return calculator;
-        }
 
         /// <summary>
         /// Safe parser that returns a double. Falls back to a default if invalid.

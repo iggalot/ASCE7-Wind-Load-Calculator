@@ -21,6 +21,12 @@ namespace ASCE7WindLoadCalculator
         public string Label_Short => Label_Full.Substring(4);
 
         private double? area;
+
+        /// <summary>
+        /// True when the outline has fewer than three distinct vertices (a zero-size zone that small or
+        /// unusual buildings can produce). Degenerate zones have zero area and are dropped by the zone layout.
+        /// </summary>
+        public bool IsDegenerate { get; }
         private Vec2? centroid;
 
         public EffectiveWindArea(string label, IEnumerable<Vec2> outer, IEnumerable<IEnumerable<Vec2>> holes = null)
@@ -30,7 +36,7 @@ namespace ASCE7WindLoadCalculator
 
             Label_Full = label;
             OuterBoundary = outer.ToList();
-            ValidateAndFixWinding(OuterBoundary, shouldBeCCW: true);
+            IsDegenerate = !ValidateAndFixWinding(OuterBoundary, shouldBeCCW: true);
 
             Holes = new List<List<Vec2>>();
             if (holes != null)
@@ -38,7 +44,7 @@ namespace ASCE7WindLoadCalculator
                 foreach (var hole in holes)
                 {
                     var holeList = hole.ToList();
-                    ValidateAndFixWinding(holeList, shouldBeCCW: false);
+                    if (!ValidateAndFixWinding(holeList, shouldBeCCW: false)) continue; // ignore zero-size holes
                     Holes.Add(holeList);
                 }
             }
@@ -51,7 +57,7 @@ namespace ASCE7WindLoadCalculator
             {
                 if (area == null)
                 {
-                    double total = ComputeArea(OuterBoundary);
+                    double total = IsDegenerate ? 0 : ComputeArea(OuterBoundary);
                     foreach (var hole in Holes)
                         total -= ComputeArea(hole);
                     area = total;
@@ -89,10 +95,11 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        private static void ValidateAndFixWinding(List<Vec2> polygon, bool shouldBeCCW)
+        /// <summary>Fixes the winding; returns false when the polygon is degenerate.</summary>
+        private static bool ValidateAndFixWinding(List<Vec2> polygon, bool shouldBeCCW)
         {
             if (polygon.Count < 3)
-                throw new ArgumentException("Polygon must have at least 3 points.");
+                return false;
 
             // At least 3 vertices distinct to 1e-6 ft.
             var distinct = new HashSet<(long, long)>();
@@ -102,10 +109,11 @@ namespace ASCE7WindLoadCalculator
                 if (distinct.Count >= 3) break;
             }
             if (distinct.Count < 3)
-                throw new ArgumentException("Polygon must have at least 3 distinct points.");
+                return false;
 
             if (IsCounterClockwise(polygon) != shouldBeCCW)
                 polygon.Reverse();
+            return true;
         }
 
         private static bool IsCounterClockwise(List<Vec2> polygon)

@@ -80,6 +80,15 @@ namespace ASCE7WindLoadCalculator
         }
 
         public bool HasPressure => !double.IsNaN(PressurePsf);
+
+        /// <summary>
+        /// Pressure that varies over the zone (the windward wall's qz-based taper), or null when the zone has
+        /// one value. Used to draw tapered pressure blocks.
+        /// </summary>
+        public Func<Vec3, double> PressureAt { get; internal set; }
+
+        /// <summary>Net pressure (psf) at a point of the zone.</summary>
+        public double PressureAtPoint(Vec3 p) => PressureAt != null ? PressureAt(p) : PressurePsf;
     }
 
     /// <summary>Everything the 3D view needs, computed without any UI types.</summary>
@@ -192,7 +201,8 @@ namespace ASCE7WindLoadCalculator
                     ["ZoneWW"] = new[] { BuildingFace.WestWall }, ["ZoneLW"] = new[] { BuildingFace.EastWall },
                     ["ZoneSW"] = new[] { BuildingFace.SouthWall, BuildingFace.NorthWall },
                 };
-            AddWallZones(scene, walls, calc.windPressureWall_Pos_External_MWFRS, null, faces, WindLoadCalculationTypes.MWFRS);
+            AddWallZones(scene, walls, calc.windPressureWall_Pos_External_MWFRS, null, faces, WindLoadCalculationTypes.MWFRS,
+                calc as WindLoadCalculator_MWFRS);
 
             if (calc is WindLoadCalculator_MWFRS)
                 scene.BaseShearKips = MwfrsLateralLoad.WallBaseShearKips(calc);
@@ -242,7 +252,8 @@ namespace ASCE7WindLoadCalculator
         }
 
         private static void AddWallZones(WindScene scene, AreaCalculator_Base zones, Dictionary<int, PressureData> pressures,
-            BuildingFace[] allFaces, Dictionary<string, BuildingFace[]> facesByLabel, WindLoadCalculationTypes analysis)
+            BuildingFace[] allFaces, Dictionary<string, BuildingFace[]> facesByLabel, WindLoadCalculationTypes analysis,
+            WindLoadCalculator_MWFRS taper = null)
         {
             if (zones == null) return;
             foreach (var kv in zones.effWindAreas)
@@ -251,6 +262,13 @@ namespace ASCE7WindLoadCalculator
                 var faces = facesByLabel != null
                     ? (facesByLabel.TryGetValue(area.Label_Full, out var f) ? f : new BuildingFace[0])
                     : allFaces;
+                if (taper != null && area.Label_Full == "ZoneWW")
+                {
+                    foreach (var face in faces)
+                        AddWindwardWallBands(scene, kv.Key, area, scene.Model.Surface(face), taper);
+                    continue;
+                }
+
                 var tris = PolygonOps.Triangulate(area.OuterBoundary, area.Holes.Cast<IReadOnlyList<Vec2>>());
 
                 foreach (var face in faces)
@@ -264,6 +282,55 @@ namespace ASCE7WindLoadCalculator
                             sz.Edges.Add((wall.FromWallFrame(ring[i]), wall.FromWallFrame(ring[(i + 1) % n])));
                     scene.Zones.Add(sz);
                 }
+            }
+        }
+
+        /// <summary>Height of the windward-wall color bands above the 15 ft line (ft).</summary>
+        public const double WindwardBandHeight = 5.0;
+
+        /// <summary>
+        /// The windward wall pressure grows with height (qz). It is drawn as horizontal bands, each colored
+        /// with the pressure at its top (the value that governs the band), with a 15 ft band at the bottom
+        /// where Kz is constant. Each band also carries the exact pressure-at-height for tapered blocks.
+        /// </summary>
+        private static void AddWindwardWallBands(WindScene scene, int id, EffectiveWindArea area, BuildingSurface wall,
+            WindLoadCalculator_MWFRS calc)
+        {
+            if (wall == null) return;
+            var outline = PolygonOps.CounterClockwise(area.OuterBoundary);
+            double top = outline.Max(p => p.Y), left = outline.Min(p => p.X) - 1, right = outline.Max(p => p.X) + 1;
+
+            var levels = new List<double> { 0 };
+            if (top > 15) levels.Add(15);
+            for (double z = 15 + WindwardBandHeight; z < top - 1e-6; z += WindwardBandHeight) levels.Add(z);
+            levels.Add(top);
+
+            Func<Vec3, double> taper = p => calc.WindwardWallNetPressureAt(p.Z);
+            for (int b = 0; b + 1 < levels.Count; b++)
+            {
+                double z0 = levels[b], z1 = levels[b + 1];
+                if (z1 - z0 < 1e-6) continue;
+                var band = new List<Vec2> { new Vec2(left, z0), new Vec2(right, z0), new Vec2(right, z1), new Vec2(left, z1) };
+                var piece = PolygonOps.ClipToConvex(outline, band);
+                if (piece.Count < 3 || Math.Abs(PolygonOps.SignedArea(piece)) < AreaCalculator_Base.MinZoneArea) continue;
+
+                var sz = new SceneZone
+                {
+                    ZoneId = id,
+                    Label = area.Label_Full,
+                    Description = $"Windward wall, {z0:0.#}-{z1:0.#} ft (pressure grows with height)",
+                    Face = wall.Face,
+                    Kind = SurfaceKind.Wall,
+                    SurfaceName = wall.Name,
+                    AreaFt2 = Math.Abs(PolygonOps.SignedArea(piece)),
+                    Normal = wall.Normal,
+                    PressurePsf = calc.WindwardWallNetPressureAt(z1),
+                    PressureAt = taper,
+                };
+                foreach (var p in PolygonOps.Triangulate(piece)) sz.Triangles.Add(wall.FromWallFrame(p));
+                for (int i = 0, n = piece.Count; i < n; i++)
+                    sz.Edges.Add((wall.FromWallFrame(piece[i]), wall.FromWallFrame(piece[(i + 1) % n])));
+                scene.Zones.Add(sz);
             }
         }
 

@@ -24,27 +24,6 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        private static AreaCalculator_Base CreateMwfrs(BuildingData b)
-        {
-            switch (b.RoofType)
-            {
-                case RoofTypes.ROOF_TYPE_FLAT:
-                    return new FlatRoofAreaCalculator_NoRidge_MWFRS(b);
-                case RoofTypes.ROOF_TYPE_GABLE:
-                    if (b.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
-                        return new GableRoofAreaCalculator_PerpToRidge_MWFRS(b);
-                    if (b.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
-                        return new GableRoofAreaCalculator_ParallelToRidge_MWFRS(b);
-                    return null;
-                case RoofTypes.ROOF_TYPE_HIP:
-                    if (b.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)
-                        return new HipRoofAreaCalculator_PerpToRidge_MWFRS(b);
-                    if (b.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)
-                        return new HipRoofAreaCalculator_ParallelToRidge_MWFRS(b);
-                    return null;
-                default:
-                    throw new NotSupportedException("Invalid roof type: " + b.RoofType);
-            }
-        }
+        private static AreaCalculator_Base CreateMwfrs(BuildingData b) => new RoofAreaCalculator_MWFRS(b);
     }
 }

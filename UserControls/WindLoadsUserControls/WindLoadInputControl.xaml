@@ -17,6 +17,10 @@
             <!-- Building Data Placeholder -->
             <StackPanel x:Name="spBuildingData" Background="LightGray" Margin="5"/>
 
+            <!-- Shown when the inputs cannot be calculated (instead of crashing) -->
+            <TextBlock x:Name="tbCalcError" Visibility="Collapsed" TextWrapping="Wrap" Margin="5" Padding="8,5"
+                       Background="#FFF4E5" Foreground="#7A4B00"/>
+
             <!-- ASCE Version -->
             <StackPanel Orientation="Horizontal" Margin="5">
                 <TextBlock Text="ASCE 7 Version" VerticalAlignment="Center"/>

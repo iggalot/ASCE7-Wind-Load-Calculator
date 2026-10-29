@@ -28,14 +28,16 @@
         /// Hip roofs present both kinds of surface to the wind: planes running along the wind (distance
         /// zones 1-4 of the parallel-to-ridge table) and the hipped planes facing it (windward/leeward roof,
         /// normal-to-ridge table at the roof slope). Fig. 27.3-1 has no separate hip table, so both sets are
-        /// combined. Below 10 deg the code uses the distance table for every roof plane; the hipped faces then
-        /// take the windward-most (Zone 4) values, which is conservative.
+        /// combined. Below 10 deg the code uses the distance table for every roof plane (the zoning then has
+        /// no windward/leeward roof zones).
         /// </summary>
         private static Chapter27and30_GCpCurveBase HipRoof(double hOverL, double slope)
         {
             var along = ParallelToRidge(hOverL, slope);
             var combined = new CombinedCpFigure("Figure 27.3-1 (hip roof)", along);
 
+            // Below 10 deg every plane is zoned by distance (RoofAreaCalculator_MWFRS), so only the
+            // distance table is needed.
             if (slope >= 10)
             {
                 var facing = NormalToRidge(hOverL, slope);
@@ -43,14 +45,6 @@
                 {
                     combined.RoofCurves_Pos[key] = facing.RoofCurves_Pos[key];
                     combined.RoofCurves_Neg[key] = facing.RoofCurves_Neg[key];
-                }
-            }
-            else
-            {
-                foreach (var key in new[] { "ZoneWWR", "ZoneLWR" })
-                {
-                    combined.RoofCurves_Pos[key] = along.RoofCurves_Pos["Zone4"];
-                    combined.RoofCurves_Neg[key] = along.RoofCurves_Neg["Zone4"];
                 }
             }
             return combined;

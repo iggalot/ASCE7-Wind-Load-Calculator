@@ -26,6 +26,34 @@ namespace ASCE7WindLoadCalculator
 
         public abstract void ComputeEffectiveWindAreas();
 
+        /// <summary>Zones smaller than this (ft²) are treated as empty and dropped.</summary>
+        public const double MinZoneArea = 1e-6;
+
+        /// <summary>
+        /// Lays out the zones, then drops empty ones (very small or narrow buildings can make a zone shrink
+        /// to nothing). Returns false, without throwing, when the layout could not be completed; the zones
+        /// laid out so far are kept.
+        /// </summary>
+        public bool Compute()
+        {
+            effWindAreas.Clear();
+            bool ok = true;
+            try
+            {
+                ComputeEffectiveWindAreas();
+            }
+            catch (ArgumentException) { ok = false; }
+            catch (InvalidOperationException) { ok = false; }
+
+            var empty = new List<int>();
+            foreach (var kv in effWindAreas)
+                if (kv.Value == null || kv.Value.IsDegenerate || kv.Value.Area < MinZoneArea)
+                    empty.Add(kv.Key);
+            foreach (var id in empty)
+                effWindAreas.Remove(id);
+            return ok;
+        }
+
         /// <summary>
         /// Creates a zone if it has positive area; otherwise returns null (degenerate zones are skipped).
         /// </summary>

@@ -60,6 +60,27 @@ namespace ASCE7WindLoadCalculator
             AddWallPressures(qh, G, windPressureWall_Neg_External_MWFRS);
         }
 
+        /// <summary>
+        /// External windward-wall pressure (psf) at height z: qz G Cp, with Kd per the edition. ASCE 7 27.3:
+        /// the windward wall uses qz at each height (Kz taken at not less than 15 ft); the leeward wall,
+        /// side walls and roof use qh.
+        /// </summary>
+        public double WindwardWallExternalPressureAt(double z)
+        {
+            double qz = CalculateDynamicWindPressure(Math.Max(0, z));
+            return qz * Cp_WW * Parameters.GustFactor * PressureKd;
+        }
+
+        /// <summary>
+        /// Net windward-wall pressure (psf) at height z, combined with the internal pressure (based on qh)
+        /// that makes it largest: qz G Cp + qh |GCpi|.
+        /// </summary>
+        public double WindwardWallNetPressureAt(double z)
+        {
+            double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+            return WindwardWallExternalPressureAt(z) + qh * GetGCpi() * PressureKd;
+        }
+
         private void AddWallPressures(double qh, double G, Dictionary<int, PressureData> target)
         {
             double kd = PressureKd;

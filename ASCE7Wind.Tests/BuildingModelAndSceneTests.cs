@@ -206,7 +206,7 @@ namespace ASCE7Wind.Tests
         public void MwfrsWalls_WindwardIsUpwind(WindViewMode mode, BuildingFace windward, BuildingFace leeward)
         {
             var s = Scene(ASCE7_Versions.ASCE_VER_7_22, Bldg.Make(60, 40, 15, RoofTypes.ROOF_TYPE_GABLE, 20, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH), mode);
-            Assert.IsTrue(s.Zones.Single(z => z.Face == windward).PressurePsf > 0, "windward wall is pushed");
+            Assert.IsTrue(s.Zones.Where(z => z.Face == windward).All(z => z.PressurePsf > 0), "windward wall is pushed");
             Assert.IsTrue(s.Zones.Single(z => z.Face == leeward).PressurePsf < 0, "leeward wall is pulled");
             Assert.IsNotNull(s.WindDirection);
             Assert.IsTrue(s.BaseShearKips > 0);

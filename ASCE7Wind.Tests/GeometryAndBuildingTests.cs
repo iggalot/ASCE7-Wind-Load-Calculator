@@ -124,10 +124,11 @@ namespace ASCE7Wind.Tests
         }
 
         [TestMethod]
-        public void Polygon_Degenerate_Throws()
+        public void Polygon_Degenerate_IsEmpty_NotAnError()
         {
-            Assert.Throws<ArgumentException>(() =>
-                new EffectiveWindArea("Zone1", new[] { new Vec2(0, 0), new Vec2(1, 1), new Vec2(0, 0) }));
+            var z = new EffectiveWindArea("Zone1", new[] { new Vec2(0, 0), new Vec2(1, 1), new Vec2(0, 0) });
+            Assert.IsTrue(z.IsDegenerate);
+            Assert.AreEqual(0, z.Area);
         }
 
         [TestMethod]

@@ -18,7 +18,8 @@ namespace ASCE7WindLoadCalculator
             /// </summary>
             
             // Gable logic
-            if (buildingData.BuildingLength < buildingData.BuildingWidth)
+            // Lay out by the ridge the user chose (it may run along either side), not by which side is longer.
+            if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)      // ridge along y at x = L/2
             {
                 Vec2 p1 = new Vec2(0, 0);
                 Vec2 p2 = new Vec2(CritDim_a, 0);
@@ -78,7 +79,7 @@ namespace ASCE7WindLoadCalculator
 
                 return;
             }
-            else if (buildingData.BuildingLength > buildingData.BuildingWidth)
+            else if (buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH) // ridge along x at y = B/2
             {
                 // Figure 30.3-2B / 2C / 2D -- Flat roof and Gable with slope greater than 7
 

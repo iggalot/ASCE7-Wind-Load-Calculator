@@ -48,7 +48,6 @@ namespace ASCE7WindLoadCalculator
             }
             else
             {
-                Console.WriteLine("Zone 1' skipped: invalid offset or too large for roof size.");
             }
 
             // Zone 1 - Middle band
@@ -71,7 +70,6 @@ namespace ASCE7WindLoadCalculator
             }
             else
             {
-                Console.WriteLine("Zone 1 skipped: invalid offset or too large for roof size.");
             }
 
             // region 3 corner zones
