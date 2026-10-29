@@ -348,7 +348,7 @@ namespace ASCE7WindLoadCalculator
             // Draw the roof areas
             foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
-                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas);
+                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas).ToRect();
                 double canvasWidth = cnvEffectiveRoofAreas.ActualWidth;
                 double canvasHeight = cnvEffectiveRoofAreas.ActualHeight;
 
@@ -381,7 +381,7 @@ namespace ASCE7WindLoadCalculator
 
                 if (cnv == null) continue;
 
-                Rect boundingBox = windLoadCalculator.WallAreaCalculator_BldgLength.GetBoundingExtents(windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas);
+                Rect boundingBox = windLoadCalculator.WallAreaCalculator_BldgLength.GetBoundingExtents(windLoadCalculator.WallAreaCalculator_BldgLength.effWindAreas).ToRect();
                 double canvasWidth = cnv.ActualWidth;
                 double canvasHeight = cnv.ActualHeight;
 

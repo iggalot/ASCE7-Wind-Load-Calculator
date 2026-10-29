@@ -55,13 +55,13 @@ namespace ASCE7WindLoadCalculator
             var geometry = new PathGeometry { FillRule = FillRule.EvenOdd };
 
             // Step 5: Add transformed outer boundary
-            var outerFigure = CreatePathFigure(area.OuterBoundary, scale, offsetX, offsetY, canvasHeight);
+            var outerFigure = CreatePathFigure(area.OuterBoundary.ToPoints(), scale, offsetX, offsetY, canvasHeight);
             geometry.Figures.Add(outerFigure);
 
             // Step 6: Add transformed holes
             foreach (var hole in area.Holes)
             {
-                var holeFigure = CreatePathFigure(hole, scale, offsetX, offsetY, canvasHeight);
+                var holeFigure = CreatePathFigure(hole.ToPoints(), scale, offsetX, offsetY, canvasHeight);
                 geometry.Figures.Add(holeFigure);
             }
 

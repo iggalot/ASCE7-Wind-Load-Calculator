@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>ASCE7Wind.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.0.2" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Tests target the engine only; it must build and run with no WPF reference. -->
+    <ProjectReference Include="..\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
+  </ItemGroup>
+
+</Project>

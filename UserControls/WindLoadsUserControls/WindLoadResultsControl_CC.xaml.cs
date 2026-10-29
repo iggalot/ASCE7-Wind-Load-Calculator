@@ -421,7 +421,7 @@ namespace ASCE7WindLoadCalculator
 
             foreach (var area in windLoadCalculator.RoofAreaCalculator.effWindAreas)
             {
-                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas);
+                Rect boundingBox = windLoadCalculator.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator.RoofAreaCalculator.effWindAreas).ToRect();
                 double canvasWidth = cnvWindLoadResultCanvasCC.ActualWidth;
                 double canvasHeight = cnvWindLoadResultCanvasCC.ActualHeight;
 

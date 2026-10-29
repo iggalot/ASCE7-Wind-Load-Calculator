@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ASCE 7 wind engine: building geometry, zoning, coefficients and pressures.
+    Deliberately has NO WPF/UI references so it can be unit tested headless and
+    reused by any front end. UI controls live in ASCE7WindLoadCalculator.csproj.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ASCE7WindLoadCalculator</RootNamespace>
+    <AssemblyName>ASCE7Wind.Core</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ASCE7Wind.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="**\~$*" />
+  </ItemGroup>
+
+</Project>

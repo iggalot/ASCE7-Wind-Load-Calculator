@@ -149,7 +149,7 @@ namespace ASCE7WindLoadCalculator
 
                 foreach (var area in windLoadCalculator_CC.RoofAreaCalculator.effWindAreas)
                 {
-                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_CC.RoofAreaCalculator.effWindAreas);
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_CC.RoofAreaCalculator.effWindAreas).ToRect();
                     double canvasWidth = cnvEffectiveRoofAreas_CC.ActualWidth;
                     double canvasHeight = cnvEffectiveRoofAreas_CC.ActualHeight;
 
@@ -169,7 +169,7 @@ namespace ASCE7WindLoadCalculator
             {
                 foreach (var area in windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas)
                 {
-                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    Rect boundingBox = windLoadCalculator_CC.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas).ToRect();
                     double canvasWidth = cnvEffectiveRoofAreas_MWFRS_Length.ActualWidth;
                     double canvasHeight = cnvEffectiveRoofAreas_MWFRS_Length.ActualHeight;
 
@@ -189,7 +189,7 @@ namespace ASCE7WindLoadCalculator
             {
                 foreach (var area in windLoadCalculator_MWFRS_Width.RoofAreaCalculator.effWindAreas)
                 {
-                    Rect boundingBox = windLoadCalculator_MWFRS_Width.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas);
+                    Rect boundingBox = windLoadCalculator_MWFRS_Width.RoofAreaCalculator.GetBoundingExtents(windLoadCalculator_MWFRS_Length.RoofAreaCalculator.effWindAreas).ToRect();
                     double canvasWidth = cnvEffectiveRoofAreas_MWFRS_Width.ActualWidth;
                     double canvasHeight = cnvEffectiveRoofAreas_MWFRS_Width.ActualHeight;
 
