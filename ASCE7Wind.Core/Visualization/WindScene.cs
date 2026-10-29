@@ -105,8 +105,11 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Unit vector the wind blows toward (MWFRS views); null for cladding (any direction).</summary>
         public Vec3? WindDirection { get; internal set; }
 
-        /// <summary>Wall base shear in the wind direction (kips), MWFRS views only.</summary>
-        public double? BaseShearKips { get; internal set; }
+        /// <summary>Design lateral force in the wind direction (kips), MWFRS views only.</summary>
+        public double? BaseShearKips => LateralForce?.DesignKips;
+
+        /// <summary>Lateral force in the wind direction (walls + roof, 27.1.5 minimum), MWFRS views only.</summary>
+        public DirectionalWindForce LateralForce { get; internal set; }
 
         public double MinPsf => Zones.Where(z => z.HasPressure).Select(z => z.PressurePsf).DefaultIfEmpty(0).Min();
         public double MaxPsf => Zones.Where(z => z.HasPressure).Select(z => z.PressurePsf).DefaultIfEmpty(0).Max();
@@ -205,7 +208,7 @@ namespace ASCE7WindLoadCalculator
                 calc as WindLoadCalculator_MWFRS);
 
             if (calc is WindLoadCalculator_MWFRS)
-                scene.BaseShearKips = MwfrsLateralLoad.WallBaseShearKips(calc);
+                scene.LateralForce = WindLateralLoads.DirectionalForce(calc, alongWidth ? "along width" : "along length");
         }
 
         // ---- Mapping ------------------------------------------------------------------------------

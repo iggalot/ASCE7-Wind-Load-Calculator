@@ -5,6 +5,16 @@ namespace ASCE7WindLoadCalculator
     /// <summary>The three calculations a building needs: cladding, and whole-building wind in each plan direction.</summary>
     public sealed class WindAnalysisResult
     {
+        internal WindAnalysisResult() { }
+
+        /// <summary>Wraps calculators produced elsewhere (e.g. by the wind input screen).</summary>
+        public WindAnalysisResult(WindLoadCalculator_Base cladding, WindLoadCalculator_Base mwfrsAlongLength, WindLoadCalculator_Base mwfrsAlongWidth)
+        {
+            Cladding = cladding;
+            MwfrsAlongLength = mwfrsAlongLength;
+            MwfrsAlongWidth = mwfrsAlongWidth;
+        }
+
         public WindLoadCalculator_Base Cladding { get; internal set; }
 
         /// <summary>MWFRS with the wind along the BuildingLength.</summary>

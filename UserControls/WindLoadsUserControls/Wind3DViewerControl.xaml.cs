@@ -671,7 +671,10 @@ namespace ASCE7WindLoadCalculator
                     AddSummary("Leeward wall", FormatPsf(lw.PressurePsf));
                 }
                 if (roof != null) AddSummary("Strongest roof suction", $"{FormatPsf(roof.PressurePsf)}  at the {Short(roof.Description)}");
-                if (scene.BaseShearKips.HasValue) AddSummary("Wind force on the walls", $"{scene.BaseShearKips.Value:0.0} kips in the wind direction");
+                var f = scene.LateralForce;
+                if (f != null)
+                    AddSummary("Wind force on the building",
+                        $"{f.DesignKips:0.0} kips  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0}; 16/8 psf minimum {f.MinimumKips:0.0}" + (f.MinimumGoverns ? " governs)" : ")"));
             }
             else
             {
