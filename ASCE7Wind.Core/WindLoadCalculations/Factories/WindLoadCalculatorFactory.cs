@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace ASCE7WindLoadCalculator
 {
@@ -8,34 +8,18 @@ namespace ASCE7WindLoadCalculator
             ASCE7_Versions version,
             WindLoadCalculationTypes calculationType,
             WindParameters_Base parameters,
-            BuildingData buildingData
-            )
+            BuildingData buildingData)
         {
-            if (version == ASCE7_Versions.ASCE_VER_7_16)
+            var edition = Asce7Edition.For(version);
+            switch (calculationType)
             {
-                if (calculationType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-                {
-                    return new WindLoadCalculator_CC_ASCE7_16(parameters, buildingData);
-                }
-                else if (calculationType == WindLoadCalculationTypes.MWFRS)
-                {
-                    return new WindLoadCalculator_MWFRS_ASCE7_16(parameters, buildingData);
-                }
+                case WindLoadCalculationTypes.COMPONENT_AND_CLADDING:
+                    return new WindLoadCalculator_CC(edition, parameters, buildingData);
+                case WindLoadCalculationTypes.MWFRS:
+                    return new WindLoadCalculator_MWFRS(edition, parameters, buildingData);
+                default:
+                    throw new NotSupportedException("Calculation type not supported: " + calculationType);
             }
-
-            else if (version == ASCE7_Versions.ASCE_VER_7_22)
-            {
-                if (calculationType == WindLoadCalculationTypes.COMPONENT_AND_CLADDING)
-                {
-                    return new WindLoadCalculator_CC_ASCE7_22(parameters, buildingData);
-                }
-                else if (calculationType == WindLoadCalculationTypes.MWFRS)
-                {
-                    return new WindLoadCalculator_MWFRS_ASCE7_22(parameters, buildingData);
-                }
-            }
-
-            throw new NotImplementedException("Error: ASCE7 version " + version + " is not implemented or " + calculationType + " calculation type is not implemented at this time.");
         }
     }
 }

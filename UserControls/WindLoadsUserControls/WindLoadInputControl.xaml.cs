@@ -62,11 +62,7 @@ namespace ASCE7WindLoadCalculator
 
             if (parameters == null)
             {
-                if(bldg_data.RoofType == RoofTypes.ROOF_TYPE_FLAT)  parameters = new FlatRoofWindLoadParameters();
-                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_GABLE) parameters = new GableRoofWindLoadParameters();
-                else if (bldg_data.RoofType == RoofTypes.ROOF_TYPE_HIP) parameters = new HipRoofWindLoadParameters();
-                else throw new Exception("ERROR: In WindLoadInputControl: Unrecognized roof type." + bldg_data.RoofType.ToString());
-
+                parameters = new WindParameters_Base();
                 version = ASCE7_Versions.ASCE_VER_7_16;
             }
 
@@ -320,14 +316,14 @@ namespace ASCE7WindLoadCalculator
                         break;
                 }
 
-                Parameters = WindLoadParametersFactory.Create(
-                    roof_type,
-                    risk,
-                    windSpeed,
-                    exposure,
-                    kzt,
-                    importance
-                    );
+                Parameters = new WindParameters_Base
+                {
+                    RiskCategory = risk,
+                    WindSpeed = windSpeed,
+                    ExposureCategory = exposure,
+                    Kzt = kzt,
+                    ImportanceFactor = importance,
+                };
 
                 bUpdatingUI = false;
             }
