@@ -58,6 +58,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The current scene (geometry, zones, pressures), or null before results are set.</summary>
         public WindScene Scene => scene;
 
+        /// <summary>Show the numbers card over the view. Hosts that show the same numbers elsewhere can turn it off.</summary>
+        public bool ShowSummaryCard { get; set; } = true;
+
         public WindViewMode Mode
         {
             get
@@ -686,7 +689,7 @@ namespace ASCE7WindLoadCalculator
                 if (roof != null) AddSummary($"Highest roof {what}", $"{FormatPsf(roof.PressurePsf)}  at the {Short(roof.Description)}");
                 if (wall != null) AddSummary($"Highest wall {(scene.Mode == WindViewMode.CladdingSuction ? "suction" : "pressure")}", $"{FormatPsf(wall.PressurePsf)}  at the {Short(wall.Description)}");
             }
-            if (spSummary.Children.Count == 0) bdSummary.Visibility = Visibility.Collapsed;
+            if (spSummary.Children.Count == 0 || !ShowSummaryCard) bdSummary.Visibility = Visibility.Collapsed;
         }
 
         private void AddSummary(string label, string value)

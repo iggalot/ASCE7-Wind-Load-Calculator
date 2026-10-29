@@ -1,0 +1,468 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Navigation;
+using System.Windows.Threading;
+
+namespace ASCE7WindLoadCalculator
+{
+    /// <summary>
+    /// Guided wind input in three steps: Site, Building, Results. Every change recalculates immediately;
+    /// the screen's own numbers and 3D view update at once, and <see cref="InputsChanged"/> follows after a
+    /// short pause in typing so the host's heavier refreshes do not run on every keystroke.
+    /// </summary>
+    public partial class WindSetupControl : UserControl
+    {
+        public const int SiteStep = 0, BuildingStep = 1, ResultsStep = 2;
+        private static readonly string[] StepNames = { "Site", "Building", "Results" };
+
+        /// <summary>Raised (debounced) after any input changes. Read the new state from the properties.</summary>
+        public event EventHandler InputsChanged;
+
+        /// <summary>Raised by "Send loads to shear walls" with the load cases for the current inputs.</summary>
+        public event EventHandler<WindLateralResult> SendLoadsRequested;
+
+        public BuildingData Building { get; private set; }
+        public WindParameters_Base Parameters { get; private set; }
+        public ASCE7_Versions Version { get; private set; }
+
+        /// <summary>The latest calculation, or null when the inputs cannot be calculated.</summary>
+        public WindAnalysisResult Analysis { get; private set; }
+        public WindSummary Summary { get; private set; }
+        public IReadOnlyList<InputIssue> Issues { get; private set; } = new List<InputIssue>();
+
+        /// <summary>Fig. 27.3-8 exception: only load cases 1 and 3.</summary>
+        public bool OnlyCases1And3 => cbOnlyCases13.IsChecked == true;
+
+        public int Step { get; private set; }
+
+        /// <summary>Show the "Send loads to shear walls" button on the Results step.</summary>
+        public bool ShowSendButton { get; set; } = true;
+
+        /// <summary>The 3D view shown on the Building and Results steps.</summary>
+        public Wind3DViewerControl Viewer { get; } = new Wind3DViewerControl();
+
+        private readonly DispatcherTimer notifyTimer;
+        private bool loading;
+        private readonly List<Button> stepButtons = new List<Button>();
+
+        private static readonly Brush ControlBrush = Frozen("#C3C2B7");
+        private static readonly Brush WarnBrush = Frozen("#B45309");
+        private static readonly Brush OkInk = Frozen("#006300");
+        private static readonly Brush WarnInk = Frozen("#8A3B00");
+        private static readonly Brush Ink = Frozen("#0B0B0B");
+        private static readonly Brush InkSecondary = Frozen("#52514E");
+
+        public WindSetupControl() : this(null, ASCE7_Versions.ASCE_VER_7_22, null) { }
+
+        public WindSetupControl(BuildingData building, ASCE7_Versions version, WindParameters_Base parameters)
+        {
+            InitializeComponent();
+            Viewer.ShowSummaryCard = false; // the Results step shows these numbers itself
+            ccViewer.Content = Viewer;
+            notifyTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+            notifyTimer.Tick += (s, e) => { notifyTimer.Stop(); InputsChanged?.Invoke(this, EventArgs.Empty); };
+            BuildStepIndicator();
+            SizeChanged += (s, e) => ApplyLayout(e.NewSize.Width);
+            SetInputs(building, version, parameters);
+            GoToStep(SiteStep);
+        }
+
+        /// <summary>Loads inputs into the screen without raising <see cref="InputsChanged"/>.</summary>
+        public void SetInputs(BuildingData building, ASCE7_Versions version, WindParameters_Base parameters)
+        {
+            Building = building?.Clone() ?? new BuildingData();
+            Parameters = parameters?.Clone() ?? new WindParameters_Base { RiskCategory = "II", ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C };
+            Version = version;
+
+            loading = true;
+            try
+            {
+                (Version == ASCE7_Versions.ASCE_VER_7_16 ? rbEd16 : rbEd22).IsChecked = true;
+                switch (Parameters.RiskCategory)
+                {
+                    case "I": rbRisk1.IsChecked = true; break;
+                    case "III": rbRisk3.IsChecked = true; break;
+                    case "IV": rbRisk4.IsChecked = true; break;
+                    default: rbRisk2.IsChecked = true; break;
+                }
+                tbV.Text = Format(Parameters.WindSpeed);
+                switch (Parameters.ExposureCategory)
+                {
+                    case WindExposureCategories.WIND_EXP_CAT_B: rbExpB.IsChecked = true; break;
+                    case WindExposureCategories.WIND_EXP_CAT_D: rbExpD.IsChecked = true; break;
+                    default: rbExpC.IsChecked = true; break;
+                }
+                bool hill = Math.Abs(Parameters.Kzt - 1.0) > 1e-9;
+                (hill ? rbHillYes : rbHillNo).IsChecked = true;
+                tbKzt.Text = Parameters.Kzt.ToString("0.00", CultureInfo.CurrentCulture);
+                switch (Building.EnclosureType)
+                {
+                    case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: rbEncPartEnc.IsChecked = true; break;
+                    case BuildingEnclosures.BLDG_PARTIALLY_OPEN: rbEncPartOpen.IsChecked = true; break;
+                    case BuildingEnclosures.BLDG_OPEN: rbEncOpen.IsChecked = true; break;
+                    default: rbEncEnclosed.IsChecked = true; break;
+                }
+                switch (Building.RoofType)
+                {
+                    case RoofTypes.ROOF_TYPE_GABLE: rbRoofGable.IsChecked = true; break;
+                    case RoofTypes.ROOF_TYPE_HIP: rbRoofHip.IsChecked = true; break;
+                    default: rbRoofFlat.IsChecked = true; break;
+                }
+                tbL.Text = Format(Building.BuildingLength);
+                tbB.Text = Format(Building.BuildingWidth);
+                tbH.Text = Format(Building.BuildingHeight);
+                tbPitch.Text = Format(Building.RoofPitch);
+                // Ridge choice as the user sees it; for a non-gable roof show the gable default.
+                var asGable = Building.Clone();
+                asGable.RoofType = RoofTypes.ROOF_TYPE_GABLE;
+                (asGable.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH ? rbRidgeAcross : rbRidgeAlong).IsChecked = true;
+            }
+            finally
+            {
+                loading = false;
+            }
+            Recalculate(notify: false);
+        }
+
+        // ---------------------------------------------------------------- steps
+
+        public void GoToStep(int step)
+        {
+            Step = Math.Max(SiteStep, Math.Min(ResultsStep, step));
+            pnlSite.Visibility = Step == SiteStep ? Visibility.Visible : Visibility.Collapsed;
+            pnlBuilding.Visibility = Step == BuildingStep ? Visibility.Visible : Visibility.Collapsed;
+            pnlResults.Visibility = Step == ResultsStep ? Visibility.Visible : Visibility.Collapsed;
+            pnlRight.Visibility = Step == SiteStep ? Visibility.Collapsed : Visibility.Visible;
+            ugBuildingNumbers.Visibility = Step == BuildingStep ? Visibility.Visible : Visibility.Collapsed;
+
+            btnBack.Visibility = Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
+            btnNext.Visibility = Step == ResultsStep ? Visibility.Collapsed : Visibility.Visible;
+            btnNext.Content = Step == SiteStep ? "Next: Building" : "See results";
+            btnSend.Visibility = Step == ResultsStep && ShowSendButton ? Visibility.Visible : Visibility.Collapsed;
+            tbSendStatus.Text = string.Empty;
+            tbStepOf.Text = $"Step {Step + 1} of 3";
+            UpdateStepIndicator();
+            UpdateSendState();
+            svContent.ScrollToTop();
+        }
+
+        private void BuildStepIndicator()
+        {
+            spSteps.Children.Clear();
+            stepButtons.Clear();
+            for (int i = 0; i < StepNames.Length; i++)
+            {
+                int target = i;
+                var b = new Button { Style = (Style)FindResource("StepButton") };
+                AutomationPropertiesHelper.SetName(b, $"Step {i + 1}: {StepNames[i]}");
+                b.Click += (s, e) => GoToStep(target);
+                stepButtons.Add(b);
+                spSteps.Children.Add(b);
+                if (i < StepNames.Length - 1)
+                    spSteps.Children.Add(new Border { Width = 28, Height = 1, Background = ControlBrush, VerticalAlignment = VerticalAlignment.Center });
+            }
+        }
+
+        private void UpdateStepIndicator()
+        {
+            for (int i = 0; i < stepButtons.Count; i++)
+            {
+                bool current = i == Step, done = i < Step;
+                var dot = new Border
+                {
+                    Width = 26, Height = 26, CornerRadius = new CornerRadius(13), Margin = new Thickness(0, 0, 8, 0),
+                    Background = current ? Ink : done ? Frozen("#E1E0D9") : Brushes.Transparent,
+                    BorderBrush = current || done ? Brushes.Transparent : ControlBrush,
+                    BorderThickness = new Thickness(1),
+                    Child = new TextBlock
+                    {
+                        Text = done ? "✓" : (i + 1).ToString(), FontSize = 13,
+                        Foreground = current ? Brushes.White : done ? Ink : InkSecondary,
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                    },
+                };
+                var panel = new StackPanel { Orientation = Orientation.Horizontal };
+                panel.Children.Add(dot);
+                panel.Children.Add(new TextBlock
+                {
+                    Text = StepNames[i], VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = current ? Ink : InkSecondary, FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal,
+                });
+                stepButtons[i].Content = panel;
+            }
+        }
+
+        /// <summary>Below these widths the two columns stack into one (e.g. beside the drawing canvas).</summary>
+        public const double StackSiteBelow = 900, StackViewBelow = 1150;
+
+        private void ApplyLayout(double width)
+        {
+            if (double.IsNaN(width) || width <= 0) return;
+
+            bool stackSite = width < StackSiteBelow;
+            Grid.SetRow(siteRight, stackSite ? 2 : 1);
+            Grid.SetColumn(siteRight, stackSite ? 0 : 2);
+            Grid.SetColumnSpan(siteLeft, stackSite ? 3 : 1);
+            Grid.SetColumnSpan(siteRight, stackSite ? 3 : 1);
+
+            bool stackView = width < StackViewBelow;
+            Grid.SetRow(pnlRight, stackView ? 1 : 0);
+            Grid.SetColumn(pnlRight, stackView ? 0 : 1);
+            Grid.SetColumnSpan(pnlRight, stackView ? 2 : 1);
+            foreach (var p in new FrameworkElement[] { pnlBuilding, pnlResults })
+            {
+                Grid.SetColumnSpan(p, stackView ? 2 : 1);
+                p.Margin = stackView ? new Thickness(0) : new Thickness(0, 0, 20, 0);
+            }
+        }
+
+        private void Next_Click(object sender, RoutedEventArgs e) => GoToStep(Step + 1);
+        private void Back_Click(object sender, RoutedEventArgs e) => GoToStep(Step - 1);
+
+        private void Send_Click(object sender, RoutedEventArgs e)
+        {
+            if (Summary?.Lateral == null) return;
+            SendLoadsRequested?.Invoke(this, Summary.Lateral);
+        }
+
+        /// <summary>Lets the host report what happened to the sent loads (shown next to the button).</summary>
+        public void ShowSendStatus(string text) => tbSendStatus.Text = text ?? string.Empty;
+
+        private void UpdateSendState() => btnSend.IsEnabled = Summary?.Lateral != null;
+
+        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+        {
+            try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is InvalidOperationException) { }
+            e.Handled = true;
+        }
+
+        // ---------------------------------------------------------------- inputs
+
+        private void Input_Changed(object sender, RoutedEventArgs e)
+        {
+            if (loading || !IsInitialized) return;
+            if (sender == rbHillNo && rbHillNo.IsChecked == true)
+            {
+                loading = true;
+                tbKzt.Text = "1.00";
+                loading = false;
+            }
+            Recalculate(notify: true);
+        }
+
+        private void ReadInputs()
+        {
+            Version = rbEd16.IsChecked == true ? ASCE7_Versions.ASCE_VER_7_16 : ASCE7_Versions.ASCE_VER_7_22;
+
+            var p = Parameters.Clone();
+            p.RiskCategory = rbRisk1.IsChecked == true ? "I" : rbRisk3.IsChecked == true ? "III" : rbRisk4.IsChecked == true ? "IV" : "II";
+            p.WindSpeed = Parse(tbV.Text);
+            p.ExposureCategory = rbExpB.IsChecked == true ? WindExposureCategories.WIND_EXP_CAT_B
+                               : rbExpD.IsChecked == true ? WindExposureCategories.WIND_EXP_CAT_D
+                               : WindExposureCategories.WIND_EXP_CAT_C;
+            p.Kzt = rbHillYes.IsChecked == true ? Parse(tbKzt.Text) : 1.0;
+            Parameters = p;
+
+            var b = Building.Clone();
+            b.EnclosureType = rbEncPartEnc.IsChecked == true ? BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED
+                            : rbEncPartOpen.IsChecked == true ? BuildingEnclosures.BLDG_PARTIALLY_OPEN
+                            : rbEncOpen.IsChecked == true ? BuildingEnclosures.BLDG_OPEN
+                            : BuildingEnclosures.BLDG_ENCLOSED;
+            b.RoofType = rbRoofGable.IsChecked == true ? RoofTypes.ROOF_TYPE_GABLE
+                       : rbRoofHip.IsChecked == true ? RoofTypes.ROOF_TYPE_HIP
+                       : RoofTypes.ROOF_TYPE_FLAT;
+            b.BuildingLength = Parse(tbL.Text);
+            b.BuildingWidth = Parse(tbB.Text);
+            b.BuildingHeight = Parse(tbH.Text);
+            double pitch = Parse(tbPitch.Text);
+            // A flat roof ignores the pitch box; keep the last good value so switching back restores it.
+            b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
+            b.RidgeDirection = rbRidgeAcross.IsChecked == true ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
+            Building = b;
+        }
+
+        /// <summary>Reads the screen, recalculates and refreshes everything shown.</summary>
+        private void Recalculate(bool notify)
+        {
+            ReadInputs();
+
+            Issues = WindInputValidator.Validate(Parameters, Building);
+            Analysis = null;
+            Summary = null;
+            string calcError = null;
+            if (!WindInputValidator.HasErrors(Issues))
+            {
+                try
+                {
+                    Analysis = WindAnalysis.Run(Version, Parameters, Building);
+                    Summary = WindSummary.Compute(Analysis, Building, OnlyCases1And3);
+                }
+                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NotSupportedException || ex is NotImplementedException)
+                {
+                    Analysis = null;
+                    Summary = null;
+                    calcError = ex.Message;
+                }
+            }
+
+            ShowIssues(calcError);
+            ShowBuildingNumbers();
+            ShowResults(calcError);
+
+            if (Analysis != null)
+                Viewer.SetResults(Building, Analysis.Cladding, Analysis.MwfrsAlongLength, Analysis.MwfrsAlongWidth, keepCamera: true);
+            else
+                Viewer.SetResults(null, null, null, null, keepCamera: true); // nothing sensible to draw
+
+            UpdateSendState();
+            tbSendStatus.Text = string.Empty;
+
+            if (notify)
+            {
+                notifyTimer.Stop();
+                notifyTimer.Start();
+            }
+        }
+
+        /// <summary>Raises <see cref="InputsChanged"/> now if a change is still waiting (e.g. before the host saves).</summary>
+        public void FlushPendingChange()
+        {
+            if (!notifyTimer.IsEnabled) return;
+            notifyTimer.Stop();
+            InputsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void ShowIssues(string calcError)
+        {
+            ShowField(msgV, bdV, WindInputField.WindSpeed);
+            ShowField(msgKzt, bdKzt, WindInputField.Kzt);
+            ShowField(msgPitch, bdPitch, WindInputField.RoofPitch);
+            ShowField(msgSize, null, WindInputField.Length, WindInputField.Width, WindInputField.WallHeight);
+            bdL.BorderBrush = Has(WindInputField.Length) ? WarnBrush : ControlBrush;
+            bdB.BorderBrush = Has(WindInputField.Width) ? WarnBrush : ControlBrush;
+            bdH.BorderBrush = Has(WindInputField.WallHeight) ? WarnBrush : ControlBrush;
+
+            var bldg = Issues.Where(i => i.Field == WindInputField.Building).Select(i => i.Message).ToList();
+            if (calcError != null) bldg.Add("These inputs cannot be calculated: " + calcError);
+            SetMessage(msgBuilding, string.Join(Environment.NewLine, bldg));
+
+            bool sloped = Building.RoofTypeIsSloped();
+            secSlope.Visibility = sloped ? Visibility.Visible : Visibility.Collapsed;
+            pnlRidge.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_GABLE ? Visibility.Visible : Visibility.Collapsed;
+            tbHipNote.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_HIP ? Visibility.Visible : Visibility.Collapsed;
+            runRise.Text = WindInputValidator.RisePer12(Building.RoofPitch);
+            pnlKzt.Visibility = rbHillYes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            runRisk.Text = "Risk Category " + Parameters.RiskCategory;
+        }
+
+        private bool Has(WindInputField f) => Issues.Any(i => i.Field == f);
+
+        private void ShowField(TextBlock message, Border frame, params WindInputField[] fields)
+        {
+            var list = Issues.Where(i => fields.Contains(i.Field)).ToList();
+            SetMessage(message, string.Join(Environment.NewLine, list.Select(i => i.Message)));
+            if (frame != null) frame.BorderBrush = list.Count > 0 ? WarnBrush : ControlBrush;
+        }
+
+        private static void SetMessage(TextBlock tb, string text)
+        {
+            tb.Text = text ?? string.Empty;
+            tb.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void ShowBuildingNumbers()
+        {
+            bool sizeOk = !Has(WindInputField.Length) && !Has(WindInputField.Width) && !Has(WindInputField.WallHeight) &&
+                          !Issues.Any(i => i.Field == WindInputField.RoofPitch && i.Severity == InputSeverity.Error);
+            valMeanH.Text = sizeOk ? Building.MeanRoofHeight.ToString("0.#") + " ft" : "-";
+            valRidgeH.Text = sizeOk ? Building.RidgeHeight.ToString("0.#") + " ft" : "-";
+            bool ccOk = sizeOk && Building.MeanRoofHeight <= WindInputValidator.CladdingHeightLimit &&
+                        (!Building.RoofTypeIsSloped() || Building.RoofPitch <= WindInputValidator.CladdingSlopeLimit);
+            valCC.Text = !sizeOk ? "-" : ccOk ? "Applies" : "Not available";
+            valCC.Foreground = !sizeOk || ccOk ? OkInk : WarnInk;
+        }
+
+        private void ShowResults(string calcError)
+        {
+            string ed = Version == ASCE7_Versions.ASCE_VER_7_16 ? "ASCE 7-16" : "ASCE 7-22";
+            string exp = Parameters.ExposureCategory == WindExposureCategories.WIND_EXP_CAT_B ? "B"
+                       : Parameters.ExposureCategory == WindExposureCategories.WIND_EXP_CAT_D ? "D" : "C";
+            string roof = Building.RoofType == RoofTypes.ROOF_TYPE_GABLE ? "gable" : Building.RoofType == RoofTypes.ROOF_TYPE_HIP ? "hip" : "flat";
+            tbResultsSub.Text = $"{ed}, {Format(Parameters.WindSpeed)} mph, Exposure {exp}, Risk Category {Parameters.RiskCategory}. " +
+                                $"{Format(Building.BuildingLength)} × {Format(Building.BuildingWidth)} ft {roof}-roof building, {Format(Building.BuildingHeight)} ft walls.";
+
+            var s = Summary;
+            SetStat(valRoof, subRoof, s?.RoofUpliftPsf, "psf", s?.RoofUpliftZone, "Cladding results are not available for these inputs");
+            SetStat(valWall, subWall, s?.WallSuctionPsf, "psf", s?.WallSuctionZone, "Cladding results are not available for these inputs");
+            SetForce(valWest, subWest, s?.FromWest);
+            SetForce(valSouth, subSouth, s?.FromSouth);
+
+            var rows = new List<CheckRow>();
+            foreach (var i in Issues)
+                rows.Add(new CheckRow(false, i.Message));
+            if (calcError != null)
+                rows.Add(new CheckRow(false, "These inputs cannot be calculated: " + calcError));
+            if (s != null)
+                rows.AddRange(s.Checks.Select(c => new CheckRow(c.Ok, c.Text)));
+            rows.Add(new CheckRow(false, "Confirm the wind speed V against the map for your site and risk category."));
+            icChecks.ItemsSource = rows;
+
+            int cases = s?.Lateral?.LoadCases.Count ?? 0;
+            tbCaseCount.Text = s?.Lateral == null
+                ? "Load cases are not available until the inputs can be calculated."
+                : $"{cases} ASCE 7 load cases will be sent. Each shear wall is designed for its worst case.";
+        }
+
+        private static void SetStat(TextBlock value, TextBlock sub, double? psf, string unit, string where, string missing)
+        {
+            value.Text = psf.HasValue ? psf.Value.ToString("0.0") + " " + unit : "-";
+            sub.Text = psf.HasValue ? where : missing;
+        }
+
+        private static void SetForce(TextBlock value, TextBlock sub, DirectionalWindForce f)
+        {
+            if (f == null) { value.Text = "-"; sub.Text = "Not available for these inputs"; return; }
+            value.Text = f.DesignKips.ToString("0.0") + " kips";
+            sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; minimum {f.MinimumKips:0.0}" +
+                       (f.MinimumGoverns ? " (minimum governs)" : string.Empty);
+        }
+
+        // ---------------------------------------------------------------- helpers
+
+        private static double Parse(string text) =>
+            double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out double v) ? v : double.NaN;
+
+        private static string Format(double v) => double.IsNaN(v) ? string.Empty : v.ToString("0.###", CultureInfo.CurrentCulture);
+
+        private static Brush Frozen(string hex)
+        {
+            var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+            b.Freeze();
+            return b;
+        }
+
+        /// <summary>One row of the results checklist (bound in XAML).</summary>
+        public sealed class CheckRow
+        {
+            public CheckRow(bool ok, string text) { Ok = ok; Text = text; }
+            public bool Ok { get; }
+            public string Text { get; }
+            public string Mark => Ok ? "✓" : "!";
+            public string Lead => Ok ? "OK:" : "Check:";
+            public Brush MarkBrush => Ok ? OkInk : WarnInk;
+        }
+
+        private static class AutomationPropertiesHelper
+        {
+            public static void SetName(DependencyObject o, string name) => System.Windows.Automation.AutomationProperties.SetName(o, name);
+        }
+    }
+}

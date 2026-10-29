@@ -75,6 +75,8 @@
         <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="10,8">
             <StackPanel>
                 <WrapPanel VerticalAlignment="Center">
+                    <!-- Each label stays on the same line as its buttons when the toolbar wraps -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <TextBlock Text="Cladding (roofing, siding, windows)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}"
                                  Content="Suction (pull-off)" Checked="Mode_Checked"
@@ -82,6 +84,8 @@
                     <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
                                  Content="Pressure (push-in)" Checked="Mode_Checked"
                                  ToolTip="Wind pushing roofing and siding inward. Worst case from any wind direction."/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <TextBlock Text="Whole building (shear walls)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
                                  Content="Wind from West" Checked="Mode_Checked"
@@ -89,7 +93,8 @@
                     <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
                                  Content="Wind from South" Checked="Mode_Checked"
                                  ToolTip="Pressures on the whole structure with wind blowing from the south (along the building width). These load the shear walls."/>
-                    <StackPanel x:Name="spRoofCase" Orientation="Horizontal">
+                    </StackPanel>
+                    <StackPanel x:Name="spRoofCase" Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Larger uplift" Checked="Mode_Checked"
                                      ToolTip="Fig. 27.3-1 gives two Cp values for many roof zones (e.g. -0.3 and +0.2). This uses the more negative one (larger uplift)."/>

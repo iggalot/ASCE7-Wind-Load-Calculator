@@ -109,6 +109,12 @@ namespace ASCE7WindLoadCalculator
                     WindSpeedTextBox.Text = Parameters.WindSpeed.ToString();
                     KztTextBox.Text = Parameters.Kzt.ToString();
 
+                    // Show the saved risk and exposure (previously the combos stayed at II / C, so opening
+                    // this tab silently reset them).
+                    foreach (ComboBoxItem item in RiskCategoryComboBox.Items)
+                        item.IsSelected = (item.Content as string) == (Parameters.RiskCategory ?? "II");
+                    ExposureCategoryComboBox.SelectedIndex = (int)Parameters.ExposureCategory;
+
                     bool found_version = false;
                     foreach (ASCE7_Versions item in Enum.GetValues(typeof(ASCE7_Versions)))
                     {
@@ -310,13 +316,12 @@ namespace ASCE7WindLoadCalculator
                         break;
                 }
 
-                Parameters = new WindParameters_Base
-                {
-                    RiskCategory = risk,
-                    WindSpeed = windSpeed,
-                    ExposureCategory = exposure,
-                    Kzt = kzt,
-                };
+                // Start from the existing inputs so values this screen does not show (e.g. G) are kept.
+                Parameters = Parameters?.Clone() ?? new WindParameters_Base();
+                Parameters.RiskCategory = risk;
+                Parameters.WindSpeed = windSpeed;
+                Parameters.ExposureCategory = exposure;
+                Parameters.Kzt = kzt;
 
                 bUpdatingUI = false;
             }
