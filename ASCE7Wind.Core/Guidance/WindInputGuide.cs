@@ -78,7 +78,9 @@ namespace ASCE7WindLoadCalculator
                     if (!(p > 0 && p < 90))
                     {
                         pitchOk = false;
-                        Add(WindInputField.RoofPitch, InputSeverity.Error, "Enter a pitch between 0 and 90 degrees.");
+                        Add(WindInputField.RoofPitch, InputSeverity.Error, p == 0
+                            ? "A 0° slope is a flat roof: choose Flat, or enter a slope."
+                            : "Enter a pitch between 0 and 90 degrees.");
                     }
                     else if (p > CladdingSlopeLimit)
                         Add(WindInputField.RoofPitch, InputSeverity.Warning,

@@ -721,11 +721,11 @@ namespace ASCE7WindLoadCalculator
                 var label = new TextBlock
                 {
                     Text = t == 0 ? "0" : t.ToString("+0.#;−0.#", CultureInfo.CurrentCulture),
-                    FontSize = 12,
+                    FontSize = 10,
                     Foreground = (Brush)FindResource("InkSecondary"),
                 };
                 Canvas.SetLeft(label, 0);
-                Canvas.SetTop(label, Math.Max(0, Math.Min(h - 16, y - 8)));
+                Canvas.SetTop(label, Math.Max(0, Math.Min(h - 13, y - 7)));
                 legendTicks.Children.Add(label);
             }
         }

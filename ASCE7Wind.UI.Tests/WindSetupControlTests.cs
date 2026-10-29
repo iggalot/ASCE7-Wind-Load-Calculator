@@ -17,8 +17,9 @@ namespace ASCE7Wind.UI.Tests
     [TestClass]
     public class WindSetupControlTests
     {
-        // The Wind Setup tab beside the 750 px drawing canvas on a maximized 1920 x 1080 window.
-        private const int W = 1130, H = 790;
+        // Smallest case: the tab beside the 750 px drawing canvas on a maximized 1920 x 1080 window (measured
+        // in the running app). On the wind tabs the app hides the canvas, so the real space is larger.
+        private const int W = 1134, H = 754;
 
         private static WindSetupControl Make(BuildingData b = null)
         {
@@ -102,6 +103,27 @@ namespace ASCE7Wind.UI.Tests
             c.SetShearWallLink(false, null);
             Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "btnSend").Visibility);
             Assert.AreEqual(Visibility.Collapsed, Find<UIElement>(c, "bdLinked").Visibility);
+
+            // Not linked for a reason (manual load, opened file): a warning stays visible with the button.
+            c.SetShearWallLink(false, "They use your manual load.");
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "bdLinked").Visibility);
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "btnSend").Visibility);
+            StringAssert.Contains(Find<TextBlock>(c, "tbLinkedTitle").Text, "NOT");
+            Layout(c);
+            Snapshot(c, "setup_results_unlinked");
+        }
+
+        /// <summary>A gable or hip at 0 degrees is a flat roof: leaving the pitch box switches the shape.</summary>
+        [STATestMethod]
+        public void ZeroPitch_OnSlopedRoof_SwitchesToFlat()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            var pitch = Find<TextBox>(c, "tbPitch");
+            pitch.Text = "0";
+            Assert.AreEqual(RoofTypes.ROOF_TYPE_GABLE, c.Building.RoofType, "no switch while typing (e.g. on the way to 0.5)");
+            pitch.RaiseEvent(new RoutedEventArgs(UIElement.LostFocusEvent));
+            Assert.AreEqual(RoofTypes.ROOF_TYPE_FLAT, c.Building.RoofType);
+            Assert.IsNotNull(c.Analysis);
         }
 
         [STATestMethod]
@@ -172,11 +194,15 @@ namespace ASCE7Wind.UI.Tests
         public void Hill_No_ResetsKztToOne()
         {
             var c = Make();
+            var fixedKzt = Find<UIElement>(c, "tbKztFixed");
+            Assert.AreEqual(Visibility.Visible, fixedKzt.Visibility, "flat ground still shows Kzt = 1.00");
             Find<ToggleButton>(c, "rbHillYes").IsChecked = true;
+            Assert.AreEqual(Visibility.Collapsed, fixedKzt.Visibility);
             Find<TextBox>(c, "tbKzt").Text = "1.30";
             Assert.AreEqual(1.30, c.Parameters.Kzt, 1e-12);
             Find<ToggleButton>(c, "rbHillNo").IsChecked = true;
             Assert.AreEqual(1.0, c.Parameters.Kzt, 1e-12);
+            Assert.AreEqual(Visibility.Visible, fixedKzt.Visibility);
         }
 
         [STATestMethod]

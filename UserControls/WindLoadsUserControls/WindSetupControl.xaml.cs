@@ -231,12 +231,36 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>Shows whether (and how) the shear walls follow these wind loads.</summary>
+        /// <remarks>
+        /// Linked: green "Shear walls use these wind loads". Not linked with a reason: amber warning plus the
+        /// button to use these loads. Not linked without a reason: just the button.
+        /// </remarks>
         public void SetShearWallLink(bool linked, string detail)
         {
             LinkedToShearWalls = linked;
             tbLinked.Text = detail ?? string.Empty;
-            bdLinked.Visibility = linked && !string.IsNullOrEmpty(detail) ? Visibility.Visible : Visibility.Collapsed;
+            bool show = linked || !string.IsNullOrEmpty(detail);
+            bdLinked.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            var ink = linked ? Frozen("#004D00") : Frozen("#7A4B00");
+            bdLinked.Background = linked ? Frozen("#EAF4EA") : Frozen("#FFF4E5");
+            bdLinked.BorderBrush = linked ? Frozen("#7FB77F") : Frozen("#E8A33D");
+            tbLinkedMark.Text = linked ? "✓" : "!";
+            tbLinkedMark.Foreground = linked ? OkInk : WarnInk;
+            tbLinkedTitle.Text = linked ? "Shear walls use these wind loads" : "Shear walls are NOT using these wind loads";
+            tbLinkedTitle.Foreground = ink;
+            tbLinked.Foreground = ink;
             UpdateSendState();
+        }
+
+        /// <summary>A sloped roof at 0 degrees is a flat roof: switch to Flat when the user leaves the box.</summary>
+        private void Pitch_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (!Building.RoofTypeIsSloped() || Parse(tbPitch.Text) != 0) return;
+            rbRoofFlat.IsChecked = true; // recalculates through Input_Changed
+            loading = true;
+            tbPitch.Text = "15";         // a sensible slope if they switch back
+            loading = false;
+            SetMessage(msgBuilding, "A 0° roof is a flat roof, so the roof shape was changed to Flat.");
         }
 
         private void UpdateSendState()
@@ -369,6 +393,7 @@ namespace ASCE7WindLoadCalculator
             tbHipNote.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_HIP ? Visibility.Visible : Visibility.Collapsed;
             runRise.Text = WindInputValidator.RisePer12(Building.RoofPitch);
             pnlKzt.Visibility = rbHillYes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            tbKztFixed.Visibility = rbHillYes.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
             runRisk.Text = "Risk Category " + Parameters.RiskCategory;
         }
 
@@ -428,7 +453,7 @@ namespace ASCE7WindLoadCalculator
             int cases = s?.Lateral?.LoadCases.Count ?? 0;
             tbCaseCount.Text = s?.Lateral == null
                 ? "Load cases are not available until the inputs can be calculated."
-                : $"{cases} ASCE 7 load cases will be sent. Each shear wall is designed for its worst case.";
+                : $"{cases} load cases (Fig. 27.3-8). Each shear wall is designed for its worst case.";
         }
 
         private static void SetStat(TextBlock value, TextBlock sub, double? psf, string unit, string where, string missing)

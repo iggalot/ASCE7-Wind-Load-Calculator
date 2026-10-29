@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="640" d:DesignWidth="960"
-             Background="#FCFCFB" FontFamily="Segoe UI" FontSize="13">
+             Background="#FCFCFB" FontFamily="Segoe UI" FontSize="12">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="InkPrimary" Color="#0B0B0B"/>
@@ -15,7 +15,7 @@
 
         <Style x:Key="Segment" TargetType="RadioButton">
             <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Padding" Value="8,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{StaticResource InkPrimary}"/>
             <Setter Property="Template">
@@ -45,7 +45,7 @@
 
         <Style x:Key="ViewButton" TargetType="Button">
             <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Padding" Value="7,2"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -71,50 +71,37 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar: two rows so nothing wraps unpredictably -->
-        <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="10,8">
-            <StackPanel>
-                <WrapPanel VerticalAlignment="Center">
-                    <!-- Each label stays on the same line as its buttons when the toolbar wraps -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="Cladding (roofing, siding, windows)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+        <!-- Toolbar: one compact row. Explanations are in the tooltips. -->
+        <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
+            <WrapPanel VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                    <TextBlock Text="Cladding" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
+                               ToolTip="Components and cladding: roofing, siding, windows (Chapter 30)"/>
                     <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}"
-                                 Content="Suction (pull-off)" Checked="Mode_Checked"
+                                 Content="Suction" Checked="Mode_Checked"
                                  ToolTip="Wind trying to pull roofing and siding away (suction / uplift). Worst case from any wind direction. Used to fasten coverings."/>
-                    <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
-                                 Content="Pressure (push-in)" Checked="Mode_Checked"
+                    <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
+                                 Content="Push-in" Checked="Mode_Checked"
                                  ToolTip="Wind pushing roofing and siding inward. Worst case from any wind direction."/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="Whole building (shear walls)" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
+                    <TextBlock Text="Shear walls" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
+                               ToolTip="Whole building (main wind force resisting system, Chapter 27): these pressures load the shear walls"/>
                     <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
-                                 Content="Wind from West" Checked="Mode_Checked"
-                                 ToolTip="Pressures on the whole structure with wind blowing from the west (along the building length). These load the shear walls."/>
-                    <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0,0,18,0"
-                                 Content="Wind from South" Checked="Mode_Checked"
-                                 ToolTip="Pressures on the whole structure with wind blowing from the south (along the building width). These load the shear walls."/>
-                    </StackPanel>
-                    <StackPanel x:Name="spRoofCase" Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Larger uplift" Checked="Mode_Checked"
-                                     ToolTip="Fig. 27.3-1 gives two Cp values for many roof zones (e.g. -0.3 and +0.2). This uses the more negative one (larger uplift)."/>
-                        <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Content="Other value" Checked="Mode_Checked"
-                                     ToolTip="The second Fig. 27.3-1 roof Cp (positive or less negative). ASCE 7 requires checking both."/>
-                    </StackPanel>
-                </WrapPanel>
-                <WrapPanel VerticalAlignment="Center" Margin="0,6,0,0">
-                    <TextBlock Text="View" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <Button Style="{StaticResource ViewButton}" Content="3D" Click="ViewIso_Click" ToolTip="Angled view (double-click the model also resets)"/>
-                    <Button Style="{StaticResource ViewButton}" Content="Top" Click="ViewTop_Click"/>
-                    <Button Style="{StaticResource ViewButton}" Content="South" Click="ViewSouth_Click"/>
-                    <Button Style="{StaticResource ViewButton}" Content="West" Click="ViewWest_Click" Margin="0,0,18,0"/>
-                    <CheckBox x:Name="cbBlocks" Content="Pressure blocks" IsChecked="True" VerticalAlignment="Center" Margin="0,0,14,0"
-                              Foreground="{StaticResource InkSecondary}" Checked="Display_Changed" Unchecked="Display_Changed"
-                              ToolTip="Draw each zone's pressure as a block standing on the surface; taller = stronger"/>
-                    <CheckBox x:Name="cbOutlines" Content="Zone outlines" IsChecked="True" VerticalAlignment="Center"
-                              Foreground="{StaticResource InkSecondary}" Checked="Outlines_Changed" Unchecked="Outlines_Changed"/>
-                </WrapPanel>
-            </StackPanel>
+                                 Content="From W" Checked="Mode_Checked"
+                                 ToolTip="Whole-building pressures with wind blowing from the west (along the building length)."/>
+                    <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
+                                 Content="From S" Checked="Mode_Checked"
+                                 ToolTip="Whole-building pressures with wind blowing from the south (along the building width)."/>
+                </StackPanel>
+                <StackPanel x:Name="spRoofCase" Orientation="Horizontal">
+                    <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Larger uplift" Checked="Mode_Checked"
+                                 ToolTip="Fig. 27.3-1 gives two Cp values for many roof zones (e.g. -0.3 and +0.2). This uses the more negative one (larger uplift)."/>
+                    <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Margin="0" Content="Other" Checked="Mode_Checked"
+                                 ToolTip="The second Fig. 27.3-1 roof Cp (positive or less negative). ASCE 7 requires checking both."/>
+                </StackPanel>
+            </WrapPanel>
         </Border>
 
         <!-- 3D area with overlays -->
@@ -140,48 +127,62 @@
             </Canvas>
 
             <!-- Title -->
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,12,0,0" IsHitTestVisible="False">
-                <TextBlock x:Name="tbTitle" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" Text="Wind pressures"/>
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,8,0,0" IsHitTestVisible="False">
+                <TextBlock x:Name="tbTitle" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" Text="Wind pressures"/>
                 <TextBlock x:Name="tbSubtitle" Foreground="{StaticResource InkSecondary}" Text="Enter building and wind inputs to see results"/>
             </StackPanel>
 
             <!-- Warnings -->
-            <Border x:Name="bdWarnings" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16,64,0,0"
+            <Border x:Name="bdWarnings" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,52,0,0"
                     MaxWidth="460" Background="#FFF4E5" BorderBrush="#E8A33D" BorderThickness="1" CornerRadius="4" Padding="10,6"
                     IsHitTestVisible="False">
                 <TextBlock x:Name="tbWarnings" TextWrapping="Wrap" Foreground="#7A4B00"/>
             </Border>
 
-            <!-- Legend -->
-            <Border x:Name="bdLegend" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,16,0" Padding="12,10"
-                    Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="6"
-                    IsHitTestVisible="False">
+            <!-- Legend: a slim bar, no card, so it hides as little of the model as possible -->
+            <Border x:Name="bdLegend" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,10,0" Padding="6,4"
+                    Background="#CCFCFCFB" CornerRadius="4" IsHitTestVisible="False"
+                    ToolTip="Net pressure in psf. Blue pushes on the surface; red pulls away (suction).">
                 <StackPanel>
-                    <TextBlock Text="Net pressure (psf)" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" Margin="0,0,0,6"/>
-                    <TextBlock Text="Pushes on surface" Foreground="{StaticResource InkSecondary}" FontSize="12"/>
-                    <Grid Margin="0,4">
+                    <TextBlock Text="psf" FontWeight="SemiBold" Foreground="{StaticResource InkPrimary}" HorizontalAlignment="Center" FontSize="11"/>
+                    <TextBlock Text="push" Foreground="{StaticResource InkSecondary}" FontSize="10" HorizontalAlignment="Center"/>
+                    <Grid Margin="0,2">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="9"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Border x:Name="legendBar" Grid.Column="0" Height="180" CornerRadius="3"/>
-                        <Canvas x:Name="legendTicks" Grid.Column="1" Width="44" Height="180" Margin="6,0,0,0"/>
+                        <Border x:Name="legendBar" Grid.Column="0" Height="120" CornerRadius="2"/>
+                        <Canvas x:Name="legendTicks" Grid.Column="1" Width="30" Height="120" Margin="4,0,0,0"/>
                     </Grid>
-                    <TextBlock Text="Pulls away (suction)" Foreground="{StaticResource InkSecondary}" FontSize="12"/>
+                    <TextBlock Text="pull" Foreground="{StaticResource InkSecondary}" FontSize="10" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
 
             <!-- Summary -->
-            <Border x:Name="bdSummary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="16,0,0,16" Padding="12,10"
+            <Border x:Name="bdSummary" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12,0,0,44" Padding="12,10"
                     Background="{StaticResource Card}" BorderBrush="{StaticResource Hairline}" BorderThickness="1" CornerRadius="6"
                     IsHitTestVisible="False" MaxWidth="420">
                 <StackPanel x:Name="spSummary"/>
             </Border>
 
+            <!-- Camera presets and display toggles, inside the view so the toolbar stays one row -->
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8" Orientation="Horizontal">
+                <Button Style="{StaticResource ViewButton}" Content="3D" Click="ViewIso_Click" ToolTip="Angled view (double-click the model also resets)"/>
+                <Button Style="{StaticResource ViewButton}" Content="Top" Click="ViewTop_Click"/>
+                <Button Style="{StaticResource ViewButton}" Content="S" Click="ViewSouth_Click" ToolTip="Look at the south wall"/>
+                <Button Style="{StaticResource ViewButton}" Content="W" Click="ViewWest_Click" ToolTip="Look at the west wall" Margin="0,0,12,0"/>
+                <CheckBox x:Name="cbBlocks" Content="Blocks" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0"
+                          Foreground="{StaticResource InkSecondary}" Checked="Display_Changed" Unchecked="Display_Changed"
+                          ToolTip="Draw each zone's pressure as a block standing on the surface; taller = stronger"/>
+                <CheckBox x:Name="cbOutlines" Content="Outlines" IsChecked="True" VerticalAlignment="Center"
+                          Foreground="{StaticResource InkSecondary}" Checked="Outlines_Changed" Unchecked="Outlines_Changed"
+                          ToolTip="Show zone boundaries"/>
+            </StackPanel>
+
             <!-- Controls hint -->
-            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,12" FontSize="12"
+            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" FontSize="11"
                        Foreground="{StaticResource InkMuted}" IsHitTestVisible="False"
-                       Text="Drag to rotate  ·  Right-drag to pan  ·  Wheel to zoom  ·  Double-click to reset"/>
+                       Text="Drag: rotate · Right-drag: pan · Wheel: zoom"/>
 
             <!-- Hover card -->
             <Border x:Name="bdHover" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top"
