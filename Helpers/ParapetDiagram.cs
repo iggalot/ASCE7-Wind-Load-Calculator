@@ -53,6 +53,59 @@ namespace ASCE7WindLoadCalculator
             Label(c, "Not to scale", w - 74, h - 22, InkSecondary, 10);
         }
 
+        /// <summary>
+        /// C&amp;C parapets, Fig. 30.6-1 layout: case A (windward parapet, roof downwind of it) on the left and case B
+        /// (leeward parapet, roof upwind of it) on the right. Each face shows its design pressure (psf): push toward the
+        /// face in blue, suction away from it in red; the net load on the parapet is written under each case.
+        /// </summary>
+        public static void DrawCladding(Canvas c, ParapetCladdingCase a, ParapetCladdingCase b)
+        {
+            double half = c.Width / 2;
+            DrawCladdingCase(c, 0, half, a, windwardParapet: true);
+            c.Children.Add(Line(half, 10, half, c.Height - 10, Fill, 1));
+            DrawCladdingCase(c, half, half, b, windwardParapet: false);
+        }
+
+        private static void DrawCladdingCase(Canvas c, double x0, double width, ParapetCladdingCase k, bool windwardParapet)
+        {
+            double h = c.Height, groundY = h - 46, roofY = groundY - 58, topY = roofY - 52, t = 8;
+            double px = windwardParapet ? x0 + width * 0.42 : x0 + width * 0.58 - t;   // parapet x (left edge)
+            double ay = (topY + roofY) / 2;
+
+            Label(c, windwardParapet ? "Case A: windward parapet" : "Case B: leeward parapet", x0 + 10, 6, Ink, 12, bold: true);
+            Arrow(c, x0 + 12, 34, x0 + 64, 34, InkSecondary, 2);
+            Label(c, "Wind", x0 + 70, 26, InkSecondary, 11);
+
+            // wall + parapet, roof on the building side, ground
+            c.Children.Add(Rect(px, topY, t, groundY - topY, Fill, Ink));
+            if (windwardParapet) c.Children.Add(Line(px + t, roofY, x0 + width - 14, roofY, Ink, 2));
+            else c.Children.Add(Line(x0 + 14, roofY, px, roofY, Ink, 2));
+            c.Children.Add(Line(x0 + 10, groundY, x0 + width - 10, groundY, Ground, 1.5));
+            Label(c, "roof", windwardParapet ? px + 40 : px - 64, roofY + 4, InkSecondary, 11);
+
+            // exterior (front) face is upwind for A, downwind for B; the back face is on the roof side
+            double frontX = windwardParapet ? px : px + t, backX = windwardParapet ? px + t : px;
+            FaceArrow(c, frontX, ay, outward: windwardParapet ? -1 : 1, k.FrontPressure);
+            FaceArrow(c, backX, ay + 18, outward: windwardParapet ? 1 : -1, k.BackPressure);
+
+            Label(c, $"Net on the parapet {k.NetPressure:0.0} psf " + (windwardParapet ? "toward the roof" : "away from the roof"),
+                  x0 + 10, groundY + 6, Ink, 11, bold: true);
+            Label(c, $"{k.Location}: front {k.FrontSource}, back {k.BackSource}", x0 + 10, groundY + 22, InkSecondary, 10);
+        }
+
+        /// <summary>
+        /// Arrow on a parapet face. <paramref name="outward"/> is the side the face looks toward (-1 left, +1 right).
+        /// Positive pressure pushes toward the face (blue), negative pulls away from it (red).
+        /// </summary>
+        private static void FaceArrow(Canvas c, double faceX, double y, int outward, double pressure)
+        {
+            bool push = pressure >= 0;
+            double far = faceX + outward * 46, near = faceX + outward * 2;
+            if (push) Arrow(c, far, y, near, y, Push, 3); else Arrow(c, near, y, far, y, Pull, 3);
+            double lx = outward < 0 ? far - 4 : near + 16;
+            Label(c, $"{pressure:+0.0;-0.0} psf", outward < 0 ? lx - 22 : lx, y - 18, push ? Push : Pull, 11, bold: true);
+        }
+
         // ------------------------------------------------------------------ primitives
 
         private static Line Line(double x1, double y1, double x2, double y2, Brush stroke, double thickness) =>

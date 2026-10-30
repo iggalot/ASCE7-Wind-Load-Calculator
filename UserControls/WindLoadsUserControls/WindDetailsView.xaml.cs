@@ -199,6 +199,7 @@ namespace ASCE7WindLoadCalculator
                 GCpGraph(cc.extGCpCurve_Roof, roofRows)));
             page.Children.Add(Card(CladdingTable(roofRows)));
             AddOverhangSection(page, cc as WindLoadCalculator_CC);
+            AddParapetSection(page, cc as WindLoadCalculator_CC);
 
             // Walls: one graph, a table for each pair of walls
             page.Children.Add(Section("Walls"));
@@ -335,6 +336,32 @@ namespace ASCE7WindLoadCalculator
                 ("Design (psf)", "Net", "0.0"), ("Uplift per ft of eave (lb/ft)", "PerFoot", "0"), ("Note", "Note", (string)null),
             }, swatch: true);
             g.ItemsSource = rows;
+            page.Children.Add(Card(g));
+        }
+
+        /// <summary>C&amp;C parapet cases A and B (30.6, Fig. 30.6-1): a diagram of the corner cases and a table of all four.</summary>
+        private static void AddParapetSection(StackPanel page, WindLoadCalculator_CC cc)
+        {
+            if (cc == null || cc.ParapetCases.Count == 0) return;
+            var first = cc.ParapetCases[0];
+            page.Children.Add(Section($"Parapet, {cc.buildingData.ParapetHeight:0.##} ft (Section 30.6, Fig. 30.6-1)"));
+            page.Children.Add(Para($"Each face: p = qp [(GCp) − (±GCpi)] (Eq. 30.6-1), qp = {first.Qp:0.00} psf at the parapet top, GCpi = ±{first.GCpi:0.00} " +
+                                   "(the building's enclosure, Table 26.13-1) taken in the direction that adds; GCp at the wall component area; " +
+                                   $"at least {WindLoadCalculator_CC.MinimumNetPressure:0} psf. The internal pressure cancels in the net load on the parapet. " +
+                                   "Corner = within the zone width a of a corner (wall Zone 5, roof Zone 3); edge = elsewhere (Zone 4, roof Zone 2). " +
+                                   "These size the parapet itself; the shear walls use the 27.3.4 parapet force."));
+            var a = cc.ParapetCases.FirstOrDefault(p => p.Case == "A" && p.Location == "corner");
+            var b = cc.ParapetCases.FirstOrDefault(p => p.Case == "B" && p.Location == "corner");
+            if (a != null && b != null)
+                page.Children.Add(FigureRow(Drawing("Corner cases (the edge values are in the table)", c => ParapetDiagram.DrawCladding(c, a, b), width: 640)));
+            var g = NewGrid(new[]
+            {
+                ("Case", "Case", (string)null), ("Where", "Location", (string)null),
+                ("Front face", "FrontSource", (string)null), ("GCp", "GCpFront", "0.00"), ("Front (psf)", "FrontPressure", "0.0"),
+                ("Back face", "BackSource", (string)null), ("GCp ", "GCpBack", "0.00"), ("Back (psf)", "BackPressure", "0.0"),
+                ("Net on the parapet (psf)", "NetPressure", "0.0"),
+            });
+            g.ItemsSource = cc.ParapetCases;
             page.Children.Add(Card(g));
         }
 
