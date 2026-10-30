@@ -607,9 +607,46 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <Border Grid.Column="2" Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
-                    <ContentControl x:Name="ccViewerBuilding"/>
-                </Border>
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
+                        <ContentControl x:Name="ccViewerBuilding"/>
+                    </Border>
+                    <!-- Live results while the building is edited (same numbers as the Results page) -->
+                    <UniformGrid x:Name="ugLiveResults" Grid.Row="1" Columns="4" Margin="0,10,0,0">
+                        <Border Style="{StaticResource StatCard}" Padding="12,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Roof uplift · cladding"/>
+                                <StackPanel Orientation="Horizontal"><TextBlock x:Name="liveRoof" Style="{StaticResource StatValue}" FontSize="18" Foreground="#9B1C1C"/><TextBlock x:Name="liveRoofUnit" Style="{StaticResource StatUnit}" Margin="4,0,0,2" Text="psf"/></StackPanel>
+                                <TextBlock x:Name="liveRoofSub" Style="{StaticResource StatDetail}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}" Padding="12,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Wall suction · cladding"/>
+                                <StackPanel Orientation="Horizontal"><TextBlock x:Name="liveWall" Style="{StaticResource StatValue}" FontSize="18" Foreground="#9B1C1C"/><TextBlock x:Name="liveWallUnit" Style="{StaticResource StatUnit}" Margin="4,0,0,2" Text="psf"/></StackPanel>
+                                <TextBlock x:Name="liveWallSub" Style="{StaticResource StatDetail}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}" Padding="12,6">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Wall force · wind from W"/>
+                                <StackPanel Orientation="Horizontal"><TextBlock x:Name="liveWest" Style="{StaticResource StatValue}" FontSize="18"/><TextBlock x:Name="liveWestUnit" Style="{StaticResource StatUnit}" Margin="4,0,0,2" Text="kips"/></StackPanel>
+                                <TextBlock x:Name="liveWestSub" Style="{StaticResource StatDetail}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}" Padding="12,6" Margin="0">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StatLabel}" Text="Wall force · wind from S"/>
+                                <StackPanel Orientation="Horizontal"><TextBlock x:Name="liveSouth" Style="{StaticResource StatValue}" FontSize="18"/><TextBlock x:Name="liveSouthUnit" Style="{StaticResource StatUnit}" Margin="4,0,0,2" Text="kips"/></StackPanel>
+                                <TextBlock x:Name="liveSouthSub" Style="{StaticResource StatDetail}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                </Grid>
             </Grid>
 
             <!-- ========== STEP 3: RESULTS — the prototype layout ========== -->

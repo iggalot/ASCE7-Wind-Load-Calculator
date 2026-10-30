@@ -120,6 +120,8 @@ namespace ASCE7WindLoadCalculator
                 new[] { "Exposure", ExposureLetter(parameters.ExposureCategory), "Section 26.7" },
                 new[] { "Terrain constants α, zg", $"{alpha:0.##}, {zg:0} ft", "Table 26.11-1" },
                 new[] { "Mean roof height h", $"{h:0.##} ft", "Section 26.2" },
+                new[] { "Plan ratio L/B (wind from W)", (building.BuildingLength / building.BuildingWidth).ToString("0.00"), "Fig. 27.3-1 leeward wall Cp" },
+                new[] { "Height ratios h/L, h/B", $"{h / building.BuildingLength:0.00}, {h / building.BuildingWidth:0.00}", "Fig. 27.3-1 roof Cp (h/L in the wind direction)" },
             };
             if (calc != null)
             {

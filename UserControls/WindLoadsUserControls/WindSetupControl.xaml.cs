@@ -556,6 +556,12 @@ namespace ASCE7WindLoadCalculator
             SetForce(valWest, unitWest, subWest, s?.FromWest);
             SetForce(valSouth, unitSouth, subSouth, s?.FromSouth);
 
+            // The Building page shows the same numbers, one detail line each, so edits there give feedback at once.
+            SetLive(liveRoof, liveRoofUnit, liveRoofSub, s?.RoofUpliftPsf, $"{ComponentName(cbRoofComponent)}, {Parameters.RoofComponentArea:0.#} sq ft");
+            SetLive(liveWall, liveWallUnit, liveWallSub, s?.WallSuctionPsf, $"{ComponentName(cbWallComponent)}, {Parameters.WallComponentArea:0.#} sq ft");
+            SetLive(liveWest, liveWestUnit, liveWestSub, s?.FromWest?.DesignKips, s?.FromWest == null ? null : s.FromWest.MinimumGoverns ? "Minimum governs" : "Calculated wind governs");
+            SetLive(liveSouth, liveSouthUnit, liveSouthSub, s?.FromSouth?.DesignKips, s?.FromSouth == null ? null : s.FromSouth.MinimumGoverns ? "Minimum governs" : "Calculated wind governs");
+
             var rows = new List<CheckRow>();
             // Building-level limits (e.g. over 60 ft) are also reported by the engine in s.Checks; show them once.
             foreach (var i in Issues.Where(i => s == null || i.Field != WindInputField.Building))
@@ -584,6 +590,13 @@ namespace ASCE7WindLoadCalculator
                 : $"{cases} load cases (Fig. 27.3-8); each wall uses its worst case:";
             double faded = OnlyCases1And3 ? 0.35 : 1.0;
             tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
+        }
+
+        private static void SetLive(TextBlock value, TextBlock unit, TextBlock sub, double? v, string detail)
+        {
+            value.Text = v.HasValue ? v.Value.ToString("0.0") : "-";
+            unit.Visibility = v.HasValue ? Visibility.Visible : Visibility.Hidden;
+            sub.Text = v.HasValue ? detail : "Not available";
         }
 
         private static string ComponentName(ComboBox c)
