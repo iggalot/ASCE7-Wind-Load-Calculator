@@ -135,7 +135,7 @@ namespace ASCE7WindLoadCalculator
             }
             rows.Add(new[] { "Gust-effect factor G", parameters.GustFactor.ToString("0.00"), "Section 26.11 (rigid building)" });
             if (analysis.Cladding?.RoofAreaCalculator?.HasCritDim == true)
-                rows.Add(new[] { "Cladding zone width a", $"{analysis.Cladding.RoofAreaCalculator.CritDim_a:0.##} ft", "Fig. 30.3-1 notes" });
+                rows.Add(new[] { "Cladding zone width a", $"{analysis.Cladding.RoofAreaCalculator.CritDim_a:0.##} ft", "Fig. 30.3-2 notes" });
             page.Children.Add(Card(KeyValueTable(rows)));
             return page;
         }
