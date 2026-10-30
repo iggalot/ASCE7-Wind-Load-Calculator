@@ -193,6 +193,18 @@ namespace ASCE7WindLoadCalculator
             page.Children.Add(Para($"Pressure p = q G Cp − qh (±GCpi). qh = {QhOf(m):0.00} psf, G = {parameters.GustFactor:0.00}, GCpi = ±{m.GetGCpi():0.00}. " +
                                    "Internal pressure cancels in the total force on the building."));
 
+            // The ratios Fig. 27.3-1 reads for this direction (L is the plan dimension along the wind).
+            var dir = m.buildingData;
+            string lw = m is WindLoadCalculator_MWFRS mw ? $" → leeward wall Cp = {mw.Cp_LW:0.00}" : string.Empty;
+            page.Children.Add(Section("Ratios for this wind direction (Fig. 27.3-1)"));
+            page.Children.Add(Card(KeyValueTable(new List<string[]>
+            {
+                new[] { "Dimension along the wind L", $"{dir.BuildingLength:0.#} ft", "parallel to the wind" },
+                new[] { "Dimension across the wind B", $"{dir.BuildingWidth:0.#} ft", "normal to the wind" },
+                new[] { "L/B", dir.L_Over_B.ToString("0.00"), "leeward wall Cp" + lw },
+                new[] { "h/L", dir.h_Over_L.ToString("0.00"), "roof Cp: windward/leeward roof and distance zones from the windward edge" },
+            })));
+
             if (force != null)
             {
                 page.Children.Add(Section("Force on the shear walls"));

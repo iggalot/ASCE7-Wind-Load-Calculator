@@ -24,7 +24,7 @@
             <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,10,16,12"/>
+            <Setter Property="Padding" Value="14,8,14,10"/>
             <Setter Property="Margin" Value="0"/>
         </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
@@ -469,7 +469,7 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer x:Name="svBuildingInputs" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <Border Style="{StaticResource Section}" Margin="0,0,0,10">
+                        <Border Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Roof shape"/>
                                 <StackPanel Orientation="Horizontal">
@@ -495,7 +495,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource Section}" Margin="0,0,0,10">
+                        <Border Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Size (to the outside of the walls)"/>
                                 <UniformGrid Columns="3">
@@ -525,7 +525,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border x:Name="secSlope" Style="{StaticResource Section}" Margin="0,0,0,10">
+                        <Border x:Name="secSlope" Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Roof slope"/>
                                 <StackPanel Orientation="Horizontal">
@@ -549,7 +549,7 @@
                         </Border>
 
                         <!-- Cladding component: C&C GCp is read at its effective wind area (26.2) in every zone -->
-                        <Border x:Name="secComponent" Style="{StaticResource Section}" Margin="0,0,0,10"
+                        <Border x:Name="secComponent" Style="{StaticResource Section}" Margin="0,0,0,8"
                                 ToolTip="Effective wind area (26.2): span × span/3 for framing. Smaller areas give higher pressures; 10 sq ft covers sheathing and fasteners.">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4">Cladding component <Run Foreground="#52514E" FontWeight="Normal">(sets the effective wind area)</Run></TextBlock>
@@ -592,15 +592,29 @@
                             </StackPanel>
                         </Border>
 
-                        <UniformGrid x:Name="ugBuildingNumbers" Columns="3">
-                            <Border Style="{StaticResource StatCard}" Padding="12,8">
-                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                        <!-- Derived from the inputs as they are typed: the values the zone layout and Fig. 27.3-1 read -->
+                        <UniformGrid x:Name="ugBuildingNumbers" Columns="3" Rows="2">
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,8">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
-                            <Border Style="{StaticResource StatCard}" Padding="12,8">
-                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Ridge height"/><TextBlock x:Name="valRidgeH" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,8">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Ridge height"/><TextBlock x:Name="valRidgeH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
-                            <Border Style="{StaticResource StatCard}" Padding="12,8" Margin="0">
-                                <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Cladding method"/><TextBlock x:Name="valCC" FontSize="18" FontWeight="SemiBold"/></StackPanel>
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,0,8"
+                                    ToolTip="Cladding zone width a (Fig. 30.3-1 and 30.3-2): sets where the edge and corner zones are. It does not set the area GCp is read at.">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Zone width a"/><TextBlock x:Name="valA" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,0"
+                                    ToolTip="Plan ratio for wind from the west, L/B (Fig. 27.3-1 leeward wall Cp). For wind from the south it is B/L.">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="L/B (B/L)"/><TextBlock x:Name="valLB" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,0"
+                                    ToolTip="h/L: roof Cp for wind from the west (Fig. 27.3-1), L along the wind.">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="h/L (wind from W)"/><TextBlock x:Name="valHL" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0"
+                                    ToolTip="h/B: roof Cp for wind from the south (Fig. 27.3-1), B along the wind.">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="h/B (wind from S)"/><TextBlock x:Name="valHB" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                         </UniformGrid>
                         <TextBlock x:Name="msgBuilding" Style="{StaticResource FieldMessage}"/>

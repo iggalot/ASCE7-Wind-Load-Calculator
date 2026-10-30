@@ -535,10 +535,15 @@ namespace ASCE7WindLoadCalculator
                           !Issues.Any(i => i.Field == WindInputField.RoofPitch && i.Severity == InputSeverity.Error);
             valMeanH.Text = sizeOk ? Building.MeanRoofHeight.ToString("0.#") + " ft" : "-";
             valRidgeH.Text = sizeOk ? Building.RidgeHeight.ToString("0.#") + " ft" : "-";
-            bool ccOk = sizeOk && Building.MeanRoofHeight <= WindInputValidator.CladdingHeightLimit &&
-                        (!Building.RoofTypeIsSloped() || Building.RoofPitch <= WindInputValidator.CladdingSlopeLimit);
-            valCC.Text = !sizeOk ? "-" : ccOk ? "Applies" : "Not available";
-            valCC.Foreground = !sizeOk || ccOk ? OkInk : WarnInk;
+            valLB.Text = sizeOk ? $"{Building.L_Over_B:0.00} ({1 / Building.L_Over_B:0.00})" : "-";
+            valHL.Text = sizeOk ? Building.h_Over_L.ToString("0.00") : "-";
+            valHB.Text = sizeOk ? (Building.MeanRoofHeight / Building.BuildingWidth).ToString("0.00") : "-";
+
+            // Zone width a from the cladding calculation (it only exists while the cladding method applies).
+            var zones = Analysis?.Cladding?.WallAreaCalculator_BldgLength;
+            bool hasA = sizeOk && zones != null && zones.HasCritDim && Analysis.Cladding.extGCpCurve_Wall != null;
+            valA.Text = hasA ? zones.CritDim_a.ToString("0.#") + " ft" : sizeOk ? "n/a (h > 60 ft)" : "-";
+            valA.Foreground = hasA || !sizeOk ? Ink : WarnInk;
         }
 
         private void ShowResults(string calcError)
