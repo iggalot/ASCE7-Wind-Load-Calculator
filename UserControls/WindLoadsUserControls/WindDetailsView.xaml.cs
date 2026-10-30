@@ -80,6 +80,39 @@ namespace ASCE7WindLoadCalculator
 
         public FrameworkElement CurrentContent => ccPage.Content as FrameworkElement;
 
+        /// <summary>The line of key inputs shown at the top (also the report's summary line).</summary>
+        public string InputsSummary => tbInputs.Text;
+
+        private static readonly string[] PageOrder = { InputsPage, CladdingPage, WestPage, SouthPage, CasesPage };
+
+        /// <summary>
+        /// Every page, freshly built and split into its blocks (title, paragraphs, figures, tables), for the printed
+        /// report: the report is built by the same code as the screen, so the two cannot disagree. Empty when
+        /// there are no results.
+        /// </summary>
+        public IReadOnlyList<ReportSection> BuildReportSections()
+        {
+            var sections = new List<ReportSection>();
+            if (!HasResults) return sections;
+            foreach (var name in PageOrder)
+            {
+                var content = pages[name]();
+                var blocks = new List<FrameworkElement>();
+                if (content is Panel panel)
+                {
+                    var children = panel.Children.OfType<FrameworkElement>().ToList();
+                    panel.Children.Clear();
+                    blocks.AddRange(children);
+                }
+                else
+                {
+                    blocks.Add(content);
+                }
+                sections.Add(new ReportSection(name, blocks));
+            }
+            return sections;
+        }
+
         public void ShowPage(string name)
         {
             if (!pages.TryGetValue(name, out var build)) return;

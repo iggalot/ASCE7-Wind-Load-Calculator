@@ -79,6 +79,8 @@
       <DependentUpon>WindDetailsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="UserControls\WindLoadsUserControls\WindDetailsWindow.cs" />
+    <Compile Include="UserControls\WindLoadsUserControls\WindReport.cs" />
+    <Compile Include="UserControls\WindLoadsUserControls\ReportPreviewWindow.cs" />
     <Compile Include="UserControls\WindLoadsUserControls\WindSetupControl.xaml.cs">
       <DependentUpon>WindSetupControl.xaml</DependentUpon>
     </Compile>

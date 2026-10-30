@@ -382,6 +382,38 @@ namespace ASCE7WindLoadCalculator
         // ---------------------------------------------------------------- cladding component
 
         private const int SheathingItem = 0, FramingItem = 1, AreaItem = 2;
+
+        /// <summary>
+        /// The cladding component choices as typed: kind 0 = sheathing/fasteners, 1 = framing (entry = span, ft),
+        /// 2 = other (entry = area, sq ft). Saved in project files, so "rafters, 14 ft span" comes back as typed
+        /// instead of as its area.
+        /// </summary>
+        public ComponentChoice RoofComponent => new ComponentChoice(cbRoofComponent.SelectedIndex, Parse(tbRoofComp.Text));
+        public ComponentChoice WallComponent => new ComponentChoice(cbWallComponent.SelectedIndex, Parse(tbWallComp.Text));
+
+        /// <summary>Restores <see cref="RoofComponent"/> and <see cref="WallComponent"/> without notifying the host.</summary>
+        public void SetComponents(ComponentChoice roof, ComponentChoice wall)
+        {
+            loading = true;
+            try
+            {
+                SetChoice(cbRoofComponent, tbRoofComp, roof);
+                SetChoice(cbWallComponent, tbWallComp, wall);
+            }
+            finally
+            {
+                loading = false;
+            }
+            Recalculate(notify: false);
+        }
+
+        private static void SetChoice(ComboBox kind, TextBox value, ComponentChoice choice)
+        {
+            if (choice == null) return;
+            int k = choice.Kind == FramingItem || choice.Kind == AreaItem ? choice.Kind : SheathingItem;
+            kind.SelectedIndex = k;
+            value.Text = k == SheathingItem || !(choice.Entry > 0) ? string.Empty : Format(choice.Entry);
+        }
         private bool roofComponentOk = true, wallComponentOk = true;
 
         /// <summary>

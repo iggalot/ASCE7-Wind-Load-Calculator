@@ -384,5 +384,21 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(10.0, c.Parameters.RoofComponentArea, "unusable entry: the conservative 10 sq ft");
             StringAssert.Contains(Find<TextBlock>(c, "tbRoofCompArea").Text, "enter");
         }
+
+        [STATestMethod]
+        public void ComponentChoices_RestoreAsTyped_ForProjectFiles()
+        {
+            var c = Make();
+            c.SetComponents(new ComponentChoice(ComponentChoice.Framing, 14), new ComponentChoice(ComponentChoice.Area, 21));
+            Assert.AreEqual(ComponentChoice.Framing, c.RoofComponent.Kind);
+            Assert.AreEqual(14.0, c.RoofComponent.Entry);
+            Assert.AreEqual(14 * 14 / 3.0, c.Parameters.RoofComponentArea, 1e-9, "rafters: span x span/3");
+            Assert.AreEqual(ComponentChoice.Area, c.WallComponent.Kind);
+            Assert.AreEqual(21.0, c.Parameters.WallComponentArea, 1e-9);
+
+            c.SetComponents(new ComponentChoice(ComponentChoice.Sheathing, 0), new ComponentChoice(ComponentChoice.Sheathing, 0));
+            Assert.AreEqual(10.0, c.Parameters.RoofComponentArea);
+            Assert.AreEqual(string.Empty, Find<TextBox>(c, "tbRoofComp").Text);
+        }
     }
 }
