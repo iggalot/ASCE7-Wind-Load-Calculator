@@ -45,6 +45,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Roof slope (degrees).</summary>
         public double RoofPitch { get; set; } = 15;
 
+        /// <summary>Roof overhang (eave) width beyond the wall face (ft); 0 for none.</summary>
+        public double OverhangWidth { get; set; } = 0;
+
         public RoofTypes RoofType { get; set; } = RoofTypes.ROOF_TYPE_FLAT;
 
         public BuildingEnclosures EnclosureType { get; set; } = BuildingEnclosures.BLDG_ENCLOSED;

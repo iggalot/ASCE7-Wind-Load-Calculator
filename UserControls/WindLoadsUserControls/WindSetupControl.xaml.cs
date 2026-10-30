@@ -119,6 +119,7 @@ namespace ASCE7WindLoadCalculator
                 tbL.Text = Format(Building.BuildingLength);
                 tbB.Text = Format(Building.BuildingWidth);
                 tbH.Text = Format(Building.BuildingHeight);
+                tbOverhang.Text = Format(Building.OverhangWidth);
                 tbPitch.Text = Format(Building.RoofPitch);
                 // Ridge choice as the user sees it; for a non-gable roof show the gable default.
                 var asGable = Building.Clone();
@@ -372,6 +373,9 @@ namespace ASCE7WindLoadCalculator
             b.BuildingLength = Parse(tbL.Text);
             b.BuildingWidth = Parse(tbB.Text);
             b.BuildingHeight = Parse(tbH.Text);
+            // Blank = no overhang; a bad entry is flagged (ShowIssues) and counted as none.
+            double overhang = string.IsNullOrWhiteSpace(tbOverhang.Text) ? 0 : Parse(tbOverhang.Text);
+            b.OverhangWidth = double.IsNaN(overhang) || overhang < 0 ? 0 : overhang;
             double pitch = Parse(tbPitch.Text);
             // A flat roof ignores the pitch box; keep the last good value so switching back restores it.
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
@@ -529,6 +533,10 @@ namespace ASCE7WindLoadCalculator
             bdL.BorderBrush = Has(WindInputField.Length) ? WarnBrush : ControlBrush;
             bdB.BorderBrush = Has(WindInputField.Width) ? WarnBrush : ControlBrush;
             bdH.BorderBrush = Has(WindInputField.WallHeight) ? WarnBrush : ControlBrush;
+            double typedOverhang = Parse(tbOverhang.Text);
+            bool overhangBad = !string.IsNullOrWhiteSpace(tbOverhang.Text) && (double.IsNaN(typedOverhang) || typedOverhang < 0);
+            bdOverhang.BorderBrush = overhangBad ? WarnBrush : ControlBrush;
+            if (overhangBad && string.IsNullOrEmpty(msgSize.Text)) SetMessage(msgSize, "Enter the eave overhang in feet (0 or more); it is taken as none until then.");
 
             var bldg = Issues.Where(i => i.Field == WindInputField.Building).Select(i => i.Message).ToList();
             if (calcError != null) bldg.Add("These inputs cannot be calculated: " + calcError);

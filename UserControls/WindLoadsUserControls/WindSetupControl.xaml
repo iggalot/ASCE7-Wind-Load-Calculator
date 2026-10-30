@@ -498,7 +498,7 @@
                         <Border Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Size (to the outside of the walls)"/>
-                                <UniformGrid Columns="3">
+                                <UniformGrid Columns="4">
                                     <StackPanel Margin="0,0,10,0">
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="Length L (W-E)"/>
                                         <Border x:Name="bdL" Style="{StaticResource NumberFrame}">
@@ -513,11 +513,18 @@
                                                 <TextBox x:Name="tbB" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Width B in feet"/></DockPanel>
                                         </Border>
                                     </StackPanel>
-                                    <StackPanel>
+                                    <StackPanel Margin="0,0,10,0">
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="Eave height"/>
                                         <Border x:Name="bdH" Style="{StaticResource NumberFrame}">
                                             <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
                                                 <TextBox x:Name="tbH" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Wall height to eave in feet"/></DockPanel>
+                                        </Border>
+                                    </StackPanel>
+                                    <StackPanel ToolTip="Roof overhang beyond the wall face. Overhang pressures (27.3.3 and the Chapter 30 overhang zones) are listed in Detailed calculations; 0 for none.">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Eave overhang"/>
+                                        <Border x:Name="bdOverhang" Style="{StaticResource NumberFrame}">
+                                            <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                                <TextBox x:Name="tbOverhang" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Roof overhang in feet"/></DockPanel>
                                         </Border>
                                     </StackPanel>
                                 </UniformGrid>

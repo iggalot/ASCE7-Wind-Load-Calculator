@@ -198,6 +198,7 @@ namespace ASCE7WindLoadCalculator
                 ZoneDrawing(cc.RoofAreaCalculator, cc.buildingData, "Roof zones (plan)"),
                 GCpGraph(cc.extGCpCurve_Roof, roofRows)));
             page.Children.Add(Card(CladdingTable(roofRows)));
+            AddOverhangSection(page, cc as WindLoadCalculator_CC);
 
             // Walls: one graph, a table for each pair of walls
             page.Children.Add(Section("Walls"));
@@ -265,9 +266,64 @@ namespace ASCE7WindLoadCalculator
 
             page.Children.Add(Section("Roof (Fig. 27.3-1; two Cp values where the figure gives two)"));
             page.Children.Add(Card(MwfrsRoofTable(m)));
+            if (m is WindLoadCalculator_MWFRS mo && mo.buildingData.OverhangWidth > 0 && mo.WindwardOverhangTop != null)
+            {
+                page.Children.Add(Section($"Windward roof overhang, {mo.buildingData.OverhangWidth:0.##} ft (27.3.3)"));
+                page.Children.Add(Card(KeyValueTable(new List<string[]>
+                {
+                    new[] { "Bottom surface (soffit)", $"+{mo.OverhangBottomPressure:0.0} psf up", $"qh G Cp, Cp = {WindLoadCalculator_MWFRS.Cp_OverhangBottom:0.0}; no internal pressure" },
+                    new[] { "Top surface", $"{mo.WindwardOverhangTop.ExternalPressure:0.0} psf", $"Cp = {mo.WindwardOverhangTop.GCp:0.00}, windward roof at the eave (Fig. 27.3-1)" },
+                    new[] { "Net on the overhang", $"{mo.WindwardOverhangNetPressure:0.0} psf", "top and bottom combined (negative = up)" },
+                    new[] { "Uplift per foot of eave", $"{mo.WindwardOverhangUpliftPerFoot:0} lb/ft", "net × overhang width; roof uplift only, it does not change the shear-wall forces" },
+                })));
+            }
             page.Children.Add(Section("Walls (Fig. 27.3-1)" + NoteSuffix(m.WallAreaCalculator_BldgLength.Note)));
             page.Children.Add(Card(MwfrsWallTable(m)));
             return page;
+        }
+
+        /// <summary>
+        /// Roof overhang cladding pressures (shown when the building has an overhang): one row per roof zone, read at the
+        /// roof component area, no internal pressure, and the uplift per foot of eave over the overhang width.
+        /// </summary>
+        private static void AddOverhangSection(StackPanel page, WindLoadCalculator_CC cc)
+        {
+            if (cc == null) return;
+            double width = cc.buildingData.OverhangWidth;
+            if (!(width > 0))
+            {
+                page.Children.Add(Note("No eave overhang entered (Building page), so overhang pressures are not listed."));
+                return;
+            }
+            bool anySummed = cc.OverhangFromRoofPlusWall.Values.Any(s => s);
+            page.Children.Add(Section($"Roof overhangs, {width:0.##} ft"));
+            page.Children.Add(Para("Overhang GCp covers the top and bottom surfaces together, so no internal pressure is added (the soffit is outside). " +
+                                   (anySummed
+                                       ? "ASCE 7-22 has no overhang curves for this roof: GCp = roof-zone GCp + the positive wall GCp below it " +
+                                         "(Zone 5 under corner zones, Zone 4 elsewhere; to be checked against the printed standard). "
+                                       : "GCp from the overhang curves of the roof figure. ") +
+                                   $"Net pressures are at least {WindLoadCalculator_CC.MinimumNetPressure:0} psf (30.2.2)."));
+            var rows = cc.windPressureOverhang_External
+                .Select(kv => (zone: cc.RoofAreaCalculator.effWindAreas[kv.Key], p: kv.Value, summed: cc.OverhangFromRoofPlusWall.TryGetValue(kv.Key, out var s) && s))
+                .GroupBy(x => x.zone.Label_Short)
+                .Select(grp => grp.First())
+                .OrderBy(x => x.zone.Label_Short, StringComparer.Ordinal)
+                .Select(x => new
+                {
+                    Zone = x.zone.Label_Short, Swatch = EffectiveWindAreaRenderer.GetColorForRegion(x.zone.Label_Short),
+                    Area = cc.RoofComponentArea, Qh = x.p.qh, GCp = x.p.GCp,
+                    Source = x.summed ? (x.zone.Label_Full.StartsWith("Zone3", StringComparison.Ordinal) ? "roof + wall Zone 5" : "roof + wall Zone 4") : "overhang curve",
+                    Press = x.p.ExternalPressure, Net = x.p.NetPressure, PerFoot = -x.p.NetPressure * width,
+                    Note = x.p.MinimumGoverns ? "16 psf minimum governs" : string.Empty,
+                }).ToList();
+            var g = NewGrid(new[]
+            {
+                ("Zone", "Zone", (string)null), ("Component area (sq ft)", "Area", "0"), ("qh (psf)", "Qh", "0.00"),
+                ("GCp", "GCp", "0.00"), ("From", "Source", (string)null), ("External (psf)", "Press", "0.0"),
+                ("Design (psf)", "Net", "0.0"), ("Uplift per ft of eave (lb/ft)", "PerFoot", "0"), ("Note", "Note", (string)null),
+            }, swatch: true);
+            g.ItemsSource = rows;
+            page.Children.Add(Card(g));
         }
 
         private FrameworkElement BuildCasesPage()

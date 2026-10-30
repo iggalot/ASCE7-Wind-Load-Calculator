@@ -58,7 +58,54 @@ namespace ASCE7WindLoadCalculator
             AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Neg, curveX, qh, G, windPressureRoof_Neg_External);
             AddWallPressures(qh, G, windPressureWall_Pos_External_MWFRS);
             AddWallPressures(qh, G, windPressureWall_Neg_External_MWFRS);
+            overhangQhGKd = qh * G * PressureKd;
         }
+
+        // ---- Roof overhangs, 27.3.3 ----
+
+        /// <summary>Cp on the bottom surface of a windward roof overhang (27.3.3).</summary>
+        public const double Cp_OverhangBottom = 0.8;
+
+        private double overhangQhGKd;
+
+        /// <summary>
+        /// Pressure (psf) pushing up on the soffit of the windward overhang: qh G (0.8), with Kd per the edition. No internal
+        /// pressure: the soffit is outside the building.
+        /// </summary>
+        public double OverhangBottomPressure => overhangQhGKd * Cp_OverhangBottom;
+
+        /// <summary>
+        /// The top-surface pressure at the windward eave (Fig. 27.3-1): the windward roof plane for wind normal to the ridge,
+        /// otherwise the windward distance zone (Zone4, 0 to h/2). The most negative value is used. Null when no roof pressures exist.
+        /// </summary>
+        public PressureData WindwardOverhangTop
+        {
+            get
+            {
+                if (RoofAreaCalculator == null) return null;
+                PressureData best = null;
+                foreach (var zone in RoofAreaCalculator.effWindAreas)
+                {
+                    string label = zone.Value.Label_Full;
+                    if (label != "ZoneWWR" && label != "Zone4") continue; // Zone4 = 0 to h/2 from the windward edge
+                    foreach (var set in new[] { windPressureRoof_Neg_External, windPressureRoof_Pos_External })
+                        if (set.TryGetValue(zone.Key, out var p) && (best == null || p.ExternalPressure < best.ExternalPressure))
+                            best = p;
+                }
+                return best;
+            }
+        }
+
+        /// <summary>
+        /// Net pressure (psf) on the windward overhang, top plus bottom, negative = upward: the top-surface external pressure
+        /// combined with the soffit pressure (27.3.3). NaN when no roof pressures exist.
+        /// </summary>
+        public double WindwardOverhangNetPressure =>
+            WindwardOverhangTop is PressureData top ? top.ExternalPressure - OverhangBottomPressure : double.NaN;
+
+        /// <summary>Upward force per foot of eave (lb/ft) on a windward overhang of the building's overhang width.</summary>
+        public double WindwardOverhangUpliftPerFoot => buildingData.OverhangWidth > 0 && !double.IsNaN(WindwardOverhangNetPressure)
+            ? -WindwardOverhangNetPressure * buildingData.OverhangWidth : 0;
 
         /// <summary>
         /// External windward-wall pressure (psf) at height z: qz G Cp, with Kd per the edition. ASCE 7 27.3:
