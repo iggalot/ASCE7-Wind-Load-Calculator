@@ -258,6 +258,10 @@ namespace ASCE7WindLoadCalculator
                     new[] { "Design force", $"{force.DesignKips:0.00} kips", force.MinimumGoverns ? "the minimum governs" : "the calculated wind governs" },
                 });
                 page.Children.Add(Card(KeyValueTable(forceRows)));
+                if (force.ParapetKips > 0 && m is WindLoadCalculator_MWFRS md)
+                    page.Children.Add(new Border { Margin = new Thickness(0, 14, 0, 0), Child = FigureRow(Drawing("Parapet pressures (27.3.4), section along the wind",
+                        c => ParapetDiagram.DrawMwfrs(c, md.buildingData.BuildingHeight, md.buildingData.ParapetHeight, md.ParapetVelocityPressure,
+                                                      md.ParapetPressureWindward, md.ParapetPressureLeeward), width: 460)) });
             }
 
             page.Children.Add(Section("Zones"));
