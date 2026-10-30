@@ -555,6 +555,21 @@
                             </StackPanel>
                         </Border>
 
+                        <Border x:Name="secParapet" Style="{StaticResource Section}" Margin="0,0,0,8"
+                                ToolTip="Parapets add horizontal force to the shear walls (27.3.4): pp = qp Kd (GCpn), +1.5 windward and -1.0 leeward, qp at the top of the parapet.">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Parapet"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Border x:Name="bdParapet" Style="{StaticResource NumberFrame}" Width="120">
+                                        <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                            <TextBox x:Name="tbParapet" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Parapet height above the roof in feet"/></DockPanel>
+                                    </Border>
+                                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource InkSecondary}" Text="above the roof, all around"/>
+                                </StackPanel>
+                                <TextBlock x:Name="msgParapet" Style="{StaticResource FieldMessage}"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Cladding component: C&C GCp is read at its effective wind area (26.2) in every zone -->
                         <Border x:Name="secComponent" Style="{StaticResource Section}" Margin="0,0,0,8"
                                 ToolTip="Effective wind area (26.2): span × span/3 for framing. Smaller areas give higher pressures; 10 sq ft covers sheathing and fasteners.">

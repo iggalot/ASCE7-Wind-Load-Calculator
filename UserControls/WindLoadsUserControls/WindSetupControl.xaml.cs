@@ -120,6 +120,7 @@ namespace ASCE7WindLoadCalculator
                 tbB.Text = Format(Building.BuildingWidth);
                 tbH.Text = Format(Building.BuildingHeight);
                 tbOverhang.Text = Format(Building.OverhangWidth);
+                tbParapet.Text = Format(Building.ParapetHeight);
                 tbPitch.Text = Format(Building.RoofPitch);
                 // Ridge choice as the user sees it; for a non-gable roof show the gable default.
                 var asGable = Building.Clone();
@@ -376,6 +377,8 @@ namespace ASCE7WindLoadCalculator
             // Blank = no overhang; a bad entry is flagged (ShowIssues) and counted as none.
             double overhang = string.IsNullOrWhiteSpace(tbOverhang.Text) ? 0 : Parse(tbOverhang.Text);
             b.OverhangWidth = double.IsNaN(overhang) || overhang < 0 ? 0 : overhang;
+            double parapet = string.IsNullOrWhiteSpace(tbParapet.Text) ? 0 : Parse(tbParapet.Text);
+            b.ParapetHeight = double.IsNaN(parapet) || parapet < 0 ? 0 : parapet;
             double pitch = Parse(tbPitch.Text);
             // A flat roof ignores the pitch box; keep the last good value so switching back restores it.
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
@@ -544,6 +547,11 @@ namespace ASCE7WindLoadCalculator
 
             bool sloped = Building.RoofTypeIsSloped();
             secSlope.Visibility = sloped ? Visibility.Visible : Visibility.Collapsed;
+            secParapet.Visibility = sloped ? Visibility.Collapsed : Visibility.Visible; // parapets are counted on flat roofs
+            double typedParapet = Parse(tbParapet.Text);
+            bool parapetBad = !string.IsNullOrWhiteSpace(tbParapet.Text) && (double.IsNaN(typedParapet) || typedParapet < 0);
+            bdParapet.BorderBrush = parapetBad ? WarnBrush : ControlBrush;
+            SetMessage(msgParapet, parapetBad ? "Enter the parapet height in feet (0 or more); it is taken as none until then." : null);
             pnlRidge.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_GABLE ? Visibility.Visible : Visibility.Collapsed;
             tbHipNote.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_HIP ? Visibility.Visible : Visibility.Collapsed;
             runRise.Text = WindInputValidator.RisePer12(Building.RoofPitch);

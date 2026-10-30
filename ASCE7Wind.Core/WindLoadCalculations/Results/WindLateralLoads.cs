@@ -16,11 +16,14 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Horizontal component of the roof pressures for the governing roof Cp value.</summary>
         public double RoofKips { get; internal set; }
 
+        /// <summary>Windward + leeward parapet force (27.3.4), 0 without a parapet.</summary>
+        public double ParapetKips { get; internal set; }
+
         /// <summary>Which Fig. 27.3-1 roof Cp value governs the total: the more negative or the other one.</summary>
         public MwfrsRoofCase GoverningRoofCase { get; internal set; }
 
-        /// <summary>Walls + roof for the governing roof case.</summary>
-        public double TotalKips => WallsKips + RoofKips;
+        /// <summary>Walls + roof (governing roof case) + parapets.</summary>
+        public double TotalKips => WallsKips + RoofKips + ParapetKips;
 
         /// <summary>27.1.5 minimum: 16 psf on the wall area and 8 psf on the roof area projected normal to the wind.</summary>
         public double MinimumKips { get; internal set; }
@@ -30,7 +33,7 @@ namespace ASCE7WindLoadCalculator
 
         public bool MinimumGoverns => MinimumKips > TotalKips;
 
-        /// <summary>Wall area projected normal to the wind (ft²), including any gable triangle.</summary>
+        /// <summary>Wall area projected normal to the wind (ft²), including any gable triangle and the parapet (it counts as wall area for the 27.1.5 minimum).</summary>
         public double ProjectedWallArea { get; internal set; }
 
         /// <summary>Roof area projected normal to the wind (ft²), above the windward wall.</summary>
@@ -149,11 +152,14 @@ namespace ASCE7WindLoadCalculator
             double roofB = RoofHorizontalKips(calculator, model, calculator.windPressureRoof_Pos_External);
 
             var (wallArea, roofArea) = ProjectedAreas(model);
+            var mwfrs = (WindLoadCalculator_MWFRS)calculator;
+            if (b.HasParapet) wallArea += b.ParapetHeight * b.BuildingWidth;
             return new DirectionalWindForce
             {
                 Direction = direction,
                 WallsKips = walls,
                 RoofKips = roofA >= roofB ? roofA : roofB,
+                ParapetKips = mwfrs.ParapetKips,
                 GoverningRoofCase = roofA >= roofB ? MwfrsRoofCase.MaxSuction : MwfrsRoofCase.Alternate,
                 ProjectedWallArea = wallArea,
                 ProjectedRoofArea = roofArea,

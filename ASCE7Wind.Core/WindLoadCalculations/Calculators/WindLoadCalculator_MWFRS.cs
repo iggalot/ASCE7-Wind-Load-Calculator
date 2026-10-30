@@ -27,6 +27,8 @@ namespace ASCE7WindLoadCalculator
         public WindLoadCalculator_MWFRS(Asce7Edition edition, WindParameters_Base p, BuildingData bldg_data)
             : base(edition, p, bldg_data)
         {
+            if (bldg_data.ParapetHeight > 0 && !bldg_data.RoofTypeIsFlat())
+                AddValidationMessage("Parapets are counted for flat roofs only; the parapet height was ignored for this sloped roof.");
             CreateExtGcpCurves();
         }
 
@@ -60,6 +62,34 @@ namespace ASCE7WindLoadCalculator
             AddWallPressures(qh, G, windPressureWall_Neg_External_MWFRS);
             overhangQhGKd = qh * G * PressureKd;
         }
+
+        // ---- Parapets, 27.3.4 ----
+
+        /// <summary>Combined net pressure coefficient GCpn for a windward parapet (27.3.4).</summary>
+        public const double GCpn_Windward = 1.5;
+
+        /// <summary>Combined net pressure coefficient GCpn for a leeward parapet (27.3.4).</summary>
+        public const double GCpn_Leeward = -1.0;
+
+        /// <summary>Height of the top of the parapet (ft): the flat roof height plus the parapet height.</summary>
+        public double ParapetTopHeight => buildingData.BuildingHeight + buildingData.ParapetHeight;
+
+        /// <summary>qp (psf): velocity pressure at the top of the parapet (Kd included per the edition, as for qh).</summary>
+        public double ParapetVelocityPressure => CalculateDynamicWindPressure(ParapetTopHeight);
+
+        /// <summary>pp = qp Kd (GCpn) for the windward parapet (psf, toward the building), Eq. 27.3-3.</summary>
+        public double ParapetPressureWindward => ParapetVelocityPressure * PressureKd * GCpn_Windward;
+
+        /// <summary>pp = qp Kd (GCpn) for the leeward parapet (psf; negative = away from its outer face, i.e. downwind).</summary>
+        public double ParapetPressureLeeward => ParapetVelocityPressure * PressureKd * GCpn_Leeward;
+
+        /// <summary>
+        /// Horizontal parapet force in the wind direction (kips): windward and leeward parapets both push downwind,
+        /// (1.5 + 1.0) qp Kd x parapet height x the width normal to the wind. 0 without a parapet.
+        /// </summary>
+        public double ParapetKips => buildingData.HasParapet
+            ? (ParapetPressureWindward - ParapetPressureLeeward) * buildingData.ParapetHeight * buildingData.BuildingWidth / 1000.0
+            : 0;
 
         // ---- Roof overhangs, 27.3.3 ----
 

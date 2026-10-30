@@ -242,14 +242,22 @@ namespace ASCE7WindLoadCalculator
             if (force != null)
             {
                 page.Children.Add(Section("Force on the shear walls"));
-                page.Children.Add(Card(KeyValueTable(new List<string[]>
+                var forceRows = new List<string[]>
                 {
                     new[] { "Walls (windward + leeward)", $"{force.WallsKips:0.00} kips", $"projected wall area {force.ProjectedWallArea:0} sq ft" },
                     new[] { "Roof (horizontal part)", $"{force.RoofKips:0.00} kips", $"projected roof area {force.ProjectedRoofArea:0} sq ft, roof Cp: {(force.GoverningRoofCase == MwfrsRoofCase.Alternate ? "other value" : "larger uplift")} governs" },
+                };
+                if (force.ParapetKips > 0 && m is WindLoadCalculator_MWFRS mp)
+                    forceRows.Add(new[] { "Parapets (windward + leeward)", $"{force.ParapetKips:0.00} kips",
+                        $"(1.5 + 1.0) × qp {mp.ParapetVelocityPressure:0.00} psf" + (m.Edition.KdInVelocityPressure ? "" : $" × Kd {m.GetKd(m.Parameters.AnalysisType):0.00}") +
+                        $" × {m.buildingData.ParapetHeight:0.##} ft × {m.buildingData.BuildingWidth:0.#} ft; qp at the parapet top, {mp.ParapetTopHeight:0.#} ft (27.3.4)" });
+                forceRows.AddRange(new List<string[]>
+                {
                     new[] { "Calculated total", $"{force.TotalKips:0.00} kips", "" },
                     new[] { "Minimum (27.1.5)", $"{force.MinimumKips:0.00} kips", $"{WindLateralLoads.MinimumWallPressure:0} psf walls + {WindLateralLoads.MinimumRoofPressure:0} psf roof" },
                     new[] { "Design force", $"{force.DesignKips:0.00} kips", force.MinimumGoverns ? "the minimum governs" : "the calculated wind governs" },
-                })));
+                });
+                page.Children.Add(Card(KeyValueTable(forceRows)));
             }
 
             page.Children.Add(Section("Zones"));

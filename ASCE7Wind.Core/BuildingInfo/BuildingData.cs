@@ -45,6 +45,12 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Roof slope (degrees).</summary>
         public double RoofPitch { get; set; } = 15;
 
+        /// <summary>Parapet height above the roof (ft), around a flat roof; 0 for none. Sloped roofs ignore it.</summary>
+        public double ParapetHeight { get; set; } = 0;
+
+        /// <summary>True when a parapet is counted: a flat roof with a parapet height above 0.</summary>
+        public bool HasParapet => ParapetHeight > 0 && RoofTypeIsFlat();
+
         /// <summary>Roof overhang (eave) width beyond the wall face (ft); 0 for none.</summary>
         public double OverhangWidth { get; set; } = 0;
 
