@@ -38,6 +38,25 @@
             <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
+        <!-- Site page: one row per step, label on the left -->
+        <GridLength x:Key="StepLabelWidth">180</GridLength>
+        <Style x:Key="SiteRow" TargetType="Border" BasedOn="{StaticResource Section}">
+            <Setter Property="Padding" Value="14,8,14,8"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style x:Key="StepNumber" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
+        </Style>
+        <Style x:Key="StepName" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+        <Style x:Key="StepHint" TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
         <Style x:Key="FieldMessage" TargetType="TextBlock" BasedOn="{StaticResource Hint}">
             <Setter Property="Foreground" Value="{StaticResource WarnInk}"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
@@ -205,13 +224,31 @@
             <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Padding" Value="14,9"/>
             <Setter Property="Margin" Value="0,0,12,0"/>
         </Style>
-        <Style x:Key="StatValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="21"/>
+        <!-- Stat cards share one grid (label / number + unit / two detail lines) so the numbers line up -->
+        <Style x:Key="StatLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+        <Style x:Key="StatValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+        </Style>
+        <Style x:Key="StatUnit" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
+            <Setter Property="Margin" Value="5,0,0,4"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+        </Style>
+        <Style x:Key="StatDetail" TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="LineHeight" Value="16"/>
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
         </Style>
     </UserControl.Resources>
 
@@ -234,87 +271,20 @@
 
         <Grid Grid.Row="1" Margin="20,12,20,12">
 
-            <!-- ========== STEP 1: SITE ========== -->
+            <!-- ========== PAGE 1: SITE — one labelled row per step, in the order they are decided ========== -->
             <ScrollViewer x:Name="pnlSite" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <StackPanel>
 
-                    <!-- Row 1: edition | wind speed | hill -->
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource Section}" Margin="0,0,10,0">
+                    <!-- Step 1: risk category (comes first: it picks the wind-speed map) -->
+                    <Border Style="{StaticResource SiteRow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="Code edition"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="rbEd22" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-22" Checked="Input_Changed"/>
-                                    <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Margin="0" Content="ASCE 7-16" Checked="Input_Changed"/>
-                                </StackPanel>
-                                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Use the one your building department enforces."/>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 1"/>
+                                <TextBlock Style="{StaticResource StepName}" Text="RISK CATEGORY"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="How important the building is. Picks the wind-speed map; it does not multiply the loads."/>
                             </StackPanel>
-                        </Border>
-                        <!-- Wind speed: the most important site input, so it is highlighted -->
-                        <Border Grid.Column="1" Style="{StaticResource Section}" Margin="0,0,10,0" Background="#EEF4FC" BorderBrush="#2A78D6" BorderThickness="2">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="150"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SectionTitle}" Foreground="#104281" Text="Basic wind speed V"/>
-                                    <Border x:Name="bdV" Style="{StaticResource NumberFrame}" BorderThickness="2" BorderBrush="#2A78D6" Height="42">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="mph"/>
-                                            <TextBox x:Name="tbV" Style="{StaticResource NumberBox}" FontSize="20" FontWeight="SemiBold" TextChanged="Input_Changed"
-                                                     AutomationProperties.Name="Wind speed V in mph"/>
-                                        </DockPanel>
-                                    </Border>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock TextWrapping="Wrap">Use the map for <Run x:Name="runRisk" FontWeight="SemiBold" Foreground="#104281" Text="Risk Category II"/>
-                                        (it follows your choice below).</TextBlock>
-                                    <TextBlock TextWrapping="Wrap" Margin="0,3,0,0">Look it up by address: <Hyperlink NavigateUri="https://ascehazardtool.org" RequestNavigate="Hyperlink_RequestNavigate">ASCE Hazard Tool</Hyperlink> (free).</TextBlock>
-                                </StackPanel>
-                                <TextBlock x:Name="msgV" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource FieldMessage}"/>
-                            </Grid>
-                        </Border>
-                        <Border Grid.Column="2" Style="{StaticResource Section}" MinWidth="250">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="On a hill, ridge or bluff?"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="rbHillNo" GroupName="hill" Style="{StaticResource Chip}" Content="No, fairly flat" Checked="Input_Changed"/>
-                                    <RadioButton x:Name="rbHillYes" GroupName="hill" Style="{StaticResource Chip}" Content="Yes" Checked="Input_Changed"/>
-                                    <!-- Kzt is always shown: fixed at 1.00 for flat ground, editable for a hill -->
-                                    <TextBlock x:Name="tbKztFixed" VerticalAlignment="Center" Margin="4,0,0,0">Kzt = <Run FontWeight="SemiBold" Text="1.00"/></TextBlock>
-                                    <StackPanel x:Name="pnlKzt" Orientation="Horizontal" Visibility="Collapsed">
-                                        <Border x:Name="bdKzt" Style="{StaticResource NumberFrame}" Width="100">
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,6,0" Text="Kzt ="/>
-                                                <TextBox x:Name="tbKzt" Style="{StaticResource NumberBox}" MinWidth="40" TextChanged="Input_Changed" AutomationProperties.Name="Topographic factor Kzt"/>
-                                            </DockPanel>
-                                        </Border>
-                                    </StackPanel>
-                                </StackPanel>
-                                <TextBlock x:Name="tbKztHint" Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Hills speed up the wind (Kzt, Section 26.8)."/>
-                                <TextBlock x:Name="msgKzt" Style="{StaticResource FieldMessage}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Row 2: risk category -->
-                    <Border Grid.Row="1" Style="{StaticResource Section}" Margin="0,0,0,10">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}">How important is the building? <Run Foreground="#52514E" FontWeight="Normal">(Risk Category: picks which wind-speed map to read; it does not multiply the loads)</Run></TextBlock>
-                            <UniformGrid Columns="4">
+                            <UniformGrid Grid.Column="1" Columns="4">
                                 <RadioButton x:Name="rbRisk1" GroupName="risk" Style="{StaticResource Card}" Checked="Input_Changed">
                                     <StackPanel><TextBlock FontWeight="SemiBold" Text="I: Low hazard"/><TextBlock Style="{StaticResource Hint}" Text="Barns, sheds, minor storage"/></StackPanel>
                                 </RadioButton>
@@ -328,14 +298,52 @@
                                     <StackPanel><TextBlock FontWeight="SemiBold" Text="IV: Essential"/><TextBlock Style="{StaticResource Hint}" Text="Hospitals, fire and police stations"/></StackPanel>
                                 </RadioButton>
                             </UniformGrid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
-                    <!-- Row 3: exposure -->
-                    <Border Grid.Row="2" Style="{StaticResource Section}" Margin="0,0,0,10">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}">What is the ground like upwind of the site? <Run Foreground="#52514E" FontWeight="Normal">(Exposure)</Run></TextBlock>
-                            <UniformGrid Columns="3">
+                    <!-- Step 2: wind speed, the most important site input, so it is highlighted -->
+                    <Border Style="{StaticResource SiteRow}" Background="#EEF4FC" BorderBrush="#2A78D6" BorderThickness="2">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StepNumber}" Foreground="#104281" Text="STEP 2"/>
+                                <TextBlock Style="{StaticResource StepName}" Foreground="#104281" Text="WIND SPEED"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="Basic wind speed V from the ASCE 7 map."/>
+                            </StackPanel>
+                            <Border x:Name="bdV" Grid.Column="1" Style="{StaticResource NumberFrame}" BorderThickness="2" BorderBrush="#2A78D6" Height="42" Width="160" VerticalAlignment="Center">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,8,0" Text="V ="/>
+                                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="mph"/>
+                                    <TextBox x:Name="tbV" Style="{StaticResource NumberBox}" MinWidth="40" FontSize="20" FontWeight="SemiBold" TextChanged="Input_Changed"
+                                             AutomationProperties.Name="Wind speed V in mph"/>
+                                </DockPanel>
+                            </Border>
+                            <StackPanel Grid.Column="2" Margin="14,0,14,0" VerticalAlignment="Center">
+                                <TextBlock TextWrapping="Wrap">Read the map for <Run x:Name="runRisk" FontWeight="SemiBold" Foreground="#104281" Text="Risk Category II"/> (Step 1).</TextBlock>
+                                <TextBlock TextWrapping="Wrap" Margin="0,3,0,0">Look it up by address: <Hyperlink NavigateUri="https://ascehazardtool.org" RequestNavigate="Hyperlink_RequestNavigate">ASCE Hazard Tool</Hyperlink> (free).</TextBlock>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Code edition (the one your building department enforces)"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton x:Name="rbEd22" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-22" Checked="Input_Changed"/>
+                                    <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Margin="0" Content="ASCE 7-16" Checked="Input_Changed"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock x:Name="msgV" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 3: exposure -->
+                    <Border Style="{StaticResource SiteRow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 3"/>
+                                <TextBlock Style="{StaticResource StepName}" Text="EXPOSURE"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="What the ground is like upwind of the site."/>
+                            </StackPanel>
+                            <UniformGrid Grid.Column="1" Columns="3">
                                 <RadioButton x:Name="rbExpB" GroupName="exp" Style="{StaticResource Card}" VerticalContentAlignment="Top" Checked="Input_Changed">
                                     <StackPanel>
                                         <DockPanel>
@@ -348,7 +356,7 @@
                                             </Canvas>
                                             <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="B: Suburbs, towns, woods"/>
                                         </DockPanel>
-                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Houses or trees close together for at least 2,600 ft upwind (1,500 ft if the mean roof height is 30 ft or less), or 20 × the building height if more."/>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0" Text="Houses or trees close together for at least 2,600 ft upwind (1,500 ft if the mean roof height is 30 ft or less), or 20 × the building height if more."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="rbExpC" GroupName="exp" Style="{StaticResource Card}" VerticalContentAlignment="Top" Checked="Input_Changed">
@@ -362,7 +370,7 @@
                                             </Canvas>
                                             <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="C: Open country, farmland"/>
                                         </DockPanel>
-                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Scattered buildings or trees. Anywhere B or D does not apply; the usual choice when in doubt."/>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0" Text="Scattered buildings or trees. Anywhere B or D does not apply; the usual choice when in doubt."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="rbExpD" GroupName="exp" Style="{StaticResource Card}" Margin="0" VerticalContentAlignment="Top" Checked="Input_Changed">
@@ -375,18 +383,23 @@
                                             </Canvas>
                                             <TextBlock FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Text="D: Shoreline, open water"/>
                                         </DockPanel>
-                                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="Only if water or flat open land runs at least 5,000 ft upwind, or 20 × the building height if more. Also within 600 ft (or 20 × height) downwind of it."/>
+                                        <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0" Text="Only if water or flat open land runs at least 5,000 ft upwind, or 20 × the building height if more. Also within 600 ft (or 20 × height) downwind of it."/>
                                     </StackPanel>
                                 </RadioButton>
                             </UniformGrid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
-                    <!-- Row 4: enclosure -->
-                    <Border Grid.Row="3" Style="{StaticResource Section}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}">How open is the building? <Run Foreground="#52514E" FontWeight="Normal">(Enclosure)</Run></TextBlock>
-                            <UniformGrid Columns="4">
+                    <!-- Step 4: building type (enclosure) -->
+                    <Border Style="{StaticResource SiteRow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 4"/>
+                                <TextBlock Style="{StaticResource StepName}" Text="BUILDING TYPE"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="How open the walls are (enclosure, Section 26.12)."/>
+                            </StackPanel>
+                            <UniformGrid Grid.Column="1" Columns="4">
                                 <RadioButton x:Name="rbEncEnclosed" GroupName="enc" Style="{StaticResource Card}" Checked="Input_Changed">
                                     <StackPanel><TextBlock FontWeight="SemiBold" Text="Enclosed"/><TextBlock Style="{StaticResource Hint}" Text="Normal walls, doors and windows (most buildings)"/></StackPanel>
                                 </RadioButton>
@@ -400,9 +413,40 @@
                                     <StackPanel><TextBlock FontWeight="SemiBold" Text="Open"/><TextBlock Style="{StaticResource Hint}" Text="Every wall at least 80% open, e.g. a carport"/></StackPanel>
                                 </RadioButton>
                             </UniformGrid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
-                </Grid>
+
+                    <!-- Step 5: terrain (hills) -->
+                    <Border Style="{StaticResource SiteRow}" Margin="0">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 5"/>
+                                <TextBlock Style="{StaticResource StepName}" Text="TERRAIN"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="Hills speed up the wind (Kzt, Section 26.8)."/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton x:Name="rbHillNo" GroupName="hill" Style="{StaticResource Chip}" Content="Fairly flat ground" Checked="Input_Changed"/>
+                                    <RadioButton x:Name="rbHillYes" GroupName="hill" Style="{StaticResource Chip}" Content="On a hill, ridge or bluff" Checked="Input_Changed"/>
+                                    <!-- Kzt is always shown: fixed at 1.00 for flat ground, editable for a hill -->
+                                    <TextBlock x:Name="tbKztFixed" VerticalAlignment="Center" Margin="8,0,0,0">Kzt = <Run FontWeight="SemiBold" Text="1.00"/></TextBlock>
+                                    <StackPanel x:Name="pnlKzt" Orientation="Horizontal" Visibility="Collapsed" Margin="4,0,0,0">
+                                        <Border x:Name="bdKzt" Style="{StaticResource NumberFrame}" Width="110" BorderBrush="#2A78D6" BorderThickness="2">
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,6,0" Text="Kzt ="/>
+                                                <TextBox x:Name="tbKzt" Style="{StaticResource NumberBox}" MinWidth="40" TextChanged="Input_Changed" AutomationProperties.Name="Topographic factor Kzt"/>
+                                            </DockPanel>
+                                        </Border>
+                                        <TextBlock x:Name="tbKztHint" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="10,0,0,0" MaxWidth="330"
+                                                   Text="Enter Kzt from Section 26.8 (Fig. 26.8-1). It is 1.0 or more."/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock x:Name="msgKzt" Style="{StaticResource FieldMessage}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </ScrollViewer>
 
             <!-- ========== STEP 2: BUILDING — inputs left, 3D view right ========== -->
@@ -524,32 +568,48 @@
 
                 <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
                     <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Text="Highest roof uplift"/>
-                            <TextBlock x:Name="valRoof" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                            <TextBlock x:Name="subRoof" Style="{StaticResource Hint}"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource StatLabel}" Text="Roof uplift · cladding"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="valRoof" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
+                                <TextBlock x:Name="unitRoof" Style="{StaticResource StatUnit}" Text="psf"/>
+                            </StackPanel>
+                            <TextBlock x:Name="subRoof" Grid.Row="2" Style="{StaticResource StatDetail}"/>
+                        </Grid>
                     </Border>
                     <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Text="Highest wall suction"/>
-                            <TextBlock x:Name="valWall" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                            <TextBlock x:Name="subWall" Style="{StaticResource Hint}"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource StatLabel}" Text="Wall suction · cladding"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="valWall" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
+                                <TextBlock x:Name="unitWall" Style="{StaticResource StatUnit}" Text="psf"/>
+                            </StackPanel>
+                            <TextBlock x:Name="subWall" Grid.Row="2" Style="{StaticResource StatDetail}"/>
+                        </Grid>
                     </Border>
                     <Border Style="{StaticResource StatCard}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Text="Wind force, from the west"/>
-                            <TextBlock x:Name="valWest" Style="{StaticResource StatValue}"/>
-                            <TextBlock x:Name="subWest" Style="{StaticResource Hint}"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource StatLabel}" Text="Shear-wall force · wind from W"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="valWest" Style="{StaticResource StatValue}"/>
+                                <TextBlock x:Name="unitWest" Style="{StaticResource StatUnit}" Text="kips"/>
+                            </StackPanel>
+                            <TextBlock x:Name="subWest" Grid.Row="2" Style="{StaticResource StatDetail}"/>
+                        </Grid>
                     </Border>
                     <Border Style="{StaticResource StatCard}" Margin="0">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Hint}" Text="Wind force, from the south"/>
-                            <TextBlock x:Name="valSouth" Style="{StaticResource StatValue}"/>
-                            <TextBlock x:Name="subSouth" Style="{StaticResource Hint}"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
+                            <TextBlock Style="{StaticResource StatLabel}" Text="Shear-wall force · wind from S"/>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock x:Name="valSouth" Style="{StaticResource StatValue}"/>
+                                <TextBlock x:Name="unitSouth" Style="{StaticResource StatUnit}" Text="kips"/>
+                            </StackPanel>
+                            <TextBlock x:Name="subSouth" Grid.Row="2" Style="{StaticResource StatDetail}"/>
+                        </Grid>
                     </Border>
                 </UniformGrid>
 
@@ -557,7 +617,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="360"/>
+                        <ColumnDefinition Width="400"/>
                     </Grid.ColumnDefinitions>
                     <Border Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
                         <ContentControl x:Name="ccViewerResults"/>
@@ -595,10 +655,23 @@
                                     <CheckBox x:Name="cbOnlyCases13" VerticalContentAlignment="Top" Checked="Input_Changed" Unchecked="Input_Changed">
                                         <StackPanel>
                                             <TextBlock FontWeight="SemiBold" Text="Use load cases 1 and 3 only"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Allowed for one story with h ≤ 30 ft, or two stories or less that are light-frame or have flexible diaphragms (Fig. 27.3-8)."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."/>
                                         </StackPanel>
                                     </CheckBox>
-                                    <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,0"/>
+                                    <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,4"/>
+                                    <!-- Fig. 27.3-8 load cases in plain words; cases 2 and 4 fade when only 1 and 3 are used -->
+                                    <Grid x:Name="gridCases" TextElement.FontSize="12">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                        <TextBlock FontWeight="SemiBold" Text="Case 1"/>
+                                        <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Full wind, each direction alone"/>
+                                        <TextBlock x:Name="tbCase2a" Grid.Row="1" FontWeight="SemiBold" Text="Case 2"/>
+                                        <TextBlock x:Name="tbCase2b" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Text="75%, 15% off-center (twists the building)"/>
+                                        <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Case 3"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="75% from both directions at once"/>
+                                        <TextBlock x:Name="tbCase4a" Grid.Row="3" FontWeight="SemiBold" Text="Case 4"/>
+                                        <TextBlock x:Name="tbCase4b" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" Text="56% from both at once, 15% off-center"/>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -615,7 +688,10 @@
                 <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                     <TextBlock x:Name="tbSendStatus" VerticalAlignment="Center" Margin="0,0,14,0" Style="{StaticResource Hint}" MaxWidth="420"/>
                     <Button x:Name="btnNext" Style="{StaticResource PrimaryButton}" Content="Next: Building" Click="Next_Click"/>
+                    <Button x:Name="btnDetails" Style="{StaticResource SecondaryButton}" Margin="0,0,10,0" Content="Detailed calculations" Click="Details_Click" Visibility="Collapsed"
+                            ToolTip="Every coefficient, pressure and graph behind these results (cladding and both wind directions)"/>
                     <Button x:Name="btnSend" Style="{StaticResource PrimaryButton}" Content="Use these wind loads for the shear walls" Click="Send_Click" Visibility="Collapsed"/>
+                    <Button x:Name="btnShearWalls" Style="{StaticResource PrimaryButton}" Content="Next: Shear walls" Click="ShearWalls_Click" Visibility="Collapsed"/>
                 </StackPanel>
             </Grid>
         </Border>

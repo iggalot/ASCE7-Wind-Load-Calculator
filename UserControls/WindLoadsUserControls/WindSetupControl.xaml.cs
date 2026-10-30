@@ -64,10 +64,12 @@ namespace ASCE7WindLoadCalculator
         public WindSetupControl(BuildingData building, ASCE7_Versions version, WindParameters_Base parameters)
         {
             InitializeComponent();
+            RadioGroups.MakeUnique(this); // the host window may hold other controls with the same group names
             Viewer.ShowSummaryCard = false; // the Results step shows these numbers itself
 
             notifyTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
             notifyTimer.Tick += (s, e) => { notifyTimer.Stop(); InputsChanged?.Invoke(this, EventArgs.Empty); };
+            zeroSlopeTimer.Tick += (s, e) => SwitchZeroSlopeToFlat();
             BuildStepIndicator();
             SetInputs(building, version, parameters);
             GoToStep(SiteStep);
@@ -149,7 +151,7 @@ namespace ASCE7WindLoadCalculator
             btnBack.Visibility = Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
             btnNext.Visibility = Step == ResultsStep ? Visibility.Collapsed : Visibility.Visible;
             btnNext.Content = Step == SiteStep ? "Next: Building" : "See results";
-            tbStepOf.Text = $"Step {Step + 1} of 3";
+            tbStepOf.Text = $"Page {Step + 1} of 3";
             UpdateStepIndicator();
             UpdateSendState();
         }
@@ -200,6 +202,21 @@ namespace ASCE7WindLoadCalculator
                 });
                 stepButtons[i].Content = panel;
             }
+        }
+
+        /// <summary>Raised by "Next: Shear walls" (shown on the Results page only when a host handles it).</summary>
+        public event EventHandler ShearWallsRequested;
+
+        private void ShearWalls_Click(object sender, RoutedEventArgs e) => ShearWallsRequested?.Invoke(this, EventArgs.Empty);
+
+        /// <summary>Opens every coefficient, pressure and graph behind the results in its own window.</summary>
+        private void Details_Click(object sender, RoutedEventArgs e)
+        {
+            if (Analysis == null) return;
+            new WindDetailsWindow(Version, Parameters, Building, Analysis)
+            {
+                Owner = Window.GetWindow(this),
+            }.Show();
         }
 
         private void Next_Click(object sender, RoutedEventArgs e) => GoToStep(Step + 1);
@@ -253,20 +270,16 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>A sloped roof at 0 degrees is a flat roof: switch to Flat when the user leaves the box.</summary>
-        private void Pitch_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (!Building.RoofTypeIsSloped() || Parse(tbPitch.Text) != 0) return;
-            rbRoofFlat.IsChecked = true; // recalculates through Input_Changed
-            loading = true;
-            tbPitch.Text = "15";         // a sensible slope if they switch back
-            loading = false;
-            SetMessage(msgBuilding, "A 0° roof is a flat roof, so the roof shape was changed to Flat.");
-        }
+        private void Pitch_LostFocus(object sender, RoutedEventArgs e) => SwitchZeroSlopeToFlat();
 
         private void UpdateSendState()
         {
-            btnSend.Visibility = Step == ResultsStep && ShowSendButton && !LinkedToShearWalls ? Visibility.Visible : Visibility.Collapsed;
+            bool results = Step == ResultsStep;
+            btnSend.Visibility = results && ShowSendButton && !LinkedToShearWalls ? Visibility.Visible : Visibility.Collapsed;
             btnSend.IsEnabled = Summary?.Lateral != null;
+            btnShearWalls.Visibility = results && LinkedToShearWalls && ShearWallsRequested != null ? Visibility.Visible : Visibility.Collapsed;
+            btnDetails.Visibility = results ? Visibility.Visible : Visibility.Collapsed;
+            btnDetails.IsEnabled = Analysis != null;
             if (LinkedToShearWalls || Step != ResultsStep) tbSendStatus.Text = string.Empty;
         }
 
@@ -288,7 +301,46 @@ namespace ASCE7WindLoadCalculator
                 tbKzt.Text = "1.00";
                 loading = false;
             }
+            // Choosing a sloped roof while the slope is 0 (e.g. coming from Flat): start from a typical slope.
+            bool toSloped = (sender == rbRoofGable && rbRoofGable.IsChecked == true) || (sender == rbRoofHip && rbRoofHip.IsChecked == true);
+            bool presetSlope = toSloped && !(Parse(tbPitch.Text) > 0);
+            if (presetSlope)
+            {
+                loading = true;
+                tbPitch.Text = DefaultSlope.ToString(CultureInfo.CurrentCulture);
+                loading = false;
+            }
             Recalculate(notify: true);
+            if (presetSlope)
+                SetMessage(msgPitch, $"Slope set to {DefaultSlope}°. Enter your roof's slope.");
+
+            if (sender == rbHillYes && rbHillYes.IsChecked == true)
+                Dispatcher.BeginInvoke(new Action(() => { tbKzt.Focus(); tbKzt.SelectAll(); }), DispatcherPriority.Input);
+
+            // A 0 typed into the slope of a sloped roof means a flat roof. Wait for a pause (so "0.5" can be
+            // typed), then switch; leaving the box switches at once (Pitch_LostFocus).
+            zeroSlopeTimer.Stop();
+            if (sender == tbPitch && IsZeroSlope()) zeroSlopeTimer.Start();
+        }
+
+        private const double DefaultSlope = 15;
+        private readonly DispatcherTimer zeroSlopeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+
+        private bool IsZeroSlope()
+        {
+            string t = tbPitch.Text.Trim();
+            return Building.RoofTypeIsSloped() && Parse(t) == 0 && !t.EndsWith(".") && !t.EndsWith(",");
+        }
+
+        private void SwitchZeroSlopeToFlat()
+        {
+            zeroSlopeTimer.Stop();
+            if (!IsZeroSlope()) return;
+            rbRoofFlat.IsChecked = true; // recalculates through Input_Changed
+            loading = true;
+            tbPitch.Text = DefaultSlope.ToString(CultureInfo.CurrentCulture); // a sensible slope if they switch back
+            loading = false;
+            SetMessage(msgBuilding, "A 0° roof is a flat roof, so the roof shape was changed to Flat.");
         }
 
         private void ReadInputs()
@@ -434,10 +486,10 @@ namespace ASCE7WindLoadCalculator
                                 $"{Format(Building.BuildingLength)} × {Format(Building.BuildingWidth)} ft {roof}-roof building, {Format(Building.BuildingHeight)} ft walls.";
 
             var s = Summary;
-            SetStat(valRoof, subRoof, s?.RoofUpliftPsf, "psf", s?.RoofUpliftZone, "Cladding results are not available for these inputs");
-            SetStat(valWall, subWall, s?.WallSuctionPsf, "psf", s?.WallSuctionZone, "Cladding results are not available for these inputs");
-            SetForce(valWest, subWest, s?.FromWest);
-            SetForce(valSouth, subSouth, s?.FromSouth);
+            SetStat(valRoof, unitRoof, subRoof, s?.RoofUpliftPsf, s?.RoofUpliftZone, "Roofing and its fastenings");
+            SetStat(valWall, unitWall, subWall, s?.WallSuctionPsf, s?.WallSuctionZone, "Siding, windows and their fastenings");
+            SetForce(valWest, unitWest, subWest, s?.FromWest);
+            SetForce(valSouth, unitSouth, subSouth, s?.FromSouth);
 
             var rows = new List<CheckRow>();
             // Building-level limits (e.g. over 60 ft) are also reported by the engine in s.Checks; show them once.
@@ -446,28 +498,45 @@ namespace ASCE7WindLoadCalculator
             if (calcError != null)
                 rows.Add(new CheckRow(false, "These inputs cannot be calculated: " + calcError));
             if (s != null)
-                rows.AddRange(s.Checks.Select(c => new CheckRow(c.Ok, c.Text)));
+            {
+                // The two directions usually agree; say it once to keep the list short.
+                bool same = s.FromWest != null && s.FromSouth != null && s.FromWest.MinimumGoverns == s.FromSouth.MinimumGoverns;
+                foreach (var check in s.Checks)
+                {
+                    if (same && check.Text.StartsWith("Wind from the south")) continue;
+                    string text = same && check.Text.StartsWith("Wind from the west")
+                        ? "Wind from the west and south" + check.Text.Substring("Wind from the west".Length)
+                        : check.Text;
+                    rows.Add(new CheckRow(check.Ok, text));
+                }
+            }
             rows.Add(new CheckRow(false, "Confirm the wind speed V against the map for your site and risk category."));
             icChecks.ItemsSource = rows;
 
             int cases = s?.Lateral?.LoadCases.Count ?? 0;
             tbCaseCount.Text = s?.Lateral == null
                 ? "Load cases are not available until the inputs can be calculated."
-                : $"{cases} load cases (Fig. 27.3-8). Each shear wall is designed for its worst case.";
+                : $"{cases} load cases (Fig. 27.3-8); each wall uses its worst case:";
+            double faded = OnlyCases1And3 ? 0.35 : 1.0;
+            tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
         }
 
-        private static void SetStat(TextBlock value, TextBlock sub, double? psf, string unit, string where, string missing)
+        /// <summary>Cladding card: number, unit, then the zone and what it is used for.</summary>
+        private static void SetStat(TextBlock value, TextBlock unit, TextBlock sub, double? psf, string where, string usedFor)
         {
-            value.Text = psf.HasValue ? psf.Value.ToString("0.0") + " " + unit : "-";
-            sub.Text = psf.HasValue ? where : missing;
+            value.Text = psf.HasValue ? psf.Value.ToString("0.0") : "-";
+            unit.Visibility = psf.HasValue ? Visibility.Visible : Visibility.Hidden;
+            sub.Text = psf.HasValue ? where + Environment.NewLine + usedFor : "Not available for these inputs";
         }
 
-        private static void SetForce(TextBlock value, TextBlock sub, DirectionalWindForce f)
+        /// <summary>Shear-wall card: number, unit, then how it is made up and the minimum.</summary>
+        private static void SetForce(TextBlock value, TextBlock unit, TextBlock sub, DirectionalWindForce f)
         {
+            unit.Visibility = f != null ? Visibility.Visible : Visibility.Hidden;
             if (f == null) { value.Text = "-"; sub.Text = "Not available for these inputs"; return; }
-            value.Text = f.DesignKips.ToString("0.0") + " kips";
-            sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0}; minimum {f.MinimumKips:0.0}" +
-                       (f.MinimumGoverns ? " (minimum governs)" : string.Empty);
+            value.Text = f.DesignKips.ToString("0.0");
+            sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0} kips" + Environment.NewLine +
+                       $"Minimum {f.MinimumKips:0.0} kips" + (f.MinimumGoverns ? " governs" : " (does not govern)");
         }
 
         // ---------------------------------------------------------------- helpers

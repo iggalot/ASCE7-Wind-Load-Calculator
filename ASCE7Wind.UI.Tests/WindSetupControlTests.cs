@@ -81,6 +81,7 @@ namespace ASCE7Wind.UI.Tests
         {
             var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = wallHeight, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
             Find<ToggleButton>(c, "rbHillYes").IsChecked = true; // shows the Kzt box
+            c.SetShearWallLink(true, "16 load cases (from W 92.6 k, from S 149.5 k), updated automatically."); // as the app shows it
             var scrollers = new[] { "pnlSite", "svBuildingInputs", "svResultsSide" };
             for (int step = 0; step < 3; step++)
             {
@@ -259,6 +260,90 @@ namespace ASCE7Wind.UI.Tests
             Find<Button>(c, "btnSend").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.IsNotNull(sent);
             Assert.AreEqual(4, sent.LoadCases.Count);
+        }
+
+        /// <summary>
+        /// Choosing Gable from Flat with a 0 slope (the usual flat-roof value) starts from a typical slope
+        /// instead of showing an error the user did not cause.
+        /// </summary>
+        [STATestMethod]
+        public void FlatToGable_WithZeroSlope_StartsFromATypicalSlope()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_FLAT, RoofPitch = 0 });
+            Find<ToggleButton>(c, "rbRoofGable").IsChecked = true;
+            Assert.AreEqual(RoofTypes.ROOF_TYPE_GABLE, c.Building.RoofType);
+            Assert.IsTrue(c.Building.RoofPitch > 0);
+            Assert.IsFalse(WindInputValidator.HasErrors(c.Issues));
+            StringAssert.Contains(Find<TextBlock>(c, "msgPitch").Text, "Slope set to");
+        }
+
+        /// <summary>WPF groups radio buttons by name across a window; each control keeps its own groups.</summary>
+        [STATestMethod]
+        public void TwoControlsInOneWindow_DoNotUncheckEachOther()
+        {
+            var a = Make();
+            var b = Make();
+            var viewer = new Wind3DViewerControl();
+            var root = new StackPanel();
+            var w = new Window { Content = root, Width = 400, Height = 300, ShowInTaskbar = false, WindowStyle = WindowStyle.None, Left = -10000 };
+            root.Children.Add(a);
+            root.Children.Add(b);
+            root.Children.Add(viewer);
+            w.Show();
+            try
+            {
+                Find<ToggleButton>(a, "rbRoofGable").IsChecked = true;
+                Find<ToggleButton>(b, "rbRoofHip").IsChecked = true;
+                Assert.AreEqual(true, Find<ToggleButton>(a, "rbRoofGable").IsChecked, "the other setup control's roof shape");
+                var caseA = (ToggleButton)viewer.FindName("rbCaseA");
+                Assert.AreEqual(true, caseA.IsChecked, "the 3D view's roof Cp choice (it also used the group name 'roof')");
+                viewer.Mode = WindViewMode.CladdingSuction;
+                Assert.AreEqual(true, ((ToggleButton)viewer.FindName("rbCladSuction")).IsChecked);
+                Assert.AreEqual(true, Find<ToggleButton>(a, "rbRoofGable").IsChecked);
+            }
+            finally { w.Close(); }
+        }
+
+        [STATestMethod]
+        public void OnlyCases1And3_FadesCases2And4_AndResultsShowDetailsButton()
+        {
+            var c = Make();
+            c.GoToStep(WindSetupControl.ResultsStep);
+            Assert.AreEqual(1.0, Find<UIElement>(c, "tbCase2b").Opacity);
+            Find<ToggleButton>(c, "cbOnlyCases13").IsChecked = true;
+            Assert.IsTrue(Find<UIElement>(c, "tbCase2b").Opacity < 1);
+            Assert.IsTrue(Find<UIElement>(c, "tbCase4b").Opacity < 1);
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "btnDetails").Visibility);
+            Assert.IsTrue(Find<UIElement>(c, "btnDetails").IsEnabled);
+        }
+
+        [STATestMethod]
+        public void ShearWallsButton_ShowsOnlyWhenLinkedAndHandled()
+        {
+            var c = Make();
+            int asked = 0;
+            c.ShearWallsRequested += (s, e) => asked++;
+            c.GoToStep(WindSetupControl.ResultsStep);
+            c.SetShearWallLink(true, "linked");
+            var btn = Find<Button>(c, "btnShearWalls");
+            Assert.AreEqual(Visibility.Visible, btn.Visibility);
+            btn.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.AreEqual(1, asked);
+            c.SetShearWallLink(false, "manual");
+            Assert.AreEqual(Visibility.Collapsed, btn.Visibility);
+        }
+
+        [STATestMethod]
+        public void ResultCards_ShowNumberAndUnitSeparately()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            c.GoToStep(WindSetupControl.ResultsStep);
+            foreach (var n in new[] { "Roof", "Wall", "West", "South" })
+            {
+                Assert.IsTrue(double.TryParse(Find<TextBlock>(c, "val" + n).Text, out _), n + " shows just the number");
+                Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "unit" + n).Visibility);
+                Assert.AreEqual(2, Find<TextBlock>(c, "sub" + n).Text.Split('\n').Length, n + " has two detail lines");
+            }
         }
     }
 }

@@ -44,6 +44,7 @@ namespace ASCE7WindLoadCalculator
         public Wind3DViewerControl()
         {
             InitializeComponent();
+            RadioGroups.MakeUnique(this); // several viewers can share a window
             viewHost.SizeChanged += (s, e) => ApplyCamera();
             UpdateRoofCaseAvailability();
             ApplyCamera();
@@ -780,7 +781,8 @@ namespace ASCE7WindLoadCalculator
         {
             if (spRoofCase == null) return;
             var m = Mode;
-            spRoofCase.IsEnabled = m == WindViewMode.MwfrsAlongLength || m == WindViewMode.MwfrsAlongWidth;
+            // The roof Cp choice only applies to the whole-building views; hide it (not just grey it) otherwise.
+            spRoofCase.Visibility = IsWholeBuilding(m) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void Display_Changed(object sender, RoutedEventArgs e)
