@@ -5,14 +5,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:ASCE7WindLoadCalculator"
              mc:Ignorable="d" d:DesignHeight="900" d:DesignWidth="1360"
-             Background="#F9F9F7" FontFamily="Segoe UI" FontSize="13" Foreground="#0B0B0B">
+             Background="#E6E9EE" FontFamily="Segoe UI" FontSize="13" Foreground="#0B0B0B">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="InkPrimary" Color="#0B0B0B"/>
         <SolidColorBrush x:Key="InkSecondary" Color="#52514E"/>
-        <SolidColorBrush x:Key="Hairline" Color="#E1E0D9"/>
+        <SolidColorBrush x:Key="Hairline" Color="#D5DAE1"/>
         <SolidColorBrush x:Key="Control" Color="#C3C2B7"/>
-        <SolidColorBrush x:Key="Surface" Color="#FCFCFB"/>
+        <SolidColorBrush x:Key="Surface" Color="#F3F5F8"/>
         <SolidColorBrush x:Key="Selected" Color="#F0EFEC"/>
         <SolidColorBrush x:Key="WarnInk" Color="#8A3B00"/>
         <SolidColorBrush x:Key="WarnBorder" Color="#B45309"/>
@@ -85,7 +85,7 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="#0B0B0B"/>
                                 <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="bd" Property="Background" Value="#F0EFEC"/>
+                                <Setter TargetName="bd" Property="Background" Value="#E4EDFA"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="#2A78D6"/>
@@ -275,12 +275,30 @@
             <ScrollViewer x:Name="pnlSite" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
 
-                    <!-- Step 1: risk category (comes first: it picks the wind-speed map) -->
+                    <!-- Step 1: code edition (decides the maps, figures and equations used everywhere else) -->
+                    <Border Style="{StaticResource SiteRow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 1"/>
+                                <TextBlock Style="{StaticResource StepName}" Text="ASCE 7 EDITION"/>
+                                <TextBlock Style="{StaticResource StepHint}" Text="The one your building department enforces."/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <RadioButton x:Name="rbEd22" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-22" Checked="Input_Changed"/>
+                                <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Margin="0" Content="ASCE 7-16" Checked="Input_Changed"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="16,0,0,0"
+                                       Text="ASCE 7-22 is referenced by the 2024 IBC; ASCE 7-16 by the 2018 and 2021 IBC. If unsure, ask the building department."/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 2: risk category (before the wind speed: it picks the wind-speed map) -->
                     <Border Style="{StaticResource SiteRow}">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 1"/>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 2"/>
                                 <TextBlock Style="{StaticResource StepName}" Text="RISK CATEGORY"/>
                                 <TextBlock Style="{StaticResource StepHint}" Text="How important the building is. Picks the wind-speed map; it does not multiply the loads."/>
                             </StackPanel>
@@ -301,13 +319,13 @@
                         </Grid>
                     </Border>
 
-                    <!-- Step 2: wind speed, the most important site input, so it is highlighted -->
+                    <!-- Step 3: wind speed, the most important site input, so it is highlighted -->
                     <Border Style="{StaticResource SiteRow}" Background="#EEF4FC" BorderBrush="#2A78D6" BorderThickness="2">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource StepNumber}" Foreground="#104281" Text="STEP 2"/>
+                                <TextBlock Style="{StaticResource StepNumber}" Foreground="#104281" Text="STEP 3"/>
                                 <TextBlock Style="{StaticResource StepName}" Foreground="#104281" Text="WIND SPEED"/>
                                 <TextBlock Style="{StaticResource StepHint}" Text="Basic wind speed V from the ASCE 7 map."/>
                             </StackPanel>
@@ -320,26 +338,19 @@
                                 </DockPanel>
                             </Border>
                             <StackPanel Grid.Column="2" Margin="14,0,14,0" VerticalAlignment="Center">
-                                <TextBlock TextWrapping="Wrap">Read the map for <Run x:Name="runRisk" FontWeight="SemiBold" Foreground="#104281" Text="Risk Category II"/> (Step 1).</TextBlock>
+                                <TextBlock TextWrapping="Wrap">Read the map for <Run x:Name="runRisk" FontWeight="SemiBold" Foreground="#104281" Text="Risk Category II"/> (Step 2).</TextBlock>
                                 <TextBlock TextWrapping="Wrap" Margin="0,3,0,0">Look it up by address: <Hyperlink NavigateUri="https://ascehazardtool.org" RequestNavigate="Hyperlink_RequestNavigate">ASCE Hazard Tool</Hyperlink> (free).</TextBlock>
                             </StackPanel>
-                            <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource FieldLabel}" Text="Code edition (the one your building department enforces)"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton x:Name="rbEd22" GroupName="ed" Style="{StaticResource Chip}" Content="ASCE 7-22" Checked="Input_Changed"/>
-                                    <RadioButton x:Name="rbEd16" GroupName="ed" Style="{StaticResource Chip}" Margin="0" Content="ASCE 7-16" Checked="Input_Changed"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <TextBlock x:Name="msgV" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+                            <TextBlock x:Name="msgV" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Style="{StaticResource FieldMessage}"/>
                         </Grid>
                     </Border>
 
-                    <!-- Step 3: exposure -->
+                    <!-- Step 4: exposure -->
                     <Border Style="{StaticResource SiteRow}">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 3"/>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 4"/>
                                 <TextBlock Style="{StaticResource StepName}" Text="EXPOSURE"/>
                                 <TextBlock Style="{StaticResource StepHint}" Text="What the ground is like upwind of the site."/>
                             </StackPanel>
@@ -390,12 +401,12 @@
                         </Grid>
                     </Border>
 
-                    <!-- Step 4: building type (enclosure) -->
+                    <!-- Step 5: building type (enclosure) -->
                     <Border Style="{StaticResource SiteRow}">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 4"/>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 5"/>
                                 <TextBlock Style="{StaticResource StepName}" Text="BUILDING TYPE"/>
                                 <TextBlock Style="{StaticResource StepHint}" Text="How open the walls are (enclosure, Section 26.12)."/>
                             </StackPanel>
@@ -416,12 +427,12 @@
                         </Grid>
                     </Border>
 
-                    <!-- Step 5: terrain (hills) -->
+                    <!-- Step 6: terrain (hills) -->
                     <Border Style="{StaticResource SiteRow}" Margin="0">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="{StaticResource StepLabelWidth}"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 5"/>
+                                <TextBlock Style="{StaticResource StepNumber}" Text="STEP 6"/>
                                 <TextBlock Style="{StaticResource StepName}" Text="TERRAIN"/>
                                 <TextBlock Style="{StaticResource StepHint}" Text="Hills speed up the wind (Kzt, Section 26.8)."/>
                             </StackPanel>

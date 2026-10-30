@@ -324,7 +324,7 @@ namespace ASCE7WindLoadCalculator
         }
 
         private const double DefaultSlope = 15;
-        private readonly DispatcherTimer zeroSlopeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        private readonly DispatcherTimer zeroSlopeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
 
         private bool IsZeroSlope()
         {
