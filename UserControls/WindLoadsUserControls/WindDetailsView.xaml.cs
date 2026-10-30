@@ -14,19 +14,20 @@ namespace ASCE7WindLoadCalculator
     /// Every number behind the guided results, organised by topic: the inputs and factors, the cladding
     /// (Chapter 30) tables and GCp graphs, and the whole-building (Chapter 27) tables for each wind direction.
     /// The graphs are drawn from the curves the calculation picked for this building, with this building's
-    /// zones marked at their effective areas. It replaces the CC Wind Calcs / MWFRS 1 / MWFRS 2 tabs.
+    /// zones marked where they read the curves. It replaces the CC Wind Calcs / MWFRS 1 / MWFRS 2 tabs, and is
+    /// shown both as a tab and in its own window (<see cref="WindDetailsWindow"/>).
     /// </summary>
-    public partial class WindDetailsWindow : Window
+    public partial class WindDetailsView : UserControl
     {
         public const string InputsPage = "Inputs and factors", CladdingPage = "Cladding (C&C)",
                             WestPage = "Shear walls: wind from W", SouthPage = "Shear walls: wind from S",
                             CasesPage = "Shear-wall load cases";
 
-        private readonly ASCE7_Versions version;
-        private readonly WindParameters_Base parameters;
-        private readonly BuildingData building;
-        private readonly WindAnalysisResult analysis;
-        private readonly WindLateralResult lateral;
+        private ASCE7_Versions version;
+        private WindParameters_Base parameters;
+        private BuildingData building;
+        private WindAnalysisResult analysis;
+        private WindLateralResult lateral;
         private readonly Dictionary<string, Func<FrameworkElement>> pages = new Dictionary<string, Func<FrameworkElement>>();
         private readonly Dictionary<string, RadioButton> navButtons = new Dictionary<string, RadioButton>();
 
@@ -35,28 +36,44 @@ namespace ASCE7WindLoadCalculator
                                       WarnBorder = Frozen("#E8A33D"), WarnInk = Frozen("#7A4B00"), Suction = Frozen("#C0362C"),
                                       PushIn = Frozen("#2A78D6");
 
-        public WindDetailsWindow(ASCE7_Versions version, WindParameters_Base parameters, BuildingData building, WindAnalysisResult analysis)
+        public WindDetailsView()
         {
             InitializeComponent();
-            this.version = version;
-            this.parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-            this.building = building ?? throw new ArgumentNullException(nameof(building));
-            this.analysis = analysis ?? throw new ArgumentNullException(nameof(analysis));
-            if (analysis.MwfrsAlongLength != null && analysis.MwfrsAlongWidth != null)
-                lateral = WindLateralLoads.Compute(analysis, onlyCases1And3: false);
-
-            tbInputs.Text = $"{Asce7Edition.For(version).Name} · V = {parameters.WindSpeed:0.#} mph · Risk Category {parameters.RiskCategory} · " +
-                            $"Exposure {ExposureLetter(parameters.ExposureCategory)} · Kzt = {parameters.Kzt:0.00} · " +
-                            $"{building.BuildingLength:0.#} × {building.BuildingWidth:0.#} ft, {building.BuildingHeight:0.#} ft walls, " +
-                            $"{RoofName(building)} roof, mean roof height h = {building.MeanRoofHeight:0.#} ft";
-
             AddPage(InputsPage, "Velocity pressure, gust and internal pressure factors", BuildInputsPage);
             AddPage(CladdingPage, "Roofing, siding and windows (Chapter 30)", BuildCladdingPage);
             AddPage(WestPage, "Whole building, wind along the length (Chapter 27)", () => BuildMwfrsPage(analysis.MwfrsAlongLength, lateral?.AlongLength, "west"));
             AddPage(SouthPage, "Whole building, wind along the width (Chapter 27)", () => BuildMwfrsPage(analysis.MwfrsAlongWidth, lateral?.AlongWidth, "south"));
             AddPage(CasesPage, "Fig. 27.3-8 cases sent to the shear walls", BuildCasesPage);
-            ShowPage(InputsPage);
+            CurrentPage = InputsPage;
+            navButtons[InputsPage].IsChecked = true;
+            SetResults(version, null, null, null);
         }
+
+        /// <summary>
+        /// Shows these results, staying on the current page. Null analysis (inputs that cannot be calculated)
+        /// shows a note instead.
+        /// </summary>
+        public void SetResults(ASCE7_Versions version, WindParameters_Base parameters, BuildingData building, WindAnalysisResult analysis)
+        {
+            this.version = version;
+            this.parameters = parameters;
+            this.building = building;
+            this.analysis = analysis;
+            lateral = analysis?.MwfrsAlongLength != null && analysis.MwfrsAlongWidth != null
+                ? WindLateralLoads.Compute(analysis, onlyCases1And3: false) : null;
+
+            tbInputs.Text = HasResults
+                ? $"{Asce7Edition.For(version).Name} · V = {parameters.WindSpeed:0.#} mph · Risk Category {parameters.RiskCategory} · " +
+                  $"Exposure {ExposureLetter(parameters.ExposureCategory)} · Kzt = {parameters.Kzt:0.00} · " +
+                  $"{building.BuildingLength:0.#} × {building.BuildingWidth:0.#} ft, {building.BuildingHeight:0.#} ft walls, " +
+                  $"{RoofName(building)} roof, mean roof height h = {building.MeanRoofHeight:0.#} ft"
+                : "No results: the wind inputs cannot be calculated yet.";
+            double offset = svPage.VerticalOffset;
+            ShowPage(CurrentPage);
+            svPage.ScrollToVerticalOffset(offset); // a live update keeps the reader's place
+        }
+
+        private bool HasResults => analysis != null && parameters != null && building != null;
 
         /// <summary>The page currently shown (for tests and for opening on a given topic).</summary>
         public string CurrentPage { get; private set; }
@@ -68,7 +85,7 @@ namespace ASCE7WindLoadCalculator
             if (!pages.TryGetValue(name, out var build)) return;
             CurrentPage = name;
             navButtons[name].IsChecked = true;
-            ccPage.Content = build();
+            ccPage.Content = HasResults ? build() : Note("Enter wind inputs that can be calculated to see the details.");
             svPage.ScrollToTop();
         }
 
@@ -131,13 +148,16 @@ namespace ASCE7WindLoadCalculator
             if (cc == null) { page.Children.Add(Note("Cladding results are not available for these inputs.")); return page; }
             AddWarnings(page, cc);
             if (cc.extGCpCurve_Roof == null || cc.extGCpCurve_Wall == null) return page;
+            double roofArea = (cc as WindLoadCalculator_CC)?.RoofComponentArea ?? WindParameters_Base.DefaultComponentArea;
+            double wallArea = (cc as WindLoadCalculator_CC)?.WallComponentArea ?? WindParameters_Base.DefaultComponentArea;
 
             page.Children.Add(Para($"Pressure p = qh [(GCp) − (±GCpi)]. qh = {QhOf(cc):0.00} psf, GCpi = ±{cc.GetGCpi():0.00}." +
-                                   (cc.RoofAreaCalculator.HasCritDim ? $" Zone width a = {cc.RoofAreaCalculator.CritDim_a:0.##} ft." : "")));
+                                   (cc.RoofAreaCalculator.HasCritDim ? $" Zone width a = {cc.RoofAreaCalculator.CritDim_a:0.##} ft." : "") +
+                                   $" GCp is read at the component's effective wind area (26.2): roof {roofArea:0.#} sq ft, walls {wallArea:0.#} sq ft; " +
+                                   $"the zones only set where each curve applies. Net pressures are at least {WindLoadCalculator_CC.MinimumNetPressure:0} psf either way (30.2.2)."));
 
             // Roof: zones + graph, then the table
-            var roofRows = CladdingRows(cc.RoofAreaCalculator.effWindAreas, cc.windPressureRoof_Pos_External, cc.windPressureRoof_Neg_External,
-                                        cc.extGCpCurve_Roof.RoofCurves_Pos, cc.extGCpCurve_Roof.RoofCurves_Neg);
+            var roofRows = CladdingRows(cc.RoofAreaCalculator.effWindAreas, cc.windPressureRoof_Pos_External, cc.windPressureRoof_Neg_External, roofArea);
             page.Children.Add(Section("Roof"));
             page.Children.Add(FigureRow(
                 ZoneDrawing(cc.RoofAreaCalculator, cc.buildingData, "Roof zones (plan)"),
@@ -147,9 +167,9 @@ namespace ASCE7WindLoadCalculator
             // Walls: one graph, a table for each pair of walls
             page.Children.Add(Section("Walls"));
             var lenRows = CladdingRows(cc.WallAreaCalculator_BldgLength.effWindAreas, cc.windPressureBuildingLengthWall_Pos_External,
-                                       cc.windPressureBuildingLengthWall_Neg_External, cc.extGCpCurve_Wall.WallCurves_Pos, cc.extGCpCurve_Wall.WallCurves_Neg);
+                                       cc.windPressureBuildingLengthWall_Neg_External, wallArea);
             var widRows = CladdingRows(cc.WallAreaCalculator_BldgWidth.effWindAreas, cc.windPressureBuildingWidthWall_Pos_External,
-                                       cc.windPressureBuildingWidthWall_Neg_External, cc.extGCpCurve_Wall.WallCurves_Pos, cc.extGCpCurve_Wall.WallCurves_Neg);
+                                       cc.windPressureBuildingWidthWall_Neg_External, wallArea);
             page.Children.Add(FigureRow(
                 ZoneDrawing(cc.WallAreaCalculator_BldgLength, cc.buildingData, "Long walls (S and N faces)"),
                 ZoneDrawing(cc.WallAreaCalculator_BldgWidth, cc.buildingData, "End walls (W and E faces)"),
@@ -225,6 +245,7 @@ namespace ASCE7WindLoadCalculator
             public Brush Swatch { get; set; }
             public double Area { get; set; }
             public int Count { get; set; } = 1;
+            public string Note { get; set; }
             public double Qh { get; set; }
             public double GCpPos { get; set; }
             public double GCpNeg { get; set; }
@@ -234,34 +255,41 @@ namespace ASCE7WindLoadCalculator
             public double NetNeg { get; set; }
         }
 
+        /// <summary>
+        /// One row per zone: GCp at the component's effective wind area (the engine reads every zone there),
+        /// the pressures, and a note where the 16 psf minimum (30.2.2) governs.
+        /// </summary>
         private static List<CladdingRow> CladdingRows(Dictionary<int, EffectiveWindArea> areas,
-            Dictionary<int, PressureData> pos, Dictionary<int, PressureData> neg,
-            Dictionary<string, ExternalGCpCurve> posCurves, Dictionary<string, ExternalGCpCurve> negCurves)
+            Dictionary<int, PressureData> pos, Dictionary<int, PressureData> neg, double componentArea)
         {
             var rows = new List<CladdingRow>();
             foreach (var a in areas)
             {
-                var r = new CladdingRow { Zone = a.Value.Label_Short, Swatch = EffectiveWindAreaRenderer.GetColorForRegion(a.Value.Label_Short), Area = a.Value.Area };
+                var r = new CladdingRow { Zone = a.Value.Label_Short, Swatch = EffectiveWindAreaRenderer.GetColorForRegion(a.Value.Label_Short), Area = componentArea };
+                var notes = new List<string>();
                 if (pos.TryGetValue(a.Key, out var p))
                 {
                     r.Qh = p.qh;
-                    r.GCpPos = posCurves.TryGetValue(a.Value.Label_Full, out var c) ? c.Evaluate(a.Value.Area) : p.GCp;
+                    r.GCpPos = p.GCp;
                     r.PressPos = p.ExternalPressure;
                     r.NetPos = p.NetPressure;
+                    if (p.MinimumGoverns) notes.Add("push-in");
                 }
                 if (neg.TryGetValue(a.Key, out var n))
                 {
                     r.Qh = n.qh;
-                    r.GCpNeg = negCurves.TryGetValue(a.Value.Label_Full, out var c) ? c.Evaluate(a.Value.Area) : n.GCp;
+                    r.GCpNeg = n.GCp;
                     r.PressNeg = n.ExternalPressure;
                     r.NetNeg = n.NetPressure;
+                    if (n.MinimumGoverns) notes.Add("suction");
                 }
+                r.Note = notes.Count == 0 ? string.Empty : $"16 psf minimum governs ({string.Join(", ", notes)})";
                 rows.Add(r);
             }
-            // Many areas share a zone and size (e.g. the four corners): list each kind once, with how many there are.
-            return rows.GroupBy(r => (r.Zone, Math.Round(r.Area, 1), Math.Round(r.NetPos, 2), Math.Round(r.NetNeg, 2)))
+            // Every piece of a zone now has the same values: list each zone once, with how many pieces it has.
+            return rows.GroupBy(r => r.Zone)
                        .Select(g => { var first = g.First(); first.Count = g.Count(); return first; })
-                       .OrderBy(r => r.Zone, StringComparer.Ordinal).ThenBy(r => r.Area)
+                       .OrderBy(r => r.Zone, StringComparer.Ordinal)
                        .ToList();
         }
 
@@ -269,10 +297,10 @@ namespace ASCE7WindLoadCalculator
         {
             var g = NewGrid(new[]
             {
-                ("Zone", "Zone", (string)null), ("Areas", "Count", "0"), ("Effective area (sq ft)", "Area", "0"), ("qh (psf)", "Qh", "0.00"),
+                ("Zone", "Zone", (string)null), ("Pieces", "Count", "0"), ("Component area (sq ft)", "Area", "0"), ("qh (psf)", "Qh", "0.00"),
                 ("GCp push-in", "GCpPos", "0.00"), ("GCp suction", "GCpNeg", "0.00"),
                 ("External push-in (psf)", "PressPos", "0.0"), ("External suction (psf)", "PressNeg", "0.0"),
-                ("Design push-in (psf)", "NetPos", "0.0"), ("Design suction (psf)", "NetNeg", "0.0"),
+                ("Design push-in (psf)", "NetPos", "0.0"), ("Design suction (psf)", "NetNeg", "0.0"), ("Note", "Note", (string)null),
             }, swatch: true);
             g.ItemsSource = rows;
             return g;
@@ -430,7 +458,7 @@ namespace ASCE7WindLoadCalculator
             legend.Inlines.Add(new System.Windows.Documents.Run("● ") { Foreground = Suction });
             legend.Inlines.Add("suction and ");
             legend.Inlines.Add(new System.Windows.Documents.Run("● ") { Foreground = PushIn });
-            legend.Inlines.Add("push-in GCp of this building's zones, at their effective wind area (sq ft, log scale). Negative GCp is up.");
+            legend.Inlines.Add("push-in GCp of this building's zones, at the component's effective wind area (sq ft, log scale). Negative GCp is up.");
             panel.Children.Add(legend);
             return panel;
         }

@@ -124,6 +124,9 @@ namespace ASCE7WindLoadCalculator
                 var asGable = Building.Clone();
                 asGable.RoofType = RoofTypes.ROOF_TYPE_GABLE;
                 (asGable.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH ? rbRidgeAcross : rbRidgeAlong).IsChecked = true;
+                // Only the areas are saved: 10 sq ft shows as sheathing, anything else as an entered area.
+                SetComponent(cbRoofComponent, tbRoofComp, Parameters.RoofComponentArea);
+                SetComponent(cbWallComponent, tbWallComp, Parameters.WallComponentArea);
             }
             finally
             {
@@ -354,6 +357,8 @@ namespace ASCE7WindLoadCalculator
                                : rbExpD.IsChecked == true ? WindExposureCategories.WIND_EXP_CAT_D
                                : WindExposureCategories.WIND_EXP_CAT_C;
             p.Kzt = rbHillYes.IsChecked == true ? Parse(tbKzt.Text) : 1.0;
+            p.RoofComponentArea = ComponentArea(cbRoofComponent, tbRoofComp, out roofComponentOk);
+            p.WallComponentArea = ComponentArea(cbWallComponent, tbWallComp, out wallComponentOk);
             Parameters = p;
 
             var b = Building.Clone();
@@ -372,6 +377,64 @@ namespace ASCE7WindLoadCalculator
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
             b.RidgeDirection = rbRidgeAcross.IsChecked == true ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
             Building = b;
+        }
+
+        // ---------------------------------------------------------------- cladding component
+
+        private const int SheathingItem = 0, FramingItem = 1, AreaItem = 2;
+        private bool roofComponentOk = true, wallComponentOk = true;
+
+        /// <summary>
+        /// Effective wind area (26.2) for the chosen component: sheathing and fasteners 10 sq ft; framing
+        /// span × span/3 (the effective width need not be less than a third of the span); otherwise the area
+        /// entered. An unusable entry falls back to 10 sq ft (the most conservative) and is marked.
+        /// </summary>
+        private static double ComponentArea(ComboBox kind, TextBox value, out bool ok)
+        {
+            ok = true;
+            double v = Parse(value.Text);
+            switch (kind.SelectedIndex)
+            {
+                case FramingItem:
+                    if (v > 0) return v * v / 3.0;
+                    break;
+                case AreaItem:
+                    if (v > 0) return v;
+                    break;
+                default:
+                    return WindParameters_Base.DefaultComponentArea;
+            }
+            ok = false;
+            return WindParameters_Base.DefaultComponentArea;
+        }
+
+        private void SetComponent(ComboBox kind, TextBox value, double area)
+        {
+            bool standard = !(area > 0) || Math.Abs(area - WindParameters_Base.DefaultComponentArea) < 1e-9;
+            kind.SelectedIndex = standard ? SheathingItem : AreaItem;
+            value.Text = standard ? string.Empty : Format(area);
+        }
+
+        private void Component_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (loading || !IsInitialized) return;
+            loading = true;
+            if (sender == cbRoofComponent) tbRoofComp.Text = string.Empty;
+            if (sender == cbWallComponent) tbWallComp.Text = string.Empty;
+            loading = false;
+            Recalculate(notify: true);
+            var box = sender == cbRoofComponent ? tbRoofComp : tbWallComp;
+            if (((ComboBox)sender).SelectedIndex != SheathingItem)
+                Dispatcher.BeginInvoke(new Action(() => box.Focus()), DispatcherPriority.Input);
+        }
+
+        private void ShowComponent(ComboBox kind, Border frame, TextBlock unit, TextBlock result, double area, bool ok)
+        {
+            frame.Visibility = kind.SelectedIndex == SheathingItem ? Visibility.Collapsed : Visibility.Visible;
+            unit.Text = kind.SelectedIndex == FramingItem ? "ft" : "sq ft";
+            frame.BorderBrush = ok ? ControlBrush : WarnBrush;
+            result.Text = ok ? "= " + area.ToString("0.#") + " sq ft" : "enter a value";
+            result.Foreground = ok ? Ink : WarnInk;
         }
 
         /// <summary>Reads the screen, recalculates and refreshes everything shown.</summary>
@@ -444,6 +507,8 @@ namespace ASCE7WindLoadCalculator
             pnlRidge.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_GABLE ? Visibility.Visible : Visibility.Collapsed;
             tbHipNote.Visibility = Building.RoofType == RoofTypes.ROOF_TYPE_HIP ? Visibility.Visible : Visibility.Collapsed;
             runRise.Text = WindInputValidator.RisePer12(Building.RoofPitch);
+            ShowComponent(cbRoofComponent, bdRoofComp, tbRoofCompUnit, tbRoofCompArea, Parameters.RoofComponentArea, roofComponentOk);
+            ShowComponent(cbWallComponent, bdWallComp, tbWallCompUnit, tbWallCompArea, Parameters.WallComponentArea, wallComponentOk);
             pnlKzt.Visibility = rbHillYes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
             tbKztFixed.Visibility = rbHillYes.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
             runRisk.Text = "Risk Category " + Parameters.RiskCategory;
@@ -486,8 +551,8 @@ namespace ASCE7WindLoadCalculator
                                 $"{Format(Building.BuildingLength)} × {Format(Building.BuildingWidth)} ft {roof}-roof building, {Format(Building.BuildingHeight)} ft walls.";
 
             var s = Summary;
-            SetStat(valRoof, unitRoof, subRoof, s?.RoofUpliftPsf, s?.RoofUpliftZone, "Roofing and its fastenings");
-            SetStat(valWall, unitWall, subWall, s?.WallSuctionPsf, s?.WallSuctionZone, "Siding, windows and their fastenings");
+            SetStat(valRoof, unitRoof, subRoof, s?.RoofUpliftPsf, s?.RoofUpliftZone, $"{ComponentName(cbRoofComponent)}, {Parameters.RoofComponentArea:0.#} sq ft");
+            SetStat(valWall, unitWall, subWall, s?.WallSuctionPsf, s?.WallSuctionZone, $"{ComponentName(cbWallComponent)}, {Parameters.WallComponentArea:0.#} sq ft");
             SetForce(valWest, unitWest, subWest, s?.FromWest);
             SetForce(valSouth, unitSouth, subSouth, s?.FromSouth);
 
@@ -521,7 +586,17 @@ namespace ASCE7WindLoadCalculator
             tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
         }
 
-        /// <summary>Cladding card: number, unit, then the zone and what it is used for.</summary>
+        private static string ComponentName(ComboBox c)
+        {
+            switch (c.SelectedIndex)
+            {
+                case FramingItem: return c.Name == "cbRoofComponent" ? "Rafters/trusses" : "Studs";
+                case AreaItem: return "Component";
+                default: return c.Name == "cbRoofComponent" ? "Sheathing, fasteners" : "Sheathing, siding";
+            }
+        }
+
+        /// <summary>Cladding card: number, unit, then the zone and the component it is for.</summary>
         private static void SetStat(TextBlock value, TextBlock unit, TextBlock sub, double? psf, string where, string usedFor)
         {
             value.Text = psf.HasValue ? psf.Value.ToString("0.0") : "-";

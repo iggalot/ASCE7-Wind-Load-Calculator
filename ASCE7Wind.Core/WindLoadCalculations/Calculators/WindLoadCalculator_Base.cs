@@ -250,7 +250,7 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>
-        /// Adds one PressureData per zone that has a matching curve.
+        /// Adds one PressureData per zone that has a matching curve. <paramref name="minimumNet"/> is the smallest net design pressure (psf), 0 for none.
         /// External = q * coefficient * G * Kd(pressure); internal = q * GCpi * Kd(pressure).
         /// </summary>
         protected void AddPressures(
@@ -259,7 +259,8 @@ namespace ASCE7WindLoadCalculator
             Func<EffectiveWindArea, double> curveX,
             double q,
             double G,
-            Dictionary<int, PressureData> target)
+            Dictionary<int, PressureData> target,
+            double minimumNet = 0)
         {
             if (zones == null) return;
 
@@ -279,6 +280,7 @@ namespace ASCE7WindLoadCalculator
                     ExternalPressure = q * gcp * G * kd,
                     GCpi = gcpi,
                     InternalPressure = q * gcpi * kd,
+                    MinimumNet = minimumNet,
                 });
             }
         }

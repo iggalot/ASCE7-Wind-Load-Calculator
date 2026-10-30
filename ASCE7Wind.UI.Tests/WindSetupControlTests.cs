@@ -345,5 +345,44 @@ namespace ASCE7Wind.UI.Tests
                 Assert.AreEqual(2, Find<TextBlock>(c, "sub" + n).Text.Split('\n').Length, n + " has two detail lines");
             }
         }
+
+        /// <summary>Framing uses span × span/3 (26.2); an entered area is used as is; it all reaches the parameters.</summary>
+        [STATestMethod]
+        public void ComponentChoice_SetsTheEffectiveWindArea()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            Assert.AreEqual(10.0, c.Parameters.RoofComponentArea, "default: sheathing and fasteners");
+            Assert.AreEqual(Visibility.Collapsed, Find<UIElement>(c, "bdRoofComp").Visibility);
+
+            Find<ComboBox>(c, "cbRoofComponent").SelectedIndex = 1;   // rafters
+            Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "bdRoofComp").Visibility);
+            Find<TextBox>(c, "tbRoofComp").Text = "12";               // 12 ft span
+            Assert.AreEqual(48.0, c.Parameters.RoofComponentArea, 1e-9);
+            StringAssert.Contains(Find<TextBlock>(c, "tbRoofCompArea").Text, "48");
+
+            Find<ComboBox>(c, "cbWallComponent").SelectedIndex = 2;   // window
+            Find<TextBox>(c, "tbWallComp").Text = "20";
+            Assert.AreEqual(20.0, c.Parameters.WallComponentArea, 1e-9);
+
+            // GCp follows the area: bigger rafters, smaller roof suction than sheathing.
+            double rafter = c.Summary.RoofUpliftPsf.Value;
+            Find<ComboBox>(c, "cbRoofComponent").SelectedIndex = 0;
+            Assert.IsTrue(c.Summary.RoofUpliftPsf.Value < rafter, "sheathing (10 sq ft) sees more uplift than a 48 sq ft rafter");
+        }
+
+        [STATestMethod]
+        public void ComponentArea_RoundTrips_AndBadEntryFallsBackTo10()
+        {
+            var c = Make();
+            c.SetInputs(new BuildingData(), ASCE7_Versions.ASCE_VER_7_22,
+                new WindParameters_Base { WindSpeed = 115, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C, RoofComponentArea = 48, WallComponentArea = 10 });
+            Assert.AreEqual(2, Find<ComboBox>(c, "cbRoofComponent").SelectedIndex, "a saved non-default area shows as an entered area");
+            Assert.AreEqual(48.0, c.Parameters.RoofComponentArea, 1e-9);
+            Assert.AreEqual(0, Find<ComboBox>(c, "cbWallComponent").SelectedIndex);
+
+            Find<TextBox>(c, "tbRoofComp").Text = "x";
+            Assert.AreEqual(10.0, c.Parameters.RoofComponentArea, "unusable entry: the conservative 10 sq ft");
+            StringAssert.Contains(Find<TextBlock>(c, "tbRoofCompArea").Text, "enter");
+        }
     }
 }

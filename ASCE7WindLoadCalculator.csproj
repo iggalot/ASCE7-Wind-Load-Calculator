@@ -75,9 +75,10 @@
     <Compile Include="UserControls\WindLoadsUserControls\Wind3DViewerControl.xaml.cs">
       <DependentUpon>Wind3DViewerControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="UserControls\WindLoadsUserControls\WindDetailsWindow.xaml.cs">
-      <DependentUpon>WindDetailsWindow.xaml</DependentUpon>
+    <Compile Include="UserControls\WindLoadsUserControls\WindDetailsView.xaml.cs">
+      <DependentUpon>WindDetailsView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="UserControls\WindLoadsUserControls\WindDetailsWindow.cs" />
     <Compile Include="UserControls\WindLoadsUserControls\WindSetupControl.xaml.cs">
       <DependentUpon>WindSetupControl.xaml</DependentUpon>
     </Compile>
@@ -100,7 +101,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="UserControls\WindLoadsUserControls\WindDetailsWindow.xaml">
+    <Page Include="UserControls\WindLoadsUserControls\WindDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

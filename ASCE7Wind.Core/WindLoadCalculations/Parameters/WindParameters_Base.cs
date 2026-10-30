@@ -30,6 +30,19 @@ namespace ASCE7WindLoadCalculator
         [Obsolete("Use BuildingData.EnclosureType; this value is ignored.")]
         public BuildingEnclosures EnclosureClassification { get; set; }
 
+        /// <summary>Effective wind area used when none is given (sq ft): the small-area end of the C&amp;C curves.</summary>
+        public const double DefaultComponentArea = 10.0;
+
+        /// <summary>
+        /// Effective wind area (sq ft, 26.2) of the roof component being designed: span × effective width, the
+        /// width need not be less than span/3; for fasteners not more than the area tributary to one fastener.
+        /// C&amp;C roof GCp is read at this area in every zone. 10 sq ft (sheathing, fasteners) gives the largest values.
+        /// </summary>
+        public double RoofComponentArea { get; set; } = DefaultComponentArea;
+
+        /// <summary>Effective wind area (sq ft, 26.2) of the wall component being designed (see <see cref="RoofComponentArea"/>).</summary>
+        public double WallComponentArea { get; set; } = DefaultComponentArea;
+
         public WindLoadCalculationTypes AnalysisType { get; set; } = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
 
         public WindParameters_Base Clone() => (WindParameters_Base)MemberwiseClone();

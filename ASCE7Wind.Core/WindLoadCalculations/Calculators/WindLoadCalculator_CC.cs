@@ -47,14 +47,29 @@ namespace ASCE7WindLoadCalculator
                 return; // outside the method's limits; see ValidationMessages
 
             double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
-            Func<EffectiveWindArea, double> byArea = a => a.Area;
 
-            AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Pos, byArea, qh, 1.0, windPressureRoof_Pos_External);
-            AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Neg, byArea, qh, 1.0, windPressureRoof_Neg_External);
-            AddPressures(WallAreaCalculator_BldgLength, extGCpCurve_Wall.WallCurves_Pos, byArea, qh, 1.0, windPressureBuildingLengthWall_Pos_External);
-            AddPressures(WallAreaCalculator_BldgLength, extGCpCurve_Wall.WallCurves_Neg, byArea, qh, 1.0, windPressureBuildingLengthWall_Neg_External);
-            AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Pos, byArea, qh, 1.0, windPressureBuildingWidthWall_Pos_External);
-            AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Neg, byArea, qh, 1.0, windPressureBuildingWidthWall_Neg_External);
+            // GCp is read at the effective wind area of the component being designed (26.2), not at the area of
+            // the zone: the zones only say where each curve applies. (Reading at the zone area gave too small a
+            // GCp for every real component, e.g. -0.8 instead of -1.5 in a large roof Zone 1.)
+            double roofArea = RoofComponentArea, wallArea = WallComponentArea;
+            Func<EffectiveWindArea, double> roof = a => roofArea;
+            Func<EffectiveWindArea, double> wall = a => wallArea;
+
+            AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Pos, roof, qh, 1.0, windPressureRoof_Pos_External, MinimumNetPressure);
+            AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Neg, roof, qh, 1.0, windPressureRoof_Neg_External, MinimumNetPressure);
+            AddPressures(WallAreaCalculator_BldgLength, extGCpCurve_Wall.WallCurves_Pos, wall, qh, 1.0, windPressureBuildingLengthWall_Pos_External, MinimumNetPressure);
+            AddPressures(WallAreaCalculator_BldgLength, extGCpCurve_Wall.WallCurves_Neg, wall, qh, 1.0, windPressureBuildingLengthWall_Neg_External, MinimumNetPressure);
+            AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Pos, wall, qh, 1.0, windPressureBuildingWidthWall_Pos_External, MinimumNetPressure);
+            AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Neg, wall, qh, 1.0, windPressureBuildingWidthWall_Neg_External, MinimumNetPressure);
         }
+
+        /// <summary>Minimum C&amp;C net design pressure (psf), either direction (30.2.2).</summary>
+        public const double MinimumNetPressure = 16.0;
+
+        /// <summary>Effective wind area (sq ft) the roof GCp is read at.</summary>
+        public double RoofComponentArea => Parameters.RoofComponentArea > 0 ? Parameters.RoofComponentArea : WindParameters_Base.DefaultComponentArea;
+
+        /// <summary>Effective wind area (sq ft) the wall GCp is read at.</summary>
+        public double WallComponentArea => Parameters.WallComponentArea > 0 ? Parameters.WallComponentArea : WindParameters_Base.DefaultComponentArea;
     }
 }

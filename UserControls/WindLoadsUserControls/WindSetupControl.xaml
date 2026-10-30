@@ -548,6 +548,50 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Cladding component: C&C GCp is read at its effective wind area (26.2) in every zone -->
+                        <Border x:Name="secComponent" Style="{StaticResource Section}" Margin="0,0,0,10"
+                                ToolTip="Effective wind area (26.2): span × span/3 for framing. Smaller areas give higher pressures; 10 sq ft covers sheathing and fasteners.">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4">Cladding component <Run Foreground="#52514E" FontWeight="Normal">(sets the effective wind area)</Run></TextBlock>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                    <TextBlock Text="Roof" VerticalAlignment="Center"/>
+                                    <ComboBox x:Name="cbRoofComponent" Grid.Column="1" Height="30" VerticalContentAlignment="Center" SelectionChanged="Component_Changed"
+                                              AutomationProperties.Name="Roof component">
+                                        <ComboBoxItem Content="Sheathing, roofing fasteners"/>
+                                        <ComboBoxItem Content="Rafters or trusses (enter span)"/>
+                                        <ComboBoxItem Content="Other (enter its area)"/>
+                                    </ComboBox>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="8,0,0,0">
+                                        <Border x:Name="bdRoofComp" Style="{StaticResource NumberFrame}" Height="30" Width="72" Padding="6,0">
+                                            <DockPanel><TextBlock x:Name="tbRoofCompUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}" Margin="4,0,0,0" Text="ft"/>
+                                                <TextBox x:Name="tbRoofComp" Style="{StaticResource NumberBox}" FontSize="13" MinWidth="20" TextChanged="Input_Changed" AutomationProperties.Name="Roof component span or area"/></DockPanel>
+                                        </Border>
+                                        <TextBlock x:Name="tbRoofCompArea" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="70" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="1" Text="Walls" VerticalAlignment="Center" Margin="0,6,0,0"/>
+                                    <ComboBox x:Name="cbWallComponent" Grid.Row="1" Grid.Column="1" Height="30" Margin="0,6,0,0" VerticalContentAlignment="Center" SelectionChanged="Component_Changed"
+                                              AutomationProperties.Name="Wall component">
+                                        <ComboBoxItem Content="Sheathing, siding, fasteners"/>
+                                        <ComboBoxItem Content="Studs (enter stud height)"/>
+                                        <ComboBoxItem Content="Window, door or other (enter area)"/>
+                                    </ComboBox>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="8,6,0,0">
+                                        <Border x:Name="bdWallComp" Style="{StaticResource NumberFrame}" Height="30" Width="72" Padding="6,0">
+                                            <DockPanel><TextBlock x:Name="tbWallCompUnit" DockPanel.Dock="Right" Style="{StaticResource Unit}" Margin="4,0,0,0" Text="ft"/>
+                                                <TextBox x:Name="tbWallComp" Style="{StaticResource NumberBox}" FontSize="13" MinWidth="20" TextChanged="Input_Changed" AutomationProperties.Name="Wall component height or area"/></DockPanel>
+                                        </Border>
+                                        <TextBlock x:Name="tbWallCompArea" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="70" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <UniformGrid x:Name="ugBuildingNumbers" Columns="3">
                             <Border Style="{StaticResource StatCard}" Padding="12,8">
                                 <StackPanel><TextBlock Style="{StaticResource Hint}" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="18" FontWeight="SemiBold"/></StackPanel>
