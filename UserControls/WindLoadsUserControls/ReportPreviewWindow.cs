@@ -20,7 +20,7 @@ namespace ASCE7WindLoadCalculator
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Viewer.Document = report;
             Content = Viewer;
-            Loaded += (s, e) => Viewer.FitToWidth();
+            Loaded += (s, e) => Viewer.FitToMaxPagesAcross(1);
         }
     }
 }
