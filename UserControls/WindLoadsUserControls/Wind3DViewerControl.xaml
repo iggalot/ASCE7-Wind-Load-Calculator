@@ -174,9 +174,12 @@
                 <CheckBox x:Name="cbBlocks" Content="Blocks" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0"
                           Foreground="{StaticResource InkSecondary}" Checked="Display_Changed" Unchecked="Display_Changed"
                           ToolTip="Draw each zone's pressure as a block standing on the surface; taller = stronger"/>
-                <CheckBox x:Name="cbOutlines" Content="Outlines" IsChecked="True" VerticalAlignment="Center"
+                <CheckBox x:Name="cbOutlines" Content="Outlines" IsChecked="True" VerticalAlignment="Center" Margin="0,0,10,0"
                           Foreground="{StaticResource InkSecondary}" Checked="Outlines_Changed" Unchecked="Outlines_Changed"
                           ToolTip="Show zone boundaries"/>
+                <CheckBox x:Name="cbPsfLabels" Content="psf labels" IsChecked="False" VerticalAlignment="Center"
+                          Foreground="{StaticResource InkSecondary}" Checked="PsfLabels_Changed" Unchecked="PsfLabels_Changed"
+                          ToolTip="Write each zone's net pressure (psf, + toward the surface, − suction) on the zone. A label is left out when the zone is too small to hold it at this zoom, or hidden behind the building."/>
             </StackPanel>
 
             <!-- Controls hint -->

@@ -33,6 +33,9 @@ namespace ASCE7WindLoadCalculator
         private Vec3? northLabelAt, windLabelAt;
         private readonly HashSet<Model3D> envelopeModels = new HashSet<Model3D>(); // solid building parts that can hide labels
 
+        /// <summary>The psf label of each zone: its text, the point it is pinned to (on the block top) and the zone's outline points.</summary>
+        private readonly List<(TextBlock label, Vec3 at, List<Vec3> outline, double area)> zoneLabels = new List<(TextBlock, Vec3, List<Vec3>, double)>();
+
         private Point lastMouse, downMouse;
         private MouseButton? dragButton;
         private bool dragged;
@@ -45,6 +48,7 @@ namespace ASCE7WindLoadCalculator
         {
             InitializeComponent();
             RadioGroups.MakeUnique(this); // several viewers can share a window
+            cbPsfLabels.IsChecked = ViewerPreferences.PsfLabels;
             viewHost.SizeChanged += (s, e) => ApplyCamera();
             UpdateRoofCaseAvailability();
             ApplyCamera();
@@ -125,6 +129,8 @@ namespace ASCE7WindLoadCalculator
             outlines = null;
             northLabelAt = windLabelAt = null;
             envelopeModels.Clear();
+            foreach (var l in zoneLabels) labelLayer.Children.Remove(l.label);
+            zoneLabels.Clear();
             bdHover.Visibility = Visibility.Collapsed;
 
             if (building == null)
@@ -165,6 +171,7 @@ namespace ASCE7WindLoadCalculator
             AddGround(model, size);
             AddEnvelope(model, size);
             AddZones(size);
+            AddZoneLabels(size);
             AddOutlines(size);
             AddEnvelopeEdges(model, size);
             if (scene.WindDirection.HasValue) AddWindArrow(model, scene.WindDirection.Value, size);
@@ -278,6 +285,77 @@ namespace ASCE7WindLoadCalculator
                 normalMaterial[gm] = gm.Material;
                 highlightMaterial[gm] = hi;
                 sceneRoot.Children.Add(gm);
+            }
+        }
+
+        /// <summary>
+        /// "psf labels": each zone's net pressure written on the zone, pinned to the area centroid on top of its block.
+        /// Placement (which labels fit, are visible, do not overlap) is decided on every camera move in UpdatePinnedLabels.
+        /// </summary>
+        private void AddZoneLabels(double size)
+        {
+            if (cbPsfLabels.IsChecked != true) return;
+            double lift = size / 1500, k = BlockScale(size);
+            foreach (var z in scene.Zones)
+            {
+                if (!z.HasPressure || z.Triangles.Count < 3) continue;
+                var n = z.Normal;
+                Vec3 OnTop(Vec3 p) => p + n * (lift + k * Math.Abs(SafePsf(z.PressureAtPoint(p))));
+                Vec3 sum = new Vec3(0, 0, 0);
+                double area = 0;
+                for (int i = 0; i + 2 < z.Triangles.Count; i += 3)
+                {
+                    var a = z.Triangles[i]; var b = z.Triangles[i + 1]; var c = z.Triangles[i + 2];
+                    double t = Vec3.TriangleArea(a, b, c);
+                    sum = sum + (a + b + c) * (t / 3);
+                    area += t;
+                }
+                if (area <= 0) continue;
+                var label = new TextBlock
+                {
+                    Text = z.PressurePsf.ToString("+0.0;−0.0", CultureInfo.CurrentCulture),
+                    FontSize = 11, FontWeight = FontWeights.SemiBold,
+                    Foreground = (Brush)FindResource("InkPrimary"),
+                    Background = new SolidColorBrush(Color.FromArgb(0xD8, 0xFF, 0xFF, 0xFF)),
+                    Padding = new Thickness(3, 0, 3, 0),
+                };
+                labelLayer.Children.Add(label);
+                zoneLabels.Add((label, OnTop(sum * (1 / area)), z.Triangles.Distinct().Select(OnTop).ToList(), area));
+            }
+            // larger zones first, so they win when two labels would overlap
+            zoneLabels.Sort((x, y) => y.area.CompareTo(x.area));
+        }
+
+        /// <summary>Places the zone labels: only where the zone is big enough on screen, not hidden, and not on top of another label.</summary>
+        private void PlaceZoneLabels()
+        {
+            var placed = new List<Rect>();
+            foreach (var (label, at, outline, _) in zoneLabels)
+            {
+                label.Visibility = Visibility.Collapsed;
+                var s = Project(at);
+                if (!s.HasValue) continue;
+                label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                var size = label.DesiredSize;
+
+                // the zone's extent on screen must hold the label
+                double x0 = double.MaxValue, y0 = double.MaxValue, x1 = double.MinValue, y1 = double.MinValue;
+                foreach (var p in outline)
+                {
+                    var q = Project(p);
+                    if (!q.HasValue) continue;
+                    x0 = Math.Min(x0, q.Value.X); x1 = Math.Max(x1, q.Value.X);
+                    y0 = Math.Min(y0, q.Value.Y); y1 = Math.Max(y1, q.Value.Y);
+                }
+                if (x1 - x0 < size.Width * 1.1 || y1 - y0 < size.Height * 1.1) continue;
+
+                var rect = new Rect(s.Value.X - size.Width / 2, s.Value.Y - size.Height / 2, size.Width, size.Height);
+                if (placed.Any(r => r.IntersectsWith(rect))) continue;
+                if (IsHidden(at, s.Value)) continue;
+                placed.Add(rect);
+                Canvas.SetLeft(label, rect.X);
+                Canvas.SetTop(label, rect.Y);
+                label.Visibility = Visibility.Visible;
             }
         }
 
@@ -486,6 +564,7 @@ namespace ASCE7WindLoadCalculator
             }
             Pin(lblNorth, northLabelAt);
             Pin(lblWind, windLabelAt);
+            PlaceZoneLabels();
         }
 
         /// <summary>
@@ -787,6 +866,13 @@ namespace ASCE7WindLoadCalculator
 
         private void Display_Changed(object sender, RoutedEventArgs e)
         {
+            if (!IsInitialized || sceneRoot == null) return;
+            Rebuild(resetCamera: false);
+        }
+
+        private void PsfLabels_Changed(object sender, RoutedEventArgs e)
+        {
+            ViewerPreferences.PsfLabels = cbPsfLabels.IsChecked == true;
             if (!IsInitialized || sceneRoot == null) return;
             Rebuild(resetCamera: false);
         }

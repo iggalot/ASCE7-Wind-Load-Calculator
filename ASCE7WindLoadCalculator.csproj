@@ -50,6 +50,7 @@
     <Compile Include="Helpers\EffectiveWindAreaRenderer.cs" />
     <Compile Include="Helpers\EnvelopeDiagram.cs" />
     <Compile Include="Helpers\FigureDrawer.cs" />
+    <Compile Include="Helpers\ViewerPreferences.cs" />
     <Compile Include="Helpers\ParapetDiagram.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UserControls\BuildingData\BuildingDataInputControl.xaml.cs">
