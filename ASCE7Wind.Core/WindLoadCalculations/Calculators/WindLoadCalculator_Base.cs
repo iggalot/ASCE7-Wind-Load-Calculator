@@ -177,15 +177,18 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>Internal pressure coefficient magnitude |GCpi| (Table 26.13-1).</summary>
-        public double GetGCpi()
+        public double GetGCpi() => GCpiFor(buildingData.EnclosureType);
+
+        /// <summary>|GCpi| for an enclosure classification (Table 26.13-1).</summary>
+        public static double GCpiFor(BuildingEnclosures enclosure)
         {
-            switch (buildingData.EnclosureType)
+            switch (enclosure)
             {
                 case BuildingEnclosures.BLDG_ENCLOSED: return 0.18;
                 case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: return 0.55;
                 case BuildingEnclosures.BLDG_PARTIALLY_OPEN: return 0.18;
                 case BuildingEnclosures.BLDG_OPEN: return 0.0;
-                default: throw new ArgumentOutOfRangeException(nameof(buildingData.EnclosureType), buildingData.EnclosureType, "Invalid enclosure type.");
+                default: throw new ArgumentOutOfRangeException(nameof(enclosure), enclosure, "Invalid enclosure type.");
             }
         }
 

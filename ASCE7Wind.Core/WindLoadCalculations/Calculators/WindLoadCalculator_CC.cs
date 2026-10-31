@@ -140,7 +140,8 @@ namespace ASCE7WindLoadCalculator
         /// Section 30.6, Fig. 30.6-1, qp at the top of the parapet, GCp at the wall component area:
         /// case A (windward parapet): front = positive wall GCp (Zone 5 at corners, 4 elsewhere), back = negative roof GCp
         /// (Zone 3 at corners, 2 elsewhere); case B (leeward parapet): back = positive wall GCp, front = negative wall GCp.
-        /// GCpi is the building's (Table 26.13-1), applied to each face separately.
+        /// GCpi is from the porosity of the parapet envelope (Table 26.13-1, BuildingData.ParapetEnclosure), and each face
+        /// is evaluated under both positive and negative internal pressure.
         /// </summary>
         private void AddParapetCases(double area)
         {
@@ -148,30 +149,31 @@ namespace ASCE7WindLoadCalculator
             if (!buildingData.HasParapet) return;
             var wallPos = extGCpCurve_Wall.WallCurves_Pos; var wallNeg = extGCpCurve_Wall.WallCurves_Neg; var roofNeg = extGCpCurve_Roof.RoofCurves_Neg;
             double qp = CalculateDynamicWindPressure(buildingData.BuildingHeight + buildingData.ParapetHeight);
-            double kd = PressureKd, gcpi = GetGCpi();
-            double Face(double gcp)
+            double kd = PressureKd, gcpi = GCpiFor(buildingData.ParapetEnclosure);
+            double Face(double gcp, double internalCoeff)
             {
-                double p = qp * kd * (gcp + (gcp >= 0 ? gcpi : -gcpi)); // internal pressure in the direction that adds
-                return Math.Abs(p) < MinimumNetPressure ? (gcp >= 0 ? MinimumNetPressure : -MinimumNetPressure) : p;
+                double p = qp * kd * (gcp - internalCoeff);
+                return Math.Abs(p) < MinimumNetPressure ? (p >= 0 ? MinimumNetPressure : -MinimumNetPressure) : p;
+            }
+            double Larger(double x, double y) => Math.Abs(x) >= Math.Abs(y) ? x : y;
+            ParapetCladdingCase Make(string kase, string location, string frontSource, double gcpFront, string backSource, double gcpBack)
+            {
+                double fPos = Face(gcpFront, gcpi), fNeg = Face(gcpFront, -gcpi), bPos = Face(gcpBack, gcpi), bNeg = Face(gcpBack, -gcpi);
+                return new ParapetCladdingCase
+                {
+                    Case = kase, Location = location, Qp = qp, GCpi = gcpi,
+                    FrontSource = frontSource, GCpFront = gcpFront, FrontPressurePosGCpi = fPos, FrontPressureNegGCpi = fNeg, FrontPressure = Larger(fPos, fNeg),
+                    BackSource = backSource, GCpBack = gcpBack, BackPressurePosGCpi = bPos, BackPressureNegGCpi = bNeg, BackPressure = Larger(bPos, bNeg),
+                    NetPressure = Math.Abs(qp * kd * (gcpFront - gcpBack)),
+                };
             }
             foreach (var (location, wallZone, roofZone) in new[] { ("corner", "Zone5", "Zone3"), ("edge", "Zone4", "Zone2") })
             {
                 if (!wallPos.ContainsKey(wallZone) || !wallNeg.ContainsKey(wallZone) || !roofNeg.ContainsKey(roofZone)) continue;
                 double wp = wallPos[wallZone].Evaluate(area), wn = wallNeg[wallZone].Evaluate(area), rn = roofNeg[roofZone].Evaluate(area);
-                ParapetCases.Add(new ParapetCladdingCase
-                {
-                    Case = "A", Location = location, Qp = qp, GCpi = gcpi,
-                    FrontSource = wallZone + " (wall, +)", GCpFront = wp, FrontPressure = Face(wp),
-                    BackSource = roofZone + (ParapetRoofZoneNoteApplied && roofZone == "Zone3" ? " (roof, -, = Zone2 by note 5)" : " (roof, -)"), GCpBack = rn, BackPressure = Face(rn),
-                    NetPressure = qp * kd * (wp - rn),
-                });
-                ParapetCases.Add(new ParapetCladdingCase
-                {
-                    Case = "B", Location = location, Qp = qp, GCpi = gcpi,
-                    FrontSource = wallZone + " (wall, -)", GCpFront = wn, FrontPressure = Face(wn),
-                    BackSource = wallZone + " (wall, +)", GCpBack = wp, BackPressure = Face(wp),
-                    NetPressure = qp * kd * (wp - wn),
-                });
+                string roofSource = roofZone + (ParapetRoofZoneNoteApplied && roofZone == "Zone3" ? " (roof, -, = Zone2 by note 5)" : " (roof, -)");
+                ParapetCases.Add(Make("A", location, wallZone + " (wall, +)", wp, roofSource, rn));
+                ParapetCases.Add(Make("B", location, wallZone + " (wall, -)", wn, wallZone + " (wall, +)", wp));
             }
         }
 

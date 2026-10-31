@@ -51,6 +51,13 @@ namespace ASCE7WindLoadCalculator
         /// <summary>True when a parapet is counted: a flat roof with a parapet height above 0.</summary>
         public bool HasParapet => ParapetHeight > 0 && RoofTypeIsFlat();
 
+        /// <summary>
+        /// Porosity of the parapet envelope for its C&amp;C internal pressure (30.6: GCpi from Table 26.13-1 based on the
+        /// parapet envelope, not the building). Enclosed (+/-0.18) suits a parapet sheathed on both faces; Open (0) a solid
+        /// or open parapet with no cavity.
+        /// </summary>
+        public BuildingEnclosures ParapetEnclosure { get; set; } = BuildingEnclosures.BLDG_ENCLOSED;
+
         /// <summary>Roof overhang (eave) width beyond the wall face (ft); 0 for none.</summary>
         public double OverhangWidth { get; set; } = 0;
 

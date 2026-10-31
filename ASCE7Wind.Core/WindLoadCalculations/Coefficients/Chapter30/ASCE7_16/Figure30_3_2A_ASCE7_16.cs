@@ -5,7 +5,7 @@
     /// Gable Roofs
     /// h <= 60ft
     /// slope <= 7deg
-    /// </summary>I'm lost
+    /// </summary>
     public class Figure30_3_2A_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
         public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2A";

@@ -348,9 +348,12 @@ namespace ASCE7WindLoadCalculator
             if (cc == null || cc.ParapetCases.Count == 0) return;
             var first = cc.ParapetCases[0];
             page.Children.Add(Section($"Parapet, {cc.buildingData.ParapetHeight:0.##} ft (Section 30.6, Fig. 30.6-1)"));
-            page.Children.Add(Para($"Each face: p = qp [(GCp) − (±GCpi)] (Eq. 30.6-1), qp = {first.Qp:0.00} psf at the parapet top, GCpi = ±{first.GCpi:0.00} " +
-                                   "(the building's enclosure, Table 26.13-1) taken in the direction that adds; GCp at the wall component area; " +
-                                   $"at least {WindLoadCalculator_CC.MinimumNetPressure:0} psf. The internal pressure cancels in the net load on the parapet. " +
+            page.Children.Add(Para($"Each face: p = qp [(GCp) − (GCpi)] (Eq. 30.6-1), qp = {first.Qp:0.00} psf at the parapet top, " +
+                                   (first.GCpi > 0
+                                       ? $"evaluated under +GCpi and −GCpi = ±{first.GCpi:0.00} (porosity of the parapet envelope, Table 26.13-1, set on the Building page); "
+                                       : "GCpi = 0 (open or solid parapet envelope, set on the Building page); ") +
+                                   $"GCp at the wall component area; at least {WindLoadCalculator_CC.MinimumNetPressure:0} psf. The diagram shows the larger value on each face. " +
+                                   "The internal pressure cancels in the net load on the parapet. " +
                                    "Corner = within the zone width a of a corner (wall Zone 5, roof Zone 3); edge = elsewhere (Zone 4, roof Zone 2). " +
                                    "These size the parapet itself; the shear walls use the 27.3.4 parapet force."));
             var a = cc.ParapetCases.FirstOrDefault(p => p.Case == "A" && p.Location == "corner");
@@ -360,8 +363,8 @@ namespace ASCE7WindLoadCalculator
             var g = NewGrid(new[]
             {
                 ("Case", "Case", (string)null), ("Where", "Location", (string)null),
-                ("Front face", "FrontSource", (string)null), ("GCp", "GCpFront", "0.00"), ("Front (psf)", "FrontPressure", "0.0"),
-                ("Back face", "BackSource", (string)null), ("GCp ", "GCpBack", "0.00"), ("Back (psf)", "BackPressure", "0.0"),
+                ("Front face", "FrontSource", (string)null), ("GCp", "GCpFront", "0.00"), ("Front, +GCpi", "FrontPressurePosGCpi", "0.0"), ("Front, −GCpi", "FrontPressureNegGCpi", "0.0"),
+                ("Back face", "BackSource", (string)null), ("GCp ", "GCpBack", "0.00"), ("Back, +GCpi", "BackPressurePosGCpi", "0.0"), ("Back, −GCpi", "BackPressureNegGCpi", "0.0"),
                 ("Net on the parapet (psf)", "NetPressure", "0.0"),
             });
             g.ItemsSource = cc.ParapetCases;

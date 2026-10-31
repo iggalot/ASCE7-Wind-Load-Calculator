@@ -566,6 +566,17 @@
                                     </Border>
                                     <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource InkSecondary}" Text="above the roof, all around"/>
                                 </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock VerticalAlignment="Center" Margin="0,0,8,0" Text="Envelope (cladding GCpi)"/>
+                                    <ComboBox x:Name="cbParapetEnvelope" Width="190" Height="30" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Input_Changed"
+                                              AutomationProperties.Name="Parapet envelope porosity for its internal pressure"
+                                              ToolTip="Cladding only (30.6): GCpi from Table 26.13-1 for the porosity of the parapet envelope itself, not the building. A parapet sheathed on both faces is usually enclosed; a solid or open parapet has no internal pressure.">
+                                        <ComboBoxItem Content="Enclosed (GCpi ±0.18)"/>
+                                        <ComboBoxItem Content="Partially enclosed (±0.55)"/>
+                                        <ComboBoxItem Content="Partially open (±0.18)"/>
+                                        <ComboBoxItem Content="Open or solid (0)"/>
+                                    </ComboBox>
+                                </StackPanel>
                                 <TextBlock x:Name="msgParapet" Style="{StaticResource FieldMessage}"/>
                             </StackPanel>
                         </Border>

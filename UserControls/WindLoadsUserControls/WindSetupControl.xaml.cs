@@ -121,6 +121,7 @@ namespace ASCE7WindLoadCalculator
                 tbH.Text = Format(Building.BuildingHeight);
                 tbOverhang.Text = Format(Building.OverhangWidth);
                 tbParapet.Text = Format(Building.ParapetHeight);
+                cbParapetEnvelope.SelectedIndex = (int)Building.ParapetEnclosure;
                 tbPitch.Text = Format(Building.RoofPitch);
                 // Ridge choice as the user sees it; for a non-gable roof show the gable default.
                 var asGable = Building.Clone();
@@ -379,6 +380,7 @@ namespace ASCE7WindLoadCalculator
             b.OverhangWidth = double.IsNaN(overhang) || overhang < 0 ? 0 : overhang;
             double parapet = string.IsNullOrWhiteSpace(tbParapet.Text) ? 0 : Parse(tbParapet.Text);
             b.ParapetHeight = double.IsNaN(parapet) || parapet < 0 ? 0 : parapet;
+            b.ParapetEnclosure = cbParapetEnvelope.SelectedIndex < 0 ? BuildingEnclosures.BLDG_ENCLOSED : (BuildingEnclosures)cbParapetEnvelope.SelectedIndex;
             double pitch = Parse(tbPitch.Text);
             // A flat roof ignores the pitch box; keep the last good value so switching back restores it.
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;

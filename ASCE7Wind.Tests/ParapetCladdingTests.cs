@@ -12,10 +12,13 @@ namespace ASCE7Wind.Tests
     [TestClass]
     public class ParapetCladdingTests
     {
-        private static WindLoadCalculator_CC Cc(ASCE7_Versions v, double parapet)
+        private static WindLoadCalculator_CC Cc(ASCE7_Versions v, double parapet,
+            BuildingEnclosures parapetEnvelope = BuildingEnclosures.BLDG_ENCLOSED, BuildingEnclosures building = BuildingEnclosures.BLDG_ENCLOSED)
         {
             var b = Bldg.Make(60, 40, 15);
             b.ParapetHeight = parapet;
+            b.ParapetEnclosure = parapetEnvelope;
+            b.EnclosureType = building;
             return (WindLoadCalculator_CC)Bldg.Run(v, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, b);
         }
 
@@ -36,6 +39,11 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(-2.3, aCorner.GCpBack, 1e-9);              // Zone 3 = Zone 2 by Fig. 30.3-2A note 5 (parapet >= 3 ft)
             Assert.AreEqual(qk * 1.18, aCorner.FrontPressure, 0.05);    // 30.0 psf
             Assert.AreEqual(-qk * 2.48, aCorner.BackPressure, 0.05);    // -63.0 psf
+            // 30.6: both faces under +GCpi and -GCpi
+            Assert.AreEqual(qk * 0.82, aCorner.FrontPressurePosGCpi, 0.05);   // 20.8 psf
+            Assert.AreEqual(qk * 1.18, aCorner.FrontPressureNegGCpi, 0.05);   // 30.0 psf
+            Assert.AreEqual(-qk * 2.48, aCorner.BackPressurePosGCpi, 0.05);   // -63.0 psf
+            Assert.AreEqual(-qk * 2.12, aCorner.BackPressureNegGCpi, 0.05);   // -53.9 psf
             Assert.AreEqual(qk * 3.3, aCorner.NetPressure, 0.05);       // 83.9 psf: internal pressure cancels
 
             var aEdge = Get(c, "A", "edge");
@@ -46,6 +54,8 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(-1.4, bCorner.GCpFront, 1e-9);
             Assert.AreEqual(1.0, bCorner.GCpBack, 1e-9);
             Assert.AreEqual(-qk * 1.58, bCorner.FrontPressure, 0.05);   // -40.2 psf
+            Assert.AreEqual(-qk * 1.58, bCorner.FrontPressurePosGCpi, 0.05);  // -40.2 psf
+            Assert.AreEqual(-qk * 1.22, bCorner.FrontPressureNegGCpi, 0.05);  // -31.0 psf
             Assert.AreEqual(qk * 1.18, bCorner.BackPressure, 0.05);
             Assert.AreEqual(qk * 2.4, bCorner.NetPressure, 0.05);       // 61.0 psf
 
@@ -67,6 +77,36 @@ namespace ASCE7Wind.Tests
         public void NoParapet_NoCases()
         {
             Assert.AreEqual(0, Cc(ASCE7_Versions.ASCE_VER_7_22, 0).ParapetCases.Count);
+        }
+
+        // 30.6: GCpi comes from the porosity of the parapet envelope, not the building's enclosure.
+        [TestMethod]
+        public void Gcpi_FromParapetEnvelope_NotBuilding()
+        {
+            var c = Cc(ASCE7_Versions.ASCE_VER_7_22, 3, parapetEnvelope: BuildingEnclosures.BLDG_ENCLOSED, building: BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED);
+            Assert.AreEqual(0.55, c.GetGCpi(), 1e-9);                       // the building's roof and walls
+            Assert.IsTrue(c.ParapetCases.All(p => System.Math.Abs(p.GCpi - 0.18) < 1e-9));
+
+            var partial = Cc(ASCE7_Versions.ASCE_VER_7_22, 3, parapetEnvelope: BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED);
+            double qk = 29.91 * 0.85;
+            var a = Get(partial, "A", "corner");
+            Assert.AreEqual(16.0, a.FrontPressurePosGCpi, 1e-9);             // qk * 0.45 = 11.4 psf, raised to the 16 psf minimum
+            Assert.AreEqual(qk * (1.0 + 0.55), a.FrontPressureNegGCpi, 0.05);
+            Assert.AreEqual(qk * 3.3, a.NetPressure, 0.05);                 // net unchanged: internal pressure cancels
+        }
+
+        [TestMethod]
+        public void OpenOrSolidEnvelope_NoInternalPressure()
+        {
+            var c = Cc(ASCE7_Versions.ASCE_VER_7_22, 3, parapetEnvelope: BuildingEnclosures.BLDG_OPEN);
+            double qk = 29.91 * 0.85;
+            foreach (var p in c.ParapetCases)
+            {
+                Assert.AreEqual(0, p.GCpi, 1e-9);
+                Assert.AreEqual(p.FrontPressurePosGCpi, p.FrontPressureNegGCpi, 1e-9);
+                Assert.AreEqual(p.BackPressurePosGCpi, p.BackPressureNegGCpi, 1e-9);
+            }
+            Assert.AreEqual(-qk * 2.3, Get(c, "A", "corner").BackPressure, 0.05);  // -58.5 psf
         }
 
         // Fig. 30.3-2A note 5: parapet >= 3 ft (0.9 m) around a roof <= 7 deg -> roof Zone 3 negative = Zone 2,
