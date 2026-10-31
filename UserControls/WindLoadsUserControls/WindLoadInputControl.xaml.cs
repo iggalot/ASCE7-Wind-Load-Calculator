@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -221,9 +222,19 @@ namespace ASCE7WindLoadCalculator
             {
                 buildingData = new BuildingData();
             }
+            inputError = null;
             ParseWindLoadParameters(buildingData.RoofType, Version);
 
-            MakeCalculators();
+            if (inputError != null)
+            {
+                // Bad input: say so on the screen and clear the results (never compute from a substituted value).
+                windLoadCalculator_CC = windLoadCalculator_MWFRS_Length = windLoadCalculator_MWFRS_Width = null;
+                LastError = inputError;
+                tbCalcError.Text = LastError;
+                tbCalcError.Visibility = Visibility.Visible;
+            }
+            else
+                MakeCalculators();
 
             OnWindInputComplete(windLoadCalculator_CC, windLoadCalculator_MWFRS_Length, windLoadCalculator_MWFRS_Width); // raise the event where input has been completed
 
@@ -261,16 +272,12 @@ namespace ASCE7WindLoadCalculator
         }
 
 
-        /// <summary>
-        /// Safe parser that returns a double. Falls back to a default if invalid.
-        /// </summary>
-        private static double TryParseOrDefault(string text, double defaultValue)
-        {
-            if (string.IsNullOrWhiteSpace(text))
-                return defaultValue;
+        /// <summary>Why the typed inputs could not be read, or null (set by <see cref="ParseWindLoadParameters"/>).</summary>
+        private string inputError;
 
-            return double.TryParse(text, out double result) ? result : defaultValue;
-        }
+        /// <summary>Reads a positive number (dot as the decimal separator, as in main 6824457).</summary>
+        private static bool TryReadPositive(string text, out double value) =>
+            double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out value) && value > 0;
 
         private static string TryGetComboBoxString(ComboBox comboBox, string defaultValue)
         {
@@ -293,8 +300,16 @@ namespace ASCE7WindLoadCalculator
 
                 Version = version;
 
-                double windSpeed = TryParseOrDefault(WindSpeedTextBox.Text, 115.0);   // fallback: 115 mph
-                double kzt = TryParseOrDefault(KztTextBox.Text, 1.0);           // fallback: 1.0
+                if (!TryReadPositive(WindSpeedTextBox.Text, out double windSpeed))
+                {
+                    inputError = "Invalid wind speed. Enter a number greater than zero (mph).";
+                    return;
+                }
+                if (!TryReadPositive(KztTextBox.Text, out double kzt))
+                {
+                    inputError = "Invalid Kzt. Enter a number greater than zero.";
+                    return;
+                }
                 string risk = TryGetComboBoxString(RiskCategoryComboBox, "II"); // fallback to Risk Category II
                 //WindLoadCalculationTypes analysis_type = (WindLoadCalculationTypes)cmbWindAnalysisType.SelectedIndex;
                 string exposure_string = TryGetComboBoxString(ExposureCategoryComboBox, "C"); // fallback to Risk Category II
