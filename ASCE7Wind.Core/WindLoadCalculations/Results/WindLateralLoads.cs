@@ -66,8 +66,18 @@ namespace ASCE7WindLoadCalculator
         public DirectionalWindForce AlongWidth { get; internal set; }
         public List<WindLoadCase> LoadCases { get; } = new List<WindLoadCase>();
 
-        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception).</summary>
+        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception), or, for Chapter 28, when the torsional cases were skipped (Fig. 28.3-1 exception).</summary>
         public bool OnlyCases1And3 { get; internal set; }
+
+        /// <summary>The procedure these loads came from.</summary>
+        public LateralProcedure Procedure { get; internal set; } = LateralProcedure.Directional;
+
+        /// <summary>Chapter 28 details per direction; null for the directional procedure.</summary>
+        public EnvelopeDirection EnvelopeAlongLength { get; internal set; }
+        public EnvelopeDirection EnvelopeAlongWidth { get; internal set; }
+
+        /// <summary>Why the requested procedure was not used (Chapter 28 asked for a building it does not cover); null otherwise.</summary>
+        public string ProcedureNote { get; internal set; }
     }
 
     /// <summary>
@@ -81,12 +91,32 @@ namespace ASCE7WindLoadCalculator
         public const double MinimumRoofPressure = 8.0;  // psf, 27.1.5
         public const double CaseEccentricity = 0.15;    // e = 0.15 B, Fig. 27.3-8
 
+        /// <param name="procedure">Chapter 27 or Chapter 28 Part 1. Chapter 28 falls back to Chapter 27, with
+        /// <see cref="WindLateralResult.ProcedureNote"/> saying why, for a building it does not cover.</param>
+        public static WindLateralResult Compute(WindAnalysisResult analysis, bool onlyCases1And3, LateralProcedure procedure)
+        {
+            if (procedure == LateralProcedure.Envelope && analysis?.MwfrsAlongLength != null)
+            {
+                var why = EnvelopeLateralLoads.Applicability(analysis.MwfrsAlongLength.buildingData);
+                if (why.Count == 0) return EnvelopeLateralLoads.Compute(analysis, onlyCases1And3);
+                var r = ComputeDirectional(analysis, onlyCases1And3);
+                r.ProcedureNote = "Chapter 28 does not apply (" + string.Join("; ", why) + "), so Chapter 27 was used.";
+                return r;
+            }
+            return ComputeDirectional(analysis, onlyCases1And3);
+        }
+
+        /// <summary>Lateral loads by the procedure chosen in the calculators' parameters (<see cref="WindParameters_Base.LateralProcedure"/>).</summary>
         /// <param name="onlyCases1And3">
         /// Fig. 27.3-8 exception: one-story buildings with h &lt;= 30 ft, buildings two stories or less
         /// framed with light-frame construction, and buildings two stories or less designed with flexible
-        /// diaphragms need only Load Cases 1 and 3.
+        /// diaphragms need only Load Cases 1 and 3. For Chapter 28 the same buildings skip the torsional cases.
         /// </param>
-        public static WindLateralResult Compute(WindAnalysisResult analysis, bool onlyCases1And3 = false)
+        public static WindLateralResult Compute(WindAnalysisResult analysis, bool onlyCases1And3 = false) =>
+            Compute(analysis, onlyCases1And3, analysis?.MwfrsAlongLength?.Parameters?.LateralProcedure ?? LateralProcedure.Directional);
+
+        /// <summary>Chapter 27 directional procedure: Fig. 27.3-8 load cases.</summary>
+        private static WindLateralResult ComputeDirectional(WindAnalysisResult analysis, bool onlyCases1And3)
         {
             if (analysis?.MwfrsAlongLength == null || analysis.MwfrsAlongWidth == null)
                 throw new ArgumentException("Both MWFRS directions are needed.", nameof(analysis));

@@ -45,6 +45,9 @@ namespace ASCE7WindLoadCalculator
 
         public WindLoadCalculationTypes AnalysisType { get; set; } = WindLoadCalculationTypes.COMPONENT_AND_CLADDING;
 
+        /// <summary>MWFRS procedure for the shear-wall (lateral) loads: Chapter 27 directional or Chapter 28 envelope.</summary>
+        public LateralProcedure LateralProcedure { get; set; } = LateralProcedure.Directional;
+
         public WindParameters_Base Clone() => (WindParameters_Base)MemberwiseClone();
     }
 }

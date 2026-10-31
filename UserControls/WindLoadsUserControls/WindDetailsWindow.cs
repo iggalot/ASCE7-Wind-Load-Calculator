@@ -7,7 +7,7 @@ namespace ASCE7WindLoadCalculator
     {
         public const string InputsPage = WindDetailsView.InputsPage, CladdingPage = WindDetailsView.CladdingPage,
                             WestPage = WindDetailsView.WestPage, SouthPage = WindDetailsView.SouthPage,
-                            CasesPage = WindDetailsView.CasesPage;
+                            CasesPage = WindDetailsView.CasesPage, EnvelopePage = WindDetailsView.EnvelopePage;
 
         public WindDetailsView View { get; } = new WindDetailsView();
 

@@ -103,6 +103,7 @@ namespace ASCE7WindLoadCalculator
                 bool hill = Math.Abs(Parameters.Kzt - 1.0) > 1e-9;
                 (hill ? rbHillYes : rbHillNo).IsChecked = true;
                 tbKzt.Text = Parameters.Kzt.ToString("0.00", CultureInfo.CurrentCulture);
+                (Parameters.LateralProcedure == LateralProcedure.Envelope ? rbProc28 : rbProc27).IsChecked = true;
                 switch (Building.EnclosureType)
                 {
                     case BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED: rbEncPartEnc.IsChecked = true; break;
@@ -243,6 +244,9 @@ namespace ASCE7WindLoadCalculator
         /// </summary>
         public bool LinkedToShearWalls { get; private set; }
 
+        /// <summary>MWFRS procedure for the shear-wall loads (also kept in <see cref="WindParameters_Base.LateralProcedure"/>).</summary>
+        public LateralProcedure Procedure => rbProc28.IsChecked == true ? LateralProcedure.Envelope : LateralProcedure.Directional;
+
         /// <summary>Sets the Fig. 27.3-8 exception (e.g. chosen in another dialog) without notifying the host.</summary>
         public void SetOnlyCases1And3(bool value)
         {
@@ -360,6 +364,7 @@ namespace ASCE7WindLoadCalculator
                                : rbExpD.IsChecked == true ? WindExposureCategories.WIND_EXP_CAT_D
                                : WindExposureCategories.WIND_EXP_CAT_C;
             p.Kzt = rbHillYes.IsChecked == true ? Parse(tbKzt.Text) : 1.0;
+            p.LateralProcedure = Procedure;
             p.RoofComponentArea = ComponentArea(cbRoofComponent, tbRoofComp, out roofComponentOk);
             p.WallComponentArea = ComponentArea(cbWallComponent, tbWallComp, out wallComponentOk);
             Parameters = p;
@@ -640,9 +645,17 @@ namespace ASCE7WindLoadCalculator
             icChecks.ItemsSource = rows;
 
             int cases = s?.Lateral?.LoadCases.Count ?? 0;
+            bool envelope = s?.Lateral?.Procedure == LateralProcedure.Envelope;
             tbCaseCount.Text = s?.Lateral == null
                 ? "Load cases are not available until the inputs can be calculated."
-                : $"{cases} load cases (Fig. 27.3-8); each wall uses its worst case:";
+                : s.Lateral.ProcedureNote != null
+                    ? $"Ch. 28 does not apply here (see details); Ch. 27, {cases} load cases:"
+                    : $"{cases} load cases ({(envelope ? "Fig. 28.3-1" : "Fig. 27.3-8")}); each wall uses its worst case:";
+            tbOnlyCasesTitle.Text = envelope ? "Skip the torsional cases" : "Use load cases 1 and 3 only";
+            tbCase1b.Text = envelope ? "Basic: full wind, end zones at one corner, then the other" : "Full wind, each direction alone";
+            tbCase2b.Text = envelope ? "Torsional: far half at 25% (twists the building)" : "75%, 15% off-center (twists the building)";
+            tbCase3b.Text = envelope ? "Minimum: 16 psf walls, 8 psf roof (28.3.4)" : "75% from both directions at once";
+            tbCase4a.Visibility = tbCase4b.Visibility = envelope ? Visibility.Collapsed : Visibility.Visible;
             double faded = OnlyCases1And3 ? 0.35 : 1.0;
             tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
         }

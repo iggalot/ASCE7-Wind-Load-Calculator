@@ -93,6 +93,25 @@ namespace ASCE7Wind.UI.Tests
             }
         }
 
+        /// <summary>Chapter 28 chosen: the Results step still fits, and the loads come from the envelope procedure
+        /// (or fall back to Chapter 27, with a note, for a building Chapter 28 does not cover).</summary>
+        [STATestMethod]
+        [DataRow(15.0, true)]
+        [DataRow(70.0, false)]
+        public void Chapter28_ResultsStep_FitsAndUsesEnvelope(double wallHeight, bool applies)
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = wallHeight, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            c.SetShearWallLink(true, "10 load cases (from W 12.0 k, from S 18.0 k), updated automatically.");
+            Find<ToggleButton>(c, "rbProc28").IsChecked = true;
+            c.GoToStep(WindSetupControl.ResultsStep);
+            Layout(c);
+            Assert.AreEqual(LateralProcedure.Envelope, c.Parameters.LateralProcedure);
+            Assert.AreEqual(applies ? LateralProcedure.Envelope : LateralProcedure.Directional, c.Summary.Lateral.Procedure);
+            Assert.AreEqual(applies, c.Summary.Lateral.ProcedureNote == null);
+            Assert.AreEqual(0, Find<ScrollViewer>(c, "svResultsSide").ScrollableHeight, 0.5, $"results step must not scroll (h = {wallHeight} ft)");
+            Snapshot(c, $"fit_ch28_h{wallHeight:0}");
+        }
+
         [STATestMethod]
         public void LinkedToShearWalls_HidesSend_AndShowsTheLink()
         {

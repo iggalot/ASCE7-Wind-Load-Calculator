@@ -780,7 +780,17 @@
                             </Border>
                             <Border Style="{StaticResource Section}">
                                 <StackPanel>
-                                    <TextBlock Style="{StaticResource SectionTitle}" Text="Shear walls"/>
+                                    <!-- title, then the MWFRS procedure for the shear-wall loads on the same row -->
+                                    <DockPanel Margin="0,0,0,6">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                    ToolTip="Chapter 27 (directional) works for any building. Chapter 28 Part 1 (envelope) is for low-rise buildings (h ≤ 60 ft and h ≤ least plan dimension) with flat or gable roofs, and often gives lower forces.">
+                                            <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Chip}" Content="Ch. 27" IsChecked="True" Checked="Input_Changed"
+                                                         AutomationProperties.Name="Chapter 27 directional procedure"/>
+                                            <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Chip}" Margin="0" Content="Ch. 28 low-rise" Checked="Input_Changed"
+                                                         AutomationProperties.Name="Chapter 28 envelope procedure"/>
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" Text="Shear walls"/>
+                                    </DockPanel>
                                     <!-- Whether the shear walls use these loads: green = yes (automatic), amber = no -->
                                     <Border x:Name="bdLinked" Margin="0,0,0,10" Padding="10,8" CornerRadius="6" Background="#EAF4EA" BorderBrush="#7FB77F" BorderThickness="1" Visibility="Collapsed">
                                         <DockPanel>
@@ -793,7 +803,7 @@
                                     </Border>
                                     <CheckBox x:Name="cbOnlyCases13" VerticalContentAlignment="Top" Checked="Input_Changed" Unchecked="Input_Changed">
                                         <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="Use load cases 1 and 3 only"/>
+                                            <TextBlock x:Name="tbOnlyCasesTitle" FontWeight="SemiBold" Text="Use load cases 1 and 3 only"/>
                                             <TextBlock Style="{StaticResource Hint}" Text="Allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."/>
                                         </StackPanel>
                                     </CheckBox>
@@ -803,11 +813,11 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
                                         <TextBlock FontWeight="SemiBold" Text="Case 1"/>
-                                        <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="Full wind, each direction alone"/>
+                                        <TextBlock x:Name="tbCase1b" Grid.Column="1" TextWrapping="Wrap" Text="Full wind, each direction alone"/>
                                         <TextBlock x:Name="tbCase2a" Grid.Row="1" FontWeight="SemiBold" Text="Case 2"/>
                                         <TextBlock x:Name="tbCase2b" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Text="75%, 15% off-center (twists the building)"/>
                                         <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Case 3"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="75% from both directions at once"/>
+                                        <TextBlock x:Name="tbCase3b" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="75% from both directions at once"/>
                                         <TextBlock x:Name="tbCase4a" Grid.Row="3" FontWeight="SemiBold" Text="Case 4"/>
                                         <TextBlock x:Name="tbCase4b" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" Text="56% from both at once, 15% off-center"/>
                                     </Grid>

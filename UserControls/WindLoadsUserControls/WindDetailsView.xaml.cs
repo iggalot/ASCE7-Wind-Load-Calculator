@@ -21,7 +21,7 @@ namespace ASCE7WindLoadCalculator
     {
         public const string InputsPage = "Inputs and factors", CladdingPage = "Cladding (C&C)",
                             WestPage = "Shear walls: wind from W", SouthPage = "Shear walls: wind from S",
-                            CasesPage = "Shear-wall load cases";
+                            CasesPage = "Shear-wall load cases", EnvelopePage = "Shear walls: Chapter 28";
 
         private ASCE7_Versions version;
         private WindParameters_Base parameters;
@@ -43,7 +43,8 @@ namespace ASCE7WindLoadCalculator
             AddPage(CladdingPage, "Roofing, siding and windows (Chapter 30)", BuildCladdingPage);
             AddPage(WestPage, "Whole building, wind along the length (Chapter 27)", () => BuildMwfrsPage(analysis.MwfrsAlongLength, lateral?.AlongLength, "west"));
             AddPage(SouthPage, "Whole building, wind along the width (Chapter 27)", () => BuildMwfrsPage(analysis.MwfrsAlongWidth, lateral?.AlongWidth, "south"));
-            AddPage(CasesPage, "Fig. 27.3-8 cases sent to the shear walls", BuildCasesPage);
+            AddPage(EnvelopePage, "Low-rise envelope procedure (Fig. 28.3-1)", BuildEnvelopePage);
+            AddPage(CasesPage, "Load cases sent to the shear walls", BuildCasesPage);
             CurrentPage = InputsPage;
             navButtons[InputsPage].IsChecked = true;
             SetResults(version, null, null, null);
@@ -83,7 +84,7 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The line of key inputs shown at the top (also the report's summary line).</summary>
         public string InputsSummary => tbInputs.Text;
 
-        private static readonly string[] PageOrder = { InputsPage, CladdingPage, WestPage, SouthPage, CasesPage };
+        private static readonly string[] PageOrder = { InputsPage, CladdingPage, WestPage, SouthPage, EnvelopePage, CasesPage };
 
         /// <summary>
         /// Every page, freshly built and split into its blocks (title, paragraphs, figures, tables), for the printed
@@ -94,7 +95,7 @@ namespace ASCE7WindLoadCalculator
         {
             var sections = new List<ReportSection>();
             if (!HasResults) return sections;
-            foreach (var name in PageOrder)
+            foreach (var name in PageOrder.Where(n => n != EnvelopePage || lateral?.Procedure == LateralProcedure.Envelope))
             {
                 var content = pages[name]();
                 var blocks = new List<FrameworkElement>();
@@ -374,14 +375,71 @@ namespace ASCE7WindLoadCalculator
         private FrameworkElement BuildCasesPage()
         {
             var page = new StackPanel { MaxWidth = 1000, HorizontalAlignment = HorizontalAlignment.Left };
-            page.Children.Add(Title("Shear-wall load cases (Fig. 27.3-8)"));
+            bool envelope = lateral?.Procedure == LateralProcedure.Envelope;
+            page.Children.Add(Title(envelope ? "Shear-wall load cases (Chapter 28, Fig. 28.3-1)" : "Shear-wall load cases (Fig. 27.3-8)"));
             if (lateral == null) { page.Children.Add(Note("Load cases are not available for these inputs.")); return page; }
-            page.Children.Add(Para($"Px = {lateral.AlongLength.DesignKips:0.00} kips (wind from W), Py = {lateral.AlongWidth.DesignKips:0.00} kips (wind from S). " +
-                                   $"Eccentricity e = {WindLateralLoads.CaseEccentricity:0.00} × the building width normal to the wind. " +
-                                   "Each shear wall is designed for its worst case. Cases 2 and 4 may be skipped under the Fig. 27.3-8 exception."));
+            if (lateral.ProcedureNote != null) page.Children.Add(Note(lateral.ProcedureNote));
+            if (envelope)
+                page.Children.Add(Para("Chapter 28 envelope procedure (details on the Chapter 28 page). Per direction: the basic case with the end zones at " +
+                                       "one corner and then the other (torsion of either sign), the torsional case (zones beyond the center at 25%), and the " +
+                                       "28.3.4 minimum (16 psf walls, 8 psf roof) as its own case. Each shear wall is designed for its worst case. " +
+                                       "The torsional cases may be skipped under the Fig. 28.3-1 exception (one story with h ≤ 30 ft, or two stories or " +
+                                       "less light-frame or with flexible diaphragms)."));
+            else
+                page.Children.Add(Para($"Px = {lateral.AlongLength.DesignKips:0.00} kips (wind from W), Py = {lateral.AlongWidth.DesignKips:0.00} kips (wind from S). " +
+                                       $"Eccentricity e = {WindLateralLoads.CaseEccentricity:0.00} × the building width normal to the wind. " +
+                                       "Each shear wall is designed for its worst case. Cases 2 and 4 may be skipped under the Fig. 27.3-8 exception."));
             var grid = NewGrid(new[] { ("Case", "Name", (string)null), ("Vx (kips)", "Vx", "0.00"), ("Vy (kips)", "Vy", "0.00"), ("Torsion Mt (kip-ft)", "Mt", "0.0") });
             grid.ItemsSource = lateral.LoadCases.Select(c => new { c.Name, c.Vx, c.Vy, c.Mt }).ToList();
             page.Children.Add(Card(grid));
+            return page;
+        }
+
+        /// <summary>Chapter 28 Part 1 envelope procedure, both directions. Shown whichever procedure feeds the walls, for comparison.</summary>
+        private FrameworkElement BuildEnvelopePage()
+        {
+            var page = new StackPanel { MaxWidth = 1000, HorizontalAlignment = HorizontalAlignment.Left };
+            page.Children.Add(Title("Shear walls: Chapter 28 envelope procedure (low-rise)"));
+            if (!(analysis.MwfrsAlongLength is WindLoadCalculator_MWFRS mx) || !(analysis.MwfrsAlongWidth is WindLoadCalculator_MWFRS my))
+            { page.Children.Add(Note("Whole-building results are not available for these inputs.")); return page; }
+
+            var why = EnvelopeLateralLoads.Applicability(building);
+            if (why.Count > 0) { page.Children.Add(Note("Chapter 28 Part 1 does not apply: " + string.Join("; ", why) + ". Use Chapter 27.")); return page; }
+
+            bool used = lateral?.Procedure == LateralProcedure.Envelope;
+            page.Children.Add(Note(used
+                ? "These loads are sent to the shear walls (Ch. 28 envelope chosen on the Results step)."
+                : "For comparison only: the shear walls use Chapter 27. Choose \"Ch. 28 envelope\" on the Results step to use these."));
+
+            var x = EnvelopeLateralLoads.Direction(mx, "along length");
+            var y = EnvelopeLateralLoads.Direction(my, "along width");
+            page.Children.Add(Para($"p = qh Kd (GCpf) (Eq. 28.3-1), qh = {x.Qh:0.00} psf at h = {building.MeanRoofHeight:0.#} ft, Kd = {x.Kd:0.00}" +
+                                   (x.Kd == 1.0 ? " (inside qh for this edition)" : "") +
+                                   ". The internal pressure acts equally on opposite walls and cancels in the horizontal force. " +
+                                   $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft); " +
+                                   "end zones are 2a wide at the reference corner, and each corner is taken in turn (torsion of either sign). " +
+                                   "Across a gable ridge, a negative Zone 2 acts only up to the smaller of half the building depth and 2.5 times the eave height " +
+                                   "(the rest of the windward slope takes Zone 3), and the total shear is not less than with the roof neglected."));
+
+            foreach (var (e, m, from) in new[] { (x, mx, "west"), (y, my, "south") })
+            {
+                page.Children.Add(Section($"Wind from the {from}: Load Case {e.LoadCase}" + (e.Transverse ? $" (normal to the ridge, roof angle {e.Theta:0.#}°)" : e.LoadCase == "B" ? " (along the ridge, zones 5 and 6)" : "")));
+                page.Children.Add(FigureRow(Drawing($"Plan, wind from the {from} (zones and GCpf)", c => EnvelopeDiagram.Draw(c, e), width: 560)));
+                var g = NewGrid(new[]
+                {
+                    ("Zone", "Zone", (string)null), ("Where", "Surface", (string)null), ("GCpf", "GCpf", "0.00"),
+                    ("p (psf)", "Pressure", "0.0"), ("Projected area (sq ft)", "ProjectedArea", "0.0"), ("Force (kips)", "Kips", "0.00"),
+                });
+                g.ItemsSource = e.Zones;
+                page.Children.Add(Card(g));
+                page.Children.Add(Para(
+                    $"Walls {e.WallsKips:0.00} k + roof {(e.RoofNeglected ? "neglected (it would reduce the shear)" : $"{e.RoofKips:0.00} k")}" +
+                    (e.ParapetKips > 0 ? $" + parapets {e.ParapetKips:0.00} k (28.3.2)" : "") +
+                    $" = basic case {e.BasicKips:0.00} kips with torsion ±{e.BasicTorsion:0.0} kip-ft (end zones at one corner). " +
+                    $"Torsional case: {e.TorsionalKips:0.00} kips with ±{e.TorsionalTorsion:0.0} kip-ft. " +
+                    $"Minimum (28.3.4): 16 psf × {e.ProjectedWallArea:0} sq ft + 8 psf × {e.ProjectedRoofArea:0} sq ft = {e.MinimumKips:0.00} kips. " +
+                    $"Chapter 27 for comparison: {WindLateralLoads.DirectionalForce(m, e.Direction).DesignKips:0.00} kips."));
+            }
             return page;
         }
 

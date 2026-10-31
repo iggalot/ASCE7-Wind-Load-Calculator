@@ -195,7 +195,7 @@ namespace ASCE7WindLoadCalculator
         /// <summary>
         /// Kd multiplier applied in the pressure equations: Kd when the edition keeps Kd out of q, otherwise 1.
         /// </summary>
-        protected double PressureKd => Edition.KdInVelocityPressure ? 1.0 : GetKd(Parameters.AnalysisType);
+        public double PressureKd => Edition.KdInVelocityPressure ? 1.0 : GetKd(Parameters.AnalysisType);
 
         // ---------------------------------------------------------------------------------------
         // Pipeline
