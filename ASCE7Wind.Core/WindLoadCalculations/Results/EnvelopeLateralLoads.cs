@@ -186,10 +186,12 @@ namespace ASCE7WindLoadCalculator
                 zWW = "5"; zLW = "6";
             }
 
-            // roof across the ridge: windward slope plan depth D/2; a negative Zone 2 acts only up to min(0.5 D, 2.5 he)
-            // from the windward edge, the rest of the windward slope takes Zone 3 (Fig. 28.3-1 note).
+            // roof across the ridge: windward slope plan depth D/2. ASCE 7-22 (Fig. 28.3-2): Zone 2 runs the whole way from the
+            // eave to the ridge. ASCE 7-16 (recalled Fig. 28.3-1 note, TO VERIFY): a negative Zone 2 acts only up to
+            // min(0.5 D, 2.5 he) from the windward edge, the rest of the windward slope taking Zone 3.
             double tan = transverse ? Math.Tan(theta * Math.PI / 180) : 0, half = D / 2;
-            double Zone2Depth(double g2) => g2 < 0 ? Math.Min(half, Math.Min(0.5 * D, 2.5 * he)) : half;
+            bool zone2Limit = mwfrs.Edition.Version == ASCE7_Versions.ASCE_VER_7_16;
+            double Zone2Depth(double g2) => zone2Limit && g2 < 0 ? Math.Min(half, Math.Min(0.5 * D, 2.5 * he)) : half;
 
             var acc = new Dictionary<string, EnvelopeZoneForce>();
             void Add(string zone, string surface, double gcpf, double projArea, double lbs)

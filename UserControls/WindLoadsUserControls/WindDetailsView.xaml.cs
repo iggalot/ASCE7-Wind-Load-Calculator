@@ -418,8 +418,8 @@ namespace ASCE7WindLoadCalculator
                                    ". The internal pressure acts equally on opposite walls and cancels in the horizontal force. " +
                                    $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft); " +
                                    "end zones are 2a wide at the reference corner, and each corner is taken in turn (torsion of either sign). " +
-                                   "Across a gable ridge, a negative Zone 2 acts only up to the smaller of half the building depth and 2.5 times the eave height " +
-                                   "(the rest of the windward slope takes Zone 3), and the total shear is not less than with the roof neglected."));
+                                   (version == ASCE7_Versions.ASCE_VER_7_16 ? "Across a gable ridge, a negative Zone 2 acts only up to the smaller of half the building depth and 2.5 times the eave height (the rest of the windward slope takes Zone 3; 7-16 figure note, to verify). " : "Across a gable ridge, Zone 2 runs from the eave to the ridge (Fig. 28.3-2). ") +
+                                   "The total shear is not less than with the roof neglected."));
 
             foreach (var (e, m, from) in new[] { (x, mx, "west"), (y, my, "south") })
             {

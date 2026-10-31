@@ -107,6 +107,20 @@ namespace ASCE7Wind.Tests
         }
 
         [TestMethod]
+        public void Zone2_FullSlopeIn7_22_LimitedIn7_16()
+        {
+            // 100 ft deep across the ridge, 8 ft eave, 10 deg: half depth 50 ft > 2.5 he = 20 ft, and Zone 2 is negative.
+            var b = Bldg.Make(100, 60, 8, RoofTypes.ROOF_TYPE_GABLE, 10, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH);
+            var e22 = WindLateralLoads.Compute(Analysis(b), false, LateralProcedure.Envelope).EnvelopeAlongLength;
+            Assert.IsTrue(e22.Transverse);
+            Assert.IsFalse(e22.Zones.Any(z => z.Zone.StartsWith("3 (windward)")));   // 7-22: Zone 2 eave to ridge (Fig. 28.3-2)
+
+            var e16 = WindLateralLoads.Compute(Analysis(b, ASCE7_Versions.ASCE_VER_7_16), false, LateralProcedure.Envelope).EnvelopeAlongLength;
+            var rest = e16.Zones.Single(z => z.Zone == "3 (windward)");                 // 7-16: Zone 3 beyond 20 ft
+            Assert.AreEqual(30 * Tan(10) * (60 - 2 * e16.A), rest.ProjectedArea, 0.2);   // interior part (end zone 2a = 9.9 ft; strips)
+        }
+
+        [TestMethod]
         public void LoadCases_BasicTorsionalMinimum_AndExemption()
         {
             var a = Analysis(Bldg.Make(60, 40, 15));
