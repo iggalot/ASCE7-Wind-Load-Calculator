@@ -251,9 +251,8 @@ namespace ASCE7WindLoadCalculator
         /// each with both torsion signs (the reference corner at either end of the windward wall), and the 28.3.4 minimum
         /// as its own case.
         /// </summary>
-        /// <param name="torsionalExempt">Fig. 28.3-1 note: one-story buildings with h &lt;= 30 ft, buildings two stories or
-        /// less framed with light-frame construction, and buildings two stories or less with flexible diaphragms need not
-        /// be designed for the torsional load cases.</param>
+        /// <param name="torsionalExempt">28.3.2.1 exceptions: one-story buildings with h &lt;= 30 ft, one- and two-story light-frame buildings, or
+        /// one- and two-story buildings with flexible diaphragms need not be designed for the torsional load cases.</param>
         public static WindLateralResult Compute(WindAnalysisResult analysis, bool torsionalExempt)
         {
             if (!(analysis?.MwfrsAlongLength is WindLoadCalculator_MWFRS mx) || !(analysis.MwfrsAlongWidth is WindLoadCalculator_MWFRS my))

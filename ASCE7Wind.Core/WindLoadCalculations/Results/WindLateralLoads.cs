@@ -66,7 +66,7 @@ namespace ASCE7WindLoadCalculator
         public DirectionalWindForce AlongWidth { get; internal set; }
         public List<WindLoadCase> LoadCases { get; } = new List<WindLoadCase>();
 
-        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception), or, for Chapter 28, when the torsional cases were skipped (Fig. 28.3-1 exception).</summary>
+        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception), or, for Chapter 28, when the torsional cases were skipped (28.3.2.1 exceptions).</summary>
         public bool OnlyCases1And3 { get; internal set; }
 
         /// <summary>The procedure these loads came from.</summary>

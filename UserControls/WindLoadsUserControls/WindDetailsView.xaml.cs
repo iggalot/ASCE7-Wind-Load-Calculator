@@ -383,8 +383,8 @@ namespace ASCE7WindLoadCalculator
                 page.Children.Add(Para("Chapter 28 envelope procedure (details on the Chapter 28 page). Per direction: the basic case with the end zones at " +
                                        "one corner and then the other (torsion of either sign), the torsional case (zones beyond the center at 25%), and the " +
                                        "28.3.4 minimum (16 psf walls, 8 psf roof) as its own case. Each shear wall is designed for its worst case. " +
-                                       "The torsional cases may be skipped under the Fig. 28.3-1 exception (one story with h ≤ 30 ft, or two stories or " +
-                                       "less light-frame or with flexible diaphragms)."));
+                                       "The torsional cases may be skipped under the 28.3.2.1 exceptions (one story with h ≤ 30 ft, or one- and two-story " +
+                                       "light-frame, or one- and two-story with flexible diaphragms)."));
             else
                 page.Children.Add(Para($"Px = {lateral.AlongLength.DesignKips:0.00} kips (wind from W), Py = {lateral.AlongWidth.DesignKips:0.00} kips (wind from S). " +
                                        $"Eccentricity e = {WindLateralLoads.CaseEccentricity:0.00} × the building width normal to the wind. " +
