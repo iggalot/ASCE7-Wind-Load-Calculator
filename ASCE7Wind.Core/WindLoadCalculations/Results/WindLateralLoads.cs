@@ -134,34 +134,41 @@ namespace ASCE7WindLoadCalculator
             double ex = CaseEccentricity * bx, ey = CaseEccentricity * by;
 
             void Add(int n, string name, double x, double y, double mt) =>
-                r.LoadCases.Add(new WindLoadCase { CaseNumber = n, Name = name, Vx = x, Vy = y, Mt = mt });
+                r.LoadCases.Add(new WindLoadCase { CaseNumber = n, Name = name, Vx = x + 0.0, Vy = y + 0.0, Mt = mt + 0.0 });
+
+            // The wind blows from either side along each axis: the 180° direction reverses the forces. The torsion
+            // (Cases 2 and 4) is taken with both signs of the eccentricity in each direction.
+            var sides = new[] { 1, -1 };
 
             // Case 1: full pressure in each principal direction separately.
-            Add(1, "Case 1, along length", vx, 0, 0);
-            Add(1, "Case 1, along width", 0, vy, 0);
+            foreach (int sx in sides) Add(1, $"Case 1, along length, {Sign(sx)} wind", sx * vx, 0, 0);
+            foreach (int sy in sides) Add(1, $"Case 1, along width, {Sign(sy)} wind", 0, sy * vy, 0);
 
             if (!onlyCases1And3)
             {
                 // Case 2: 75% in one direction with torsion 0.75 V e, e = +/-0.15 B.
-                foreach (int s in new[] { 1, -1 })
-                {
-                    Add(2, $"Case 2, along length, {Sign(s)} torsion", 0.75 * vx, 0, s * 0.75 * vx * ex);
-                    Add(2, $"Case 2, along width, {Sign(s)} torsion", 0, 0.75 * vy, s * 0.75 * vy * ey);
-                }
+                foreach (int sx in sides)
+                    foreach (int s in sides)
+                        Add(2, $"Case 2, along length, {Sign(sx)} wind, {Sign(s)} torsion", sx * 0.75 * vx, 0, s * 0.75 * vx * ex);
+                foreach (int sy in sides)
+                    foreach (int s in sides)
+                        Add(2, $"Case 2, along width, {Sign(sy)} wind, {Sign(s)} torsion", 0, sy * 0.75 * vy, s * 0.75 * vy * ey);
             }
 
-            // Case 3: 75% in both directions at once (both diagonal directions).
-            foreach (int sy in new[] { 1, -1 })
-                Add(3, $"Case 3, both directions ({Sign(sy)} width)", 0.75 * vx, sy * 0.75 * vy, 0);
+            // Case 3: 75% in both directions at once (all four diagonal directions).
+            foreach (int sx in sides)
+                foreach (int sy in sides)
+                    Add(3, $"Case 3, both directions ({Sign(sx)} length, {Sign(sy)} width)", sx * 0.75 * vx, sy * 0.75 * vy, 0);
 
             if (!onlyCases1And3)
             {
                 // Case 4: 56.3% in both directions with torsion from both eccentricities.
-                foreach (int sy in new[] { 1, -1 })
-                    foreach (int s1 in new[] { 1, -1 })
-                        foreach (int s2 in new[] { 1, -1 })
-                            Add(4, $"Case 4, both directions ({Sign(sy)} width), torsion {Sign(s1)}{Sign(s2)}",
-                                0.563 * vx, sy * 0.563 * vy, 0.563 * (s1 * vx * ex + s2 * vy * ey));
+                foreach (int sx in sides)
+                    foreach (int sy in sides)
+                        foreach (int s1 in sides)
+                            foreach (int s2 in sides)
+                                Add(4, $"Case 4, both directions ({Sign(sx)} length, {Sign(sy)} width), torsion {Sign(s1)}{Sign(s2)}",
+                                    sx * 0.563 * vx, sy * 0.563 * vy, 0.563 * (s1 * vx * ex + s2 * vy * ey));
             }
             return r;
         }

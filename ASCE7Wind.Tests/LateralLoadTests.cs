@@ -120,26 +120,44 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(40, r.AlongLength.WidthNormalToWind, 1e-12, "B for wind along x is the width");
             Assert.AreEqual(60, r.AlongWidth.WidthNormalToWind, 1e-12, "B for wind along y is the length");
 
+            // The wind blows from either side along each axis (the 180° direction reverses the forces).
             var c1 = r.LoadCases.Where(c => c.CaseNumber == 1).ToList();
-            Assert.AreEqual(2, c1.Count);
-            Assert.IsTrue(c1.Any(c => c.Vx == vx && c.Vy == 0 && c.Mt == 0));
-            Assert.IsTrue(c1.Any(c => c.Vx == 0 && c.Vy == vy && c.Mt == 0));
+            Assert.AreEqual(4, c1.Count);
+            foreach (int s in new[] { 1, -1 })
+            {
+                Assert.IsTrue(c1.Any(c => c.Vx == s * vx && c.Vy == 0 && c.Mt == 0));
+                Assert.IsTrue(c1.Any(c => c.Vx == 0 && c.Vy == s * vy && c.Mt == 0));
+            }
 
+            // Case 2: each wind side with both torsion signs
             var c2 = r.LoadCases.Where(c => c.CaseNumber == 2).ToList();
-            Assert.AreEqual(4, c2.Count);
-            Assert.IsTrue(c2.Any(c => Math.Abs(c.Vx - 0.75 * vx) < 1e-12 && Math.Abs(c.Mt - 0.75 * vx * 0.15 * 40) < 1e-9));
-            Assert.IsTrue(c2.Any(c => Math.Abs(c.Vy - 0.75 * vy) < 1e-12 && Math.Abs(c.Mt + 0.75 * vy * 0.15 * 60) < 1e-9));
+            Assert.AreEqual(8, c2.Count);
+            foreach (int s in new[] { 1, -1 })
+                foreach (int t in new[] { 1, -1 })
+                {
+                    Assert.IsTrue(c2.Any(c => Math.Abs(c.Vx - s * 0.75 * vx) < 1e-12 && c.Vy == 0 && Math.Abs(c.Mt - t * 0.75 * vx * 0.15 * 40) < 1e-9));
+                    Assert.IsTrue(c2.Any(c => c.Vx == 0 && Math.Abs(c.Vy - s * 0.75 * vy) < 1e-12 && Math.Abs(c.Mt - t * 0.75 * vy * 0.15 * 60) < 1e-9));
+                }
 
+            // Case 3: all four diagonal (oblique) directions
             var c3 = r.LoadCases.Where(c => c.CaseNumber == 3).ToList();
-            Assert.AreEqual(2, c3.Count);
-            Assert.IsTrue(c3.All(c => Math.Abs(c.Vx - 0.75 * vx) < 1e-12 && Math.Abs(Math.Abs(c.Vy) - 0.75 * vy) < 1e-12 && c.Mt == 0));
+            Assert.AreEqual(4, c3.Count);
+            foreach (int sx in new[] { 1, -1 })
+                foreach (int sy in new[] { 1, -1 })
+                    Assert.IsTrue(c3.Any(c => Math.Abs(c.Vx - sx * 0.75 * vx) < 1e-12 && Math.Abs(c.Vy - sy * 0.75 * vy) < 1e-12 && c.Mt == 0));
 
+            // Case 4: four diagonal directions, each with the four torsion sign combinations
             var c4 = r.LoadCases.Where(c => c.CaseNumber == 4).ToList();
-            Assert.AreEqual(8, c4.Count);
+            Assert.AreEqual(16, c4.Count);
             double mMax = 0.563 * (vx * 0.15 * 40 + vy * 0.15 * 60);
-            Assert.AreEqual(mMax, c4.Max(c => c.Mt), 1e-9);
-            Assert.AreEqual(-mMax, c4.Min(c => c.Mt), 1e-9);
-            Assert.IsTrue(c4.All(c => Math.Abs(c.Vx - 0.563 * vx) < 1e-12));
+            foreach (int sx in new[] { 1, -1 })
+                foreach (int sy in new[] { 1, -1 })
+                {
+                    var q = c4.Where(c => Math.Abs(c.Vx - sx * 0.563 * vx) < 1e-12 && Math.Abs(c.Vy - sy * 0.563 * vy) < 1e-12).ToList();
+                    Assert.AreEqual(4, q.Count);
+                    Assert.AreEqual(mMax, q.Max(c => c.Mt), 1e-9);
+                    Assert.AreEqual(-mMax, q.Min(c => c.Mt), 1e-9);
+                }
         }
 
         [TestMethod]

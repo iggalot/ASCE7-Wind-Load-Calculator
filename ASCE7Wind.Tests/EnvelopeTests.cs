@@ -51,7 +51,8 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(0, e.RoofKips, 1e-9);
             Assert.AreEqual(e.WallsKips, e.BasicKips, 1e-9);
 
-            // torsion: the extra end-zone pressure (1.04 - 0.69) x 15 x 8 = 42 q acts 16 ft from the center
+            // torsion about the center of mass, CCW +: the extra end-zone force (1.04 - 0.69) x 15 x 8 = 42 q (+x) acts at
+            // ry = 4 - 20 = -16 ft, Mz = -ry Fx = +16 x 42 q (the +x push below the center turns the plan CCW)
             Assert.AreEqual(42 * 16 * q / 1000, e.BasicTorsion, 0.01);
 
             // torsional case: the half beyond the center at 25%:
@@ -63,8 +64,22 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(9.6, e.MinimumKips, 1e-6);
 
             // zone table sums to the wall force
-            Assert.AreEqual(e.WallsKips, e.Zones.Sum(z => z.Kips), 1e-6);
-            Assert.AreEqual(8 * 15, e.Zones.Single(z => z.Zone == "1E").ProjectedArea, 1e-6);
+            Assert.AreEqual(e.WallsKips, e.Zones.Where(z => !z.IsRoof).Sum(z => z.Fx), 1e-6);
+            Assert.AreEqual(0, e.BasicCrossKips, 1e-9);
+            Assert.AreEqual(8 * 15, e.Zones.Single(z => z.Zone == "1E").Area, 1e-6);
+
+            // signs, row by row: windward push (+0.40) and leeward suction (-0.29) both give +x on the building
+            var w1 = e.Zones.Single(z => z.Zone == "1" && z.TorsionalFactor == 1);          // y = 8 to 20 ft
+            Assert.AreEqual(0.40 * q * 15 * 12 / 1000, w1.Fx, 1e-9);
+            Assert.AreEqual(-6.0, w1.Ry, 1e-9);
+            Assert.AreEqual(6.0 * w1.Fx, w1.Mz, 1e-9);
+            var l4 = e.Zones.Single(z => z.Zone == "4" && z.TorsionalFactor == 1);
+            Assert.AreEqual(-0.29 * q, l4.Pressure.Value, 1e-9);
+            Assert.AreEqual(0.29 * q * 15 * 12 / 1000, l4.Fx, 1e-9);
+            // roof suction lifts: Fz = +0.69 q A on Zone 2
+            var r2 = e.Zones.Single(z => z.Zone == "2" && z.TorsionalFactor == 1);
+            Assert.AreEqual(0.69 * q * r2.Area / 1000, r2.Fz, 1e-9);
+            Assert.AreEqual(0, r2.Fx, 1e-9);
         }
 
         [TestMethod]
@@ -91,8 +106,55 @@ namespace ASCE7Wind.Tests
             double endArea = 4 * (10 + 0.5 * 4 * Tan(30));                       // strip 0-4 ft under the rake: 5E/6E are a wide
             double wallArea = 40 * 10 + 0.5 * 40 * 20 * Tan(30);
             double ql = l.Qh * l.Kd;
-            Assert.AreEqual(((0.61 + 0.43) * endArea + (0.40 + 0.29) * (wallArea - endArea)) * ql / 1000, l.WallsKips, 0.01);
+            Assert.AreEqual(((0.61 + 0.43) * endArea + (0.40 + 0.29) * (wallArea - endArea)) * ql / 1000, l.WallsKips, 1e-6);
             Assert.AreEqual(0, l.RoofKips, 1e-9);
+
+            // Case B side walls: suction on both (-0.45, -0.48) pulls each outward; equal and opposite, they cancel in ΣFy
+            var s1 = l.Zones.Single(z => z.Zone == "1");
+            var s4 = l.Zones.Single(z => z.Zone == "4");
+            Assert.AreEqual(-0.45 * ql * 10 * 52 / 1000, s1.Fy, 1e-9);       // wall at y = 0: outward is -y
+            Assert.AreEqual(-s1.Fy, s4.Fy, 1e-9);                             // wall at y = W: outward is +y
+            // the roof halves do not cancel: Zone 2 (next to wall 1, -0.69 / -1.07) out-pulls Zone 3 (-0.37 / -0.53), toward -y:
+            // Fy = q tan30 x 20 [(-1.07 + 0.53) 8 + (-0.69 + 0.37) 52] = -20.96 x 20 tan30 q
+            Assert.AreEqual(-20.96 * 20 * Tan(30) * ql / 1000, l.BasicCrossKips, 1e-6);
+        }
+
+        /// <summary>
+        /// The sign convention, row by row, for every roof form: F = −p A n with n the outward unit normal, r from the center
+        /// of mass to the zone centroid, Mz = rx Fy − ry Fx; the case totals are the sums of the rows.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(RoofTypes.ROOF_TYPE_FLAT, 0.0, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)]
+        [DataRow(RoofTypes.ROOF_TYPE_GABLE, 30.0, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH)]
+        [DataRow(RoofTypes.ROOF_TYPE_GABLE, 20.0, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH)]
+        public void EveryRow_FollowsTheSignConvention_AndTotalsAreTheSums(RoofTypes roof, double pitch, RidgeDirections ridge)
+        {
+            var b = Bldg.Make(60, 40, 10, roof, pitch, ridge);
+            b.ParapetHeight = 2;
+            var r = WindLateralLoads.Compute(Analysis(b), false, LateralProcedure.Envelope);
+            foreach (var e in new[] { r.EnvelopeAlongLength, r.EnvelopeAlongWidth })
+            {
+                foreach (var z in e.Zones.Where(z => !z.IsParapet))
+                {
+                    double f = -z.Pressure.Value * z.Area / 1000;
+                    Assert.AreEqual(f * z.Nx, z.Fx, 1e-9, z.Zone);
+                    Assert.AreEqual(f * z.Ny, z.Fy, 1e-9, z.Zone);
+                    Assert.AreEqual(f * z.Nz, z.Fz, 1e-9, z.Zone);
+                    Assert.AreEqual(1.0, z.Nx * z.Nx + z.Ny * z.Ny + z.Nz * z.Nz, 1e-9, "unit normal");
+                    Assert.AreEqual(z.Xc - e.ComX, z.Rx, 1e-9);
+                    Assert.AreEqual(z.Yc - e.ComY, z.Ry, 1e-9);
+                    Assert.AreEqual(z.Rx * z.Fy - z.Ry * z.Fx, z.Mz, 1e-9, z.Zone);
+                }
+                var used = e.Zones.Where(z => !(z.IsRoof && e.RoofNeglected)).ToList();
+                Assert.AreEqual(used.Sum(z => z.Fx), e.BasicKips, 1e-9);
+                Assert.AreEqual(used.Sum(z => z.Fy), e.BasicCrossKips, 1e-9);
+                Assert.AreEqual(used.Sum(z => z.Mz), e.BasicTorsion, 1e-9);
+                var usedT = e.Zones.Where(z => !(z.IsRoof && e.TorsionalRoofNeglected)).ToList();
+                Assert.AreEqual(usedT.Sum(z => z.Fx * z.TorsionalFactor), e.TorsionalKips, 1e-9);
+                Assert.AreEqual(usedT.Sum(z => z.Mz * z.TorsionalFactor), e.TorsionalTorsion, 1e-9);
+                // the roof rows cover the whole plan
+                Assert.AreEqual(e.WidthNormalToWind * e.DepthAlongWind, e.Zones.Where(z => z.IsRoof).Sum(z => z.Area * z.Nz), 1e-6);
+            }
         }
 
         [TestMethod]
@@ -135,24 +197,53 @@ namespace ASCE7Wind.Tests
             {
                 var e = WindLateralLoads.Compute(Analysis(b, v), false, LateralProcedure.Envelope).EnvelopeAlongLength;
                 Assert.IsTrue(e.Transverse);
-                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Single(z => z.Zone == "2").ProjectedArea, 0.5);   // strip rounding at the end-zone edge
-                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Single(z => z.Zone == "3").ProjectedArea, 0.5);
+                // projected on the vertical plane: sloped area × sin θ = plan × tan θ
+                double sin = Math.Sin(10 * Math.PI / 180);
+                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Where(z => z.Zone == "2").Sum(z => z.Area) * sin, 1e-6);
+                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Where(z => z.Zone == "3").Sum(z => z.Area) * sin, 1e-6);
             }
         }
 
         [TestMethod]
-        public void LoadCases_BasicTorsionalMinimum_AndExemption()
+        public void LoadCases_FourCornersEachAxis_BasicTorsionalMinimum_AndExemption()
         {
             var a = Analysis(Bldg.Make(60, 40, 15));
             var full = WindLateralLoads.Compute(a, false, LateralProcedure.Envelope);
-            Assert.AreEqual(10, full.LoadCases.Count);           // per direction: 2 basic, 2 torsional, 1 minimum
-            var basic = full.LoadCases.Where(c => c.CaseNumber == 1 && c.Vx > 0).ToList();
-            Assert.AreEqual(2, basic.Count);
-            Assert.AreEqual(-basic[0].Mt, basic[1].Mt, 1e-9);    // reference corner at either end
+            Assert.AreEqual(20, full.LoadCases.Count);           // per axis: 4 corners basic, 4 corners torsional, minimum ±
+            var e = full.EnvelopeAlongLength;
+            var basic = full.LoadCases.Where(c => c.CaseNumber == 1 && c.Name.Contains("along length")).ToList();
+            Assert.AreEqual(4, basic.Count);
+            double fx = e.BasicKips, fy = e.BasicCrossKips, m = e.BasicTorsion;
+            var expected = new[] { (fx, fy, m), (fx, -fy, -m), (-fx, -fy, m), (-fx, fy, -m) };
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(expected[i].Item1, basic[i].Vx, 1e-9);
+                Assert.AreEqual(expected[i].Item2, basic[i].Vy, 1e-9);
+                Assert.AreEqual(expected[i].Item3, basic[i].Mt, 1e-9);
+            }
+            Assert.AreEqual(2, full.LoadCases.Count(c => c.CaseNumber == 3 && c.Name.Contains("along length")));
 
             var exempt = WindLateralLoads.Compute(a, true, LateralProcedure.Envelope);
-            Assert.AreEqual(6, exempt.LoadCases.Count);
+            Assert.AreEqual(12, exempt.LoadCases.Count);
             Assert.IsFalse(exempt.LoadCases.Any(c => c.CaseNumber == 2));
+        }
+
+        /// <summary>
+        /// Wind along the width: the calculation axes are the building axes turned 90° CCW, so (Fx, Fy, Mz) → (−Fy, Fx, Mz).
+        /// Case B there (ridge across the length) has a cross-wind force from the roof halves, so the mapping is visible.
+        /// </summary>
+        [TestMethod]
+        public void AlongWidth_MapsToBuildingAxes_WithTheCrossWindForce()
+        {
+            var b = Bldg.Make(60, 40, 10, RoofTypes.ROOF_TYPE_GABLE, 30, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH);
+            var r = WindLateralLoads.Compute(Analysis(b), false, LateralProcedure.Envelope);
+            var e = r.EnvelopeAlongWidth;
+            Assert.AreEqual("B", e.LoadCase);
+            Assert.IsTrue(Math.Abs(e.BasicCrossKips) > 0.01);
+            var first = r.LoadCases.First(c => c.CaseNumber == 1 && c.Name.Contains("along width"));
+            Assert.AreEqual(-e.BasicCrossKips, first.Vx, 1e-9);
+            Assert.AreEqual(e.BasicKips, first.Vy, 1e-9);
+            Assert.AreEqual(e.BasicTorsion, first.Mt, 1e-9);
         }
 
         [TestMethod]

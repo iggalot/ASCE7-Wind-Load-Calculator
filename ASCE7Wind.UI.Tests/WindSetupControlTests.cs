@@ -155,7 +155,7 @@ namespace ASCE7Wind.UI.Tests
             c.SetOnlyCases1And3(true);
             c.FlushPendingChange();
             Assert.IsTrue(c.OnlyCases1And3);
-            Assert.AreEqual(4, c.Summary.Lateral.LoadCases.Count);
+            Assert.AreEqual(8, c.Summary.Lateral.LoadCases.Count);   // Cases 1 and 3, wind from both sides
             Assert.AreEqual(0, raised);
         }
 
@@ -278,7 +278,7 @@ namespace ASCE7Wind.UI.Tests
             c.GoToStep(WindSetupControl.ResultsStep);
             Find<Button>(c, "btnSend").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.IsNotNull(sent);
-            Assert.AreEqual(4, sent.LoadCases.Count);
+            Assert.AreEqual(8, sent.LoadCases.Count);
         }
 
         /// <summary>

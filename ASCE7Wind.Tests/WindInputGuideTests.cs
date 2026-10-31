@@ -140,8 +140,8 @@ namespace ASCE7Wind.Tests
 
             Assert.AreEqual(lateral.AlongLength.DesignKips, full.FromWest.DesignKips, 1e-12);
             Assert.AreEqual(lateral.AlongWidth.DesignKips, full.FromSouth.DesignKips, 1e-12);
-            Assert.AreEqual(16, full.Lateral.LoadCases.Count);
-            Assert.AreEqual(4, reduced.Lateral.LoadCases.Count);
+            Assert.AreEqual(32, full.Lateral.LoadCases.Count);    // Fig. 27.3-8, wind from both sides of each axis: 4 + 8 + 4 + 16
+            Assert.AreEqual(8, reduced.Lateral.LoadCases.Count);  // Cases 1 and 3: 4 + 4
         }
 
         [TestMethod]

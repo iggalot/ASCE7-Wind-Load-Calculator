@@ -411,34 +411,85 @@ namespace ASCE7WindLoadCalculator
                 ? "These loads are sent to the shear walls (Ch. 28 envelope chosen on the Results step)."
                 : "For comparison only: the shear walls use Chapter 27. Choose \"Ch. 28 envelope\" on the Results step to use these."));
 
+            page.MaxWidth = 1400;
             var x = EnvelopeLateralLoads.Direction(mx, "along length");
             var y = EnvelopeLateralLoads.Direction(my, "along width");
+            page.Children.Add(Section("Sign convention"));
+            page.Children.Add(Para(
+                "Calculation axes, for each wind axis: x along the wind (windward wall at x = 0, leeward wall at x = D), y across it " +
+                "(0 to W), z up; the origin is the reference corner, where the end zones are. " +
+                "Pressure p = qh Kd (GCpf) is positive toward the surface (push) and negative away from it (suction). " +
+                "n is the outward unit normal of the surface. The force on the building is F = −p A n: a push acts inward, a suction outward. " +
+                "r runs from the center of mass (taken at the plan center, x = D/2, y = W/2) to the centroid of the zone, where its pressure resultant acts. " +
+                "Mz = (r × F)z = rx Fy − ry Fx, counterclockwise seen from above positive (right-hand rule). " +
+                "Totals: Vx = ΣFx, Vy = ΣFy, Mz = ΣMz; opposite walls cancel only in these sums. Fz (roof uplift +) is listed but not sent to the shear walls."));
+            page.Children.Add(Para(
+                "Building axes (what the shear walls receive): x along the building length, y along the width, moments CCW positive. " +
+                "Wind along the length uses the calculation axes as they are; wind along the width turns them 90° CCW: (Vx, Vy, Mz) → (−Vy, Vx, Mz). " +
+                "Each building corner is the reference corner in turn (Fig. 28.3-1): from the corner at (0, 0) with the wind along +x, " +
+                "the corner at (0, W) mirrors y (Vx, −Vy, −Mz); the corner at (D, W) is the building turned 180° with the wind along −x (−Vx, −Vy, Mz); " +
+                "the corner at (D, 0) is turned and mirrored (−Vx, Vy, −Mz)."));
             page.Children.Add(Para($"p = qh Kd (GCpf) (Eq. 28.3-1), qh = {x.Qh:0.00} psf at h = {building.MeanRoofHeight:0.#} ft, Kd = {x.Kd:0.00}" +
                                    (x.Kd == 1.0 ? " (inside qh for this edition)" : "") +
-                                   ". The internal pressure acts equally on opposite walls and cancels in the horizontal force. " +
-                                   $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft); " +
-                                   "end zones at the reference corner are 2a wide (1E/4E, 2E/3E) or a wide on the end walls along the ridge (5E/6E), and each corner is taken in turn (torsion of either sign). " +
-                                   "Across a gable ridge, Zone 2 (windward slope) and Zone 3 (leeward slope) run from the eave to the ridge. " +
-                                   "The total shear is not less than with the roof neglected."));
+                                   ". The internal pressure acts equally on opposite faces and cancels in the horizontal force. " +
+                                   $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft). " +
+                                   "End zones: 2a for 1E/4E and 2E/3E, a for 5E/6E. Across a gable ridge, Zones 2 and 3 run from the eave to the ridge. " +
+                                   "Torsional case: the zones beyond the plan center (y > W/2) at 25% (1T–4T, or 5T/6T along the ridge). " +
+                                   "A case leaves the roof out when the roof's ΣFx is negative (the shear may not be less than with the roof neglected)."));
 
-            foreach (var (e, m, from) in new[] { (x, mx, "west"), (y, my, "south") })
+            foreach (var (e, m, from, alongLength) in new[] { (x, mx, "west", true), (y, my, "south", false) })
             {
                 page.Children.Add(Section($"Wind from the {from}: Load Case {e.LoadCase}" + (e.Transverse ? $" (normal to the ridge, roof angle {e.Theta:0.#}°)" : e.LoadCase == "B" ? " (along the ridge, zones 5 and 6)" : "")));
+                page.Children.Add(Para($"D = {e.DepthAlongWind:0.##} ft along the wind, W = {e.WidthNormalToWind:0.##} ft across it; center of mass at x = {e.ComX:0.##}, y = {e.ComY:0.##} ft; " +
+                                       $"q = qh Kd = {e.Qh * e.Kd:0.00} psf; a = {e.A:0.##} ft."));
                 page.Children.Add(FigureRow(Drawing($"Plan, wind from the {from} (zones and GCpf)", c => EnvelopeDiagram.Draw(c, e), width: 560)));
                 var g = NewGrid(new[]
                 {
-                    ("Zone", "Zone", (string)null), ("Where", "Surface", (string)null), ("GCpf", "GCpf", "0.00"),
-                    ("p (psf)", "Pressure", "0.0"), ("Projected area (sq ft)", "ProjectedArea", "0.0"), ("Force (kips)", "Kips", "0.00"),
+                    ("Zone", "Zone", (string)null), ("Where", "Surface", (string)null), ("Extent", "Extent", (string)null),
+                    ("GCpf", "GCpf", "0.00"), ("p (psf)", "Pressure", "0.00"), ("Area (sq ft)", "Area", "0.00"),
+                    ("Outward n", "Normal", (string)null), ("rx (ft)", "Rx", "0.00"), ("ry (ft)", "Ry", "0.00"),
+                    ("Fx (k)", "Fx", "0.000"), ("Fy (k)", "Fy", "0.000"), ("Fz (k)", "Fz", "0.000"), ("Mz (k-ft)", "Mz", "0.00"),
+                    ("Torsional case", "TorsionalLabel", (string)null),
                 });
                 g.ItemsSource = e.Zones;
                 page.Children.Add(Card(g));
-                page.Children.Add(Para(
-                    $"Walls {e.WallsKips:0.00} k + roof {(e.RoofNeglected ? "neglected (it would reduce the shear)" : $"{e.RoofKips:0.00} k")}" +
-                    (e.ParapetKips > 0 ? $" + parapets {e.ParapetKips:0.00} k (28.3.2)" : "") +
-                    $" = basic case {e.BasicKips:0.00} kips with torsion ±{e.BasicTorsion:0.0} kip-ft (end zones at one corner). " +
-                    $"Torsional case (beyond the center at 25%): {e.TorsionalKips:0.00} kips with ±{e.TorsionalTorsion:0.0} kip-ft. " +
-                    $"Minimum (28.3.4): 16 psf × {e.ProjectedWallArea:0} sq ft + 8 psf × {e.ProjectedRoofArea:0} sq ft = {e.MinimumKips:0.00} kips. " +
-                    $"Chapter 27 for comparison: {WindLateralLoads.DirectionalForce(m, e.Direction).DesignKips:0.00} kips."));
+
+                string roof(bool neglected) => neglected ? "roof left out (its ΣFx < 0)" : "roof included";
+                var totals = NewGrid(new[]
+                {
+                    ("Case", "Case", (string)null), ("Vx = ΣFx (k)", "Vx", "0.000"), ("Vy = ΣFy (k)", "Vy", "0.000"),
+                    ("Mz = ΣMz (k-ft)", "Mz", "0.00"), ("Roof", "Roof", (string)null),
+                });
+                totals.ItemsSource = new[]
+                {
+                    new { Case = "Basic (rows × 1)", Vx = e.BasicKips, Vy = e.BasicCrossKips, Mz = e.BasicTorsion, Roof = roof(e.RoofNeglected) },
+                    new { Case = "Torsional (rows × factor)", Vx = e.TorsionalKips, Vy = e.TorsionalCrossKips, Mz = e.TorsionalTorsion, Roof = roof(e.TorsionalRoofNeglected) },
+                    new { Case = "Minimum (28.3.4)", Vx = e.MinimumKips, Vy = 0.0, Mz = 0.0, Roof = $"16 psf × {e.ProjectedWallArea:0} + 8 psf × {e.ProjectedRoofArea:0} sq ft" },
+                };
+                page.Children.Add(Section($"Totals, calculation axes (wind from the {from})"));
+                page.Children.Add(Card(totals));
+
+                var sent = new List<object>();
+                foreach (var (kind, vx, vy, mz) in new[] { ("Basic", e.BasicKips, e.BasicCrossKips, e.BasicTorsion), ("Torsional", e.TorsionalKips, e.TorsionalCrossKips, e.TorsionalTorsion) })
+                    foreach (var c in EnvelopeLateralLoads.Corners(vx, vy, mz))
+                    {
+                        var (bx, by, bm) = EnvelopeLateralLoads.ToBuilding(alongLength, c.vx, c.vy, c.mz);
+                        sent.Add(new { Case = $"{kind}, {c.label}", Cx = c.vx, Cy = c.vy, Cm = c.mz, Vx = bx, Vy = by, Mt = bm });
+                    }
+                foreach (int s in new[] { 1, -1 })
+                {
+                    var (bx, by, bm) = EnvelopeLateralLoads.ToBuilding(alongLength, s * e.MinimumKips, 0, 0);
+                    sent.Add(new { Case = $"Minimum, {(s > 0 ? "+" : "−")} wind", Cx = s * e.MinimumKips, Cy = 0.0, Cm = 0.0, Vx = bx, Vy = by, Mt = bm });
+                }
+                var cases = NewGrid(new[]
+                {
+                    ("Case", "Case", (string)null), ("Vx calc (k)", "Cx", "0.000"), ("Vy calc (k)", "Cy", "0.000"), ("Mz calc (k-ft)", "Cm", "0.00"),
+                    ("Vx building (k)", "Vx", "0.000"), ("Vy building (k)", "Vy", "0.000"), ("Mt building (k-ft)", "Mt", "0.00"),
+                });
+                cases.ItemsSource = sent;
+                page.Children.Add(Section($"Load cases for the shear walls, wind {(alongLength ? "along the length" : "along the width")} (each corner in turn)"));
+                page.Children.Add(Card(cases));
+                page.Children.Add(Para($"Chapter 27 for comparison: {WindLateralLoads.DirectionalForce(m, e.Direction).DesignKips:0.00} kips along the wind."));
             }
             return page;
         }

@@ -42,13 +42,29 @@ namespace ASCE7WindLoadCalculator
             Zone(c, ww + "E", g(ww + "E"), x0 - 92, y0 + ph - end / 2 - 8);
             Zone(c, lw, g(lw), x0 + pw + 8, y0 + (ph - end) / 2 - 8);
             Zone(c, lw + "E", g(lw + "E"), x0 + pw + 8, y0 + ph - end / 2 - 8);
-            if (e.Transverse)
+            if (e.LoadCase == "A")
             {
                 Zone(c, "2", g("2"), x0 + pw * 0.25 - 26, y0 + (ph - end) / 2 - 8);
                 Zone(c, "3", g("3"), x0 + pw * 0.75 - 26, y0 + (ph - end) / 2 - 8);
             }
+            else
+            {
+                // Case B: ridge along the wind at y = W/2; side walls 1 (y = 0, bottom) and 4 (y = W, top), roof halves 2 (next to
+                // wall 1) and 3; their end zones 2a from the windward end
+                double side = e.SideEndZoneWidth * s;
+                c.Children.Add(Rect(x0, y0, side, ph, null, InkSecondary));
+                c.Children.Add(new Line { X1 = x0, Y1 = y0 + ph / 2, X2 = x0 + pw, Y2 = y0 + ph / 2, Stroke = InkSecondary, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 3 } });
+                Zone(c, "2", g("2"), x0 + side + (pw - side) / 2 - 26, y0 + ph * 0.75 - 8);
+                Zone(c, "3", g("3"), x0 + side + (pw - side) / 2 - 26, y0 + ph * 0.25 - 8);
+                Zone(c, "2E", g("2E"), x0 + 4, y0 + ph * 0.75 - 26);
+                Zone(c, "3E", g("3E"), x0 + 4, y0 + ph * 0.25 - 8);
+                Zone(c, "1", g("1"), x0 + pw - 80, y0 + ph - 20);
+                Zone(c, "4", g("4"), x0 + pw - 80, y0 + 3);
+                Zone(c, "1E", g("1E"), x0 + 4, y0 + ph - 20 - end);
+                Zone(c, "4E", g("4E"), x0 + 4, y0 + 3);
+            }
 
-            Label(c, $"End zones {(e.LoadCase == "B" ? "a" : "2a")} = {endFt:0.#} ft at the reference corner (shaded); then each other corner in turn.", 8, h - 30, InkSecondary, 11);
+            Label(c, $"End zones {(e.LoadCase == "B" ? $"a = {endFt:0.#} ft (5E/6E, shaded) and 2a = {e.SideEndZoneWidth:0.#} ft (outlined)" : $"2a = {endFt:0.#} ft (shaded)")} at the reference corner (0, 0), bottom left; then each other corner in turn.", 8, h - 30, InkSecondary, 11);
             Label(c, $"Load Case {e.LoadCase}" + (e.LoadCase == "A" ? $", roof angle {e.Theta:0.#}°" : ", wind along the ridge") + ". GCpf shown; + push, − suction.", 8, h - 16, InkSecondary, 11);
         }
 
