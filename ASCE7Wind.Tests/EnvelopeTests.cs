@@ -107,6 +107,25 @@ namespace ASCE7Wind.Tests
         }
 
         [TestMethod]
+        public void Case4_AlongRidge_7_22_EndZoneA()
+        {
+            // ASCE 7-22 Fig. 28.3-2 Case 4 (torsional, wind along the ridge): 5E/6E are a wide, 5/6 run 0.5B - a, beyond the
+            // center 5T/6T at 25%. 60 x 40 ft, 10 ft eave, 30 deg gable, ridge along the length; a = 4 ft. Gable-end wall
+            // height 10 + tan30 x min(y, 40 - y): areas 0-4 ft 44.62, 4-20 ft 270.85, 20-40 ft 315.47 sq ft.
+            var b = Bldg.Make(60, 40, 10, RoofTypes.ROOF_TYPE_GABLE, 30, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH);
+            var l = WindLateralLoads.Compute(Analysis(b), false, LateralProcedure.Envelope).EnvelopeAlongLength;
+            double q = l.Qh * l.Kd, t = Tan(30);
+            double a04 = 40 + t * 8, a420 = 160 + t * (200 - 8), a2040 = 200 + t * 200;
+            Assert.AreEqual("B", l.LoadCase);
+            Assert.AreEqual(4.0, l.TorsionalEndZoneWidth, 1e-9);
+            Assert.AreEqual(q * (1.04 * a04 + 0.69 * a420 + 0.25 * 0.69 * a2040) / 1000, l.TorsionalKips, 0.01);
+
+            // 7-16 keeps the 2a end zone in the torsional case (not confirmed otherwise)
+            var l16 = WindLateralLoads.Compute(Analysis(b, ASCE7_Versions.ASCE_VER_7_16), false, LateralProcedure.Envelope).EnvelopeAlongLength;
+            Assert.AreEqual(8.0, l16.TorsionalEndZoneWidth, 1e-9);
+        }
+
+        [TestMethod]
         public void Zone2_FullSlopeIn7_22_LimitedIn7_16()
         {
             // 100 ft deep across the ridge, 8 ft eave, 10 deg: half depth 50 ft > 2.5 he = 20 ft, and Zone 2 is negative.

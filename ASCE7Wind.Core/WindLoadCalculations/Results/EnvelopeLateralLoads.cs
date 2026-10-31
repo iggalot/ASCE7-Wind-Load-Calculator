@@ -84,6 +84,9 @@ namespace ASCE7WindLoadCalculator
         public double TorsionalKips { get; internal set; }
         public double TorsionalTorsion { get; internal set; }
 
+        /// <summary>End-zone width used in the torsional case (ft): 2a, or a for the 7-22 Case 4 end walls (5E/6E) along the ridge.</summary>
+        public double TorsionalEndZoneWidth { get; internal set; }
+
         /// <summary>28.3.4 minimum, a separate load case: 16 psf on walls (and parapet), 8 psf on the roof, projected.</summary>
         public double MinimumKips { get; internal set; }
         public double ProjectedWallArea { get; internal set; }
@@ -201,6 +204,9 @@ namespace ASCE7WindLoadCalculator
                 z.ProjectedArea += projArea; z.Kips += lbs / 1000.0;
             }
 
+            double endT = r.LoadCase == "B" && mwfrs.Edition.Version == ASCE7_Versions.ASCE_VER_7_22 ? Math.Min(a, W) : end;
+            r.TorsionalEndZoneWidth = endT;
+
             // strips along the windward wall, reference corner at y = 0
             double dy = W / Strips, wallLbs = 0, roofLbs = 0, wallM = 0, roofM = 0, wallT = 0, roofT = 0, wallTM = 0, roofTM = 0;
             for (int i = 0; i < Strips; i++)
@@ -225,9 +231,17 @@ namespace ASCE7WindLoadCalculator
                     fr = q * (g2 * rise2 + g3 * rise3w - g3 * riseL) * dy;
                 }
 
-                double t = y > W / 2 ? TorsionalFraction : 1.0;  // torsional case: far half at 25%
+                // torsional case: the far half at 25%. Along the ridge (Case B walls) ASCE 7-22 Fig. 28.3-2 Case 4 makes 5E/6E only
+                // a wide (5/6 run 0.5B - a), so the wall strip is re-read with that end zone; roof terms are 0 along the ridge.
+                double t = y > W / 2 ? TorsionalFraction : 1.0;
+                double fwT = fw;
+                if (endT != end)
+                {
+                    bool isEndT = y < endT;
+                    fwT = q * ((isEndT ? wwE : ww) - (isEndT ? lwE : lw)) * area;
+                }
                 wallLbs += fw; roofLbs += fr; wallM += fw * arm; roofM += fr * arm;
-                wallT += fw * t; roofT += fr * t; wallTM += fw * t * arm; roofTM += fr * t * arm;
+                wallT += fwT * t; roofT += fr * t; wallTM += fwT * t * arm; roofTM += fr * t * arm;
             }
 
             r.Zones.AddRange(acc.Values);

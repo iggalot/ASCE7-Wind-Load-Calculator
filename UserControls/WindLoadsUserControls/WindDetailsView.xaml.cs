@@ -436,7 +436,7 @@ namespace ASCE7WindLoadCalculator
                     $"Walls {e.WallsKips:0.00} k + roof {(e.RoofNeglected ? "neglected (it would reduce the shear)" : $"{e.RoofKips:0.00} k")}" +
                     (e.ParapetKips > 0 ? $" + parapets {e.ParapetKips:0.00} k (28.3.2)" : "") +
                     $" = basic case {e.BasicKips:0.00} kips with torsion ±{e.BasicTorsion:0.0} kip-ft (end zones at one corner). " +
-                    $"Torsional case: {e.TorsionalKips:0.00} kips with ±{e.TorsionalTorsion:0.0} kip-ft. " +
+                    $"Torsional case (end zone {e.TorsionalEndZoneWidth:0.#} ft, beyond the center at 25%): {e.TorsionalKips:0.00} kips with ±{e.TorsionalTorsion:0.0} kip-ft. " +
                     $"Minimum (28.3.4): 16 psf × {e.ProjectedWallArea:0} sq ft + 8 psf × {e.ProjectedRoofArea:0} sq ft = {e.MinimumKips:0.00} kips. " +
                     $"Chapter 27 for comparison: {WindLateralLoads.DirectionalForce(m, e.Direction).DesignKips:0.00} kips."));
             }
