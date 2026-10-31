@@ -84,7 +84,7 @@ namespace ASCE7WindLoadCalculator
         public double TorsionalKips { get; internal set; }
         public double TorsionalTorsion { get; internal set; }
 
-        /// <summary>End-zone width used in the torsional case (ft): 2a, or a for the 7-22 Case 4 end walls (5E/6E) along the ridge.</summary>
+        /// <summary>End-zone width used in the torsional case (ft): 2a, or a for the end walls (5E/6E) with the wind along the ridge.</summary>
         public double TorsionalEndZoneWidth { get; internal set; }
 
         /// <summary>28.3.4 minimum, a separate load case: 16 psf on walls (and parapet), 8 psf on the roof, projected.</summary>
@@ -204,7 +204,7 @@ namespace ASCE7WindLoadCalculator
                 z.ProjectedArea += projArea; z.Kips += lbs / 1000.0;
             }
 
-            double endT = r.LoadCase == "B" && mwfrs.Edition.Version == ASCE7_Versions.ASCE_VER_7_22 ? Math.Min(a, W) : end;
+            double endT = r.LoadCase == "B" ? Math.Min(a, W) : end;   // 7-16 and 7-22 alike (user, from both figures)
             r.TorsionalEndZoneWidth = endT;
 
             // strips along the windward wall, reference corner at y = 0
@@ -231,7 +231,8 @@ namespace ASCE7WindLoadCalculator
                     fr = q * (g2 * rise2 + g3 * rise3w - g3 * riseL) * dy;
                 }
 
-                // torsional case: the far half at 25%. Along the ridge (Case B walls) ASCE 7-22 Fig. 28.3-2 Case 4 makes 5E/6E only
+                // torsional case: the far half at 25% (2T/3T cover the back half of the roof across the ridge). Along the ridge (Case B
+                // walls) the torsional case (7-22 Fig. 28.3-2 Case 4, same in 7-16) makes 5E/6E only
                 // a wide (5/6 run 0.5B - a), so the wall strip is re-read with that end zone; roof terms are 0 along the ridge.
                 double t = y > W / 2 ? TorsionalFraction : 1.0;
                 double fwT = fw;

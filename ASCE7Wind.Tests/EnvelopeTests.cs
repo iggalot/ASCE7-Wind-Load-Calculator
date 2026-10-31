@@ -107,7 +107,7 @@ namespace ASCE7Wind.Tests
         }
 
         [TestMethod]
-        public void Case4_AlongRidge_7_22_EndZoneA()
+        public void Case4_AlongRidge_EndZoneA_BothEditions()
         {
             // ASCE 7-22 Fig. 28.3-2 Case 4 (torsional, wind along the ridge): 5E/6E are a wide, 5/6 run 0.5B - a, beyond the
             // center 5T/6T at 25%. 60 x 40 ft, 10 ft eave, 30 deg gable, ridge along the length; a = 4 ft. Gable-end wall
@@ -120,9 +120,9 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(4.0, l.TorsionalEndZoneWidth, 1e-9);
             Assert.AreEqual(q * (1.04 * a04 + 0.69 * a420 + 0.25 * 0.69 * a2040) / 1000, l.TorsionalKips, 0.01);
 
-            // 7-16 keeps the 2a end zone in the torsional case (not confirmed otherwise)
+            // 7-16: the same 5/5E/5T and 6/6E/6T layout (user)
             var l16 = WindLateralLoads.Compute(Analysis(b, ASCE7_Versions.ASCE_VER_7_16), false, LateralProcedure.Envelope).EnvelopeAlongLength;
-            Assert.AreEqual(8.0, l16.TorsionalEndZoneWidth, 1e-9);
+            Assert.AreEqual(4.0, l16.TorsionalEndZoneWidth, 1e-9);
         }
 
         [TestMethod]
