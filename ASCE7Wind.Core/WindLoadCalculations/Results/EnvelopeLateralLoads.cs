@@ -84,8 +84,8 @@ namespace ASCE7WindLoadCalculator
         public double TorsionalKips { get; internal set; }
         public double TorsionalTorsion { get; internal set; }
 
-        /// <summary>End-zone width used in the torsional case (ft): 2a, or a for the end walls (5E/6E) with the wind along the ridge.</summary>
-        public double TorsionalEndZoneWidth { get; internal set; }
+        /// <summary>End-zone width at the reference corner (ft): 2a for Case A, a for the end walls (5E/6E) with the wind along the ridge.</summary>
+        public double EndZoneWidth { get; internal set; }
 
         /// <summary>28.3.4 minimum, a separate load case: 16 psf on walls (and parapet), 8 psf on the roof, projected.</summary>
         public double MinimumKips { get; internal set; }
@@ -161,9 +161,9 @@ namespace ASCE7WindLoadCalculator
         {
             var b = mwfrs.buildingData;
             var model = new BuildingModel(b);
-            double W = b.BuildingWidth, D = b.BuildingLength, he = b.BuildingHeight;
+            double W = b.BuildingWidth, D = b.BuildingLength;
             double qh = mwfrs.CalculateDynamicWindPressure(b.MeanRoofHeight), kd = mwfrs.PressureKd, q = qh * kd;
-            double a = ZoneWidthA(b), end = Math.Min(2 * a, W);
+            double a = ZoneWidthA(b);
             bool gable = b.RoofType == RoofTypes.ROOF_TYPE_GABLE;
             bool transverse = gable && b.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH; // ridge across the wind
             double theta = transverse ? b.RoofPitch : 0;
@@ -189,12 +189,9 @@ namespace ASCE7WindLoadCalculator
                 zWW = "5"; zLW = "6";
             }
 
-            // roof across the ridge: windward slope plan depth D/2. ASCE 7-22 (Fig. 28.3-2): Zone 2 runs the whole way from the
-            // eave to the ridge. ASCE 7-16 (recalled Fig. 28.3-1 note, TO VERIFY): a negative Zone 2 acts only up to
-            // min(0.5 D, 2.5 he) from the windward edge, the rest of the windward slope taking Zone 3.
+            // roof across the ridge (Case A): Zone 2 covers the windward slope and Zone 3 the leeward slope, each from the eave to
+            // the ridge (7-16 and 7-22, confirmed by the user).
             double tan = transverse ? Math.Tan(theta * Math.PI / 180) : 0, half = D / 2;
-            bool zone2Limit = mwfrs.Edition.Version == ASCE7_Versions.ASCE_VER_7_16;
-            double Zone2Depth(double g2) => zone2Limit && g2 < 0 ? Math.Min(half, Math.Min(0.5 * D, 2.5 * he)) : half;
 
             var acc = new Dictionary<string, EnvelopeZoneForce>();
             void Add(string zone, string surface, double gcpf, double projArea, double lbs)
@@ -204,8 +201,10 @@ namespace ASCE7WindLoadCalculator
                 z.ProjectedArea += projArea; z.Kips += lbs / 1000.0;
             }
 
-            double endT = r.LoadCase == "B" ? Math.Min(a, W) : end;   // 7-16 and 7-22 alike (user, from both figures)
-            r.TorsionalEndZoneWidth = endT;
+            // end zones at the reference corner: 2a for Case A (1E/4E, 2E/3E); a for the end walls along the ridge (5E/6E, Fig.
+            // 28.3-2 Cases 2 and 4, 7-16 and 7-22 alike, confirmed by the user). The torsional case uses the same end zones.
+            double end = Math.Min((r.LoadCase == "B" ? 1 : 2) * a, W);
+            r.EndZoneWidth = end;
 
             // strips along the windward wall, reference corner at y = 0
             double dy = W / Strips, wallLbs = 0, roofLbs = 0, wallM = 0, roofM = 0, wallT = 0, roofT = 0, wallTM = 0, roofTM = 0;
@@ -222,27 +221,17 @@ namespace ASCE7WindLoadCalculator
                 double fr = 0;
                 if (transverse)
                 {
-                    double g2 = isEnd ? r2E : r2, g3 = isEnd ? r3E : r3, d2 = Zone2Depth(g2);
-                    double rise2 = d2 * tan, rise3w = (half - d2) * tan, riseL = half * tan;
+                    double g2 = isEnd ? r2E : r2, g3 = isEnd ? r3E : r3, rise = half * tan;
                     string s2 = isEnd ? "2E" : "2", s3 = isEnd ? "3E" : "3";
-                    Add(s2, "windward roof" + (isEnd ? ", end zone" : ""), g2, rise2 * dy, q * g2 * rise2 * dy);
-                    if (rise3w > 0) Add(s3 + " (windward)", "windward roof beyond the Zone 2 limit", g3, rise3w * dy, q * g3 * rise3w * dy);
-                    Add(s3, "leeward roof" + (isEnd ? ", end zone" : ""), g3, riseL * dy, -q * g3 * riseL * dy);
-                    fr = q * (g2 * rise2 + g3 * rise3w - g3 * riseL) * dy;
+                    Add(s2, "windward roof" + (isEnd ? ", end zone" : ""), g2, rise * dy, q * g2 * rise * dy);
+                    Add(s3, "leeward roof" + (isEnd ? ", end zone" : ""), g3, rise * dy, -q * g3 * rise * dy);
+                    fr = q * (g2 - g3) * rise * dy;
                 }
 
-                // torsional case: the far half at 25% (2T/3T cover the back half of the roof across the ridge). Along the ridge (Case B
-                // walls) the torsional case (7-22 Fig. 28.3-2 Case 4, same in 7-16) makes 5E/6E only
-                // a wide (5/6 run 0.5B - a), so the wall strip is re-read with that end zone; roof terms are 0 along the ridge.
+                // torsional case: beyond the center at 25% (1T/4T, 2T/3T the back half of the roof; 5T/6T along the ridge)
                 double t = y > W / 2 ? TorsionalFraction : 1.0;
-                double fwT = fw;
-                if (endT != end)
-                {
-                    bool isEndT = y < endT;
-                    fwT = q * ((isEndT ? wwE : ww) - (isEndT ? lwE : lw)) * area;
-                }
                 wallLbs += fw; roofLbs += fr; wallM += fw * arm; roofM += fr * arm;
-                wallT += fwT * t; roofT += fr * t; wallTM += fwT * t * arm; roofTM += fr * t * arm;
+                wallT += fw * t; roofT += fr * t; wallTM += fw * t * arm; roofTM += fr * t * arm;
             }
 
             r.Zones.AddRange(acc.Values);

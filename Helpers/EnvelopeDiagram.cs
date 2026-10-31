@@ -24,7 +24,7 @@ namespace ASCE7WindLoadCalculator
             double s = Math.Min(availW / e.DepthAlongWind, availH / e.WidthNormalToWind);
             double pw = e.DepthAlongWind * s, ph = e.WidthNormalToWind * s;
             double x0 = 100 + (availW - pw) / 2, y0 = 22 + (availH - ph) / 2;
-            double end = Math.Min(2 * e.A, e.WidthNormalToWind) * s;
+            double endFt = e.EndZoneWidth, end = endFt * s;
 
             // building, end-zone band at the reference corner (bottom), ridge for the transverse case
             c.Children.Add(Rect(x0, y0, pw, ph, Fill, Ink));
@@ -48,7 +48,7 @@ namespace ASCE7WindLoadCalculator
                 Zone(c, "3", g("3"), x0 + pw * 0.75 - 26, y0 + (ph - end) / 2 - 8);
             }
 
-            Label(c, $"End zones 2a = {2 * e.A:0.#} ft at the reference corner (shaded); then each other corner in turn.", 8, h - 30, InkSecondary, 11);
+            Label(c, $"End zones {(e.LoadCase == "B" ? "a" : "2a")} = {endFt:0.#} ft at the reference corner (shaded); then each other corner in turn.", 8, h - 30, InkSecondary, 11);
             Label(c, $"Load Case {e.LoadCase}" + (e.LoadCase == "A" ? $", roof angle {e.Theta:0.#}°" : ", wind along the ridge") + ". GCpf shown; + push, − suction.", 8, h - 16, InkSecondary, 11);
         }
 

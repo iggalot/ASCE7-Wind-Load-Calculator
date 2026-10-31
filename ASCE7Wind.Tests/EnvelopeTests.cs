@@ -88,7 +88,7 @@ namespace ASCE7Wind.Tests
             var l = r.EnvelopeAlongLength;
             Assert.IsFalse(l.Transverse);
             Assert.AreEqual("B", l.LoadCase);
-            double endArea = 8 * (10 + 0.5 * 8 * Tan(30));                       // strip 0-8 ft under the rake
+            double endArea = 4 * (10 + 0.5 * 4 * Tan(30));                       // strip 0-4 ft under the rake: 5E/6E are a wide
             double wallArea = 40 * 10 + 0.5 * 40 * 20 * Tan(30);
             double ql = l.Qh * l.Kd;
             Assert.AreEqual(((0.61 + 0.43) * endArea + (0.40 + 0.29) * (wallArea - endArea)) * ql / 1000, l.WallsKips, 0.01);
@@ -117,26 +117,27 @@ namespace ASCE7Wind.Tests
             double q = l.Qh * l.Kd, t = Tan(30);
             double a04 = 40 + t * 8, a420 = 160 + t * (200 - 8), a2040 = 200 + t * 200;
             Assert.AreEqual("B", l.LoadCase);
-            Assert.AreEqual(4.0, l.TorsionalEndZoneWidth, 1e-9);
+            Assert.AreEqual(4.0, l.EndZoneWidth, 1e-9);
             Assert.AreEqual(q * (1.04 * a04 + 0.69 * a420 + 0.25 * 0.69 * a2040) / 1000, l.TorsionalKips, 0.01);
 
             // 7-16: the same 5/5E/5T and 6/6E/6T layout (user)
             var l16 = WindLateralLoads.Compute(Analysis(b, ASCE7_Versions.ASCE_VER_7_16), false, LateralProcedure.Envelope).EnvelopeAlongLength;
-            Assert.AreEqual(4.0, l16.TorsionalEndZoneWidth, 1e-9);
+            Assert.AreEqual(4.0, l16.EndZoneWidth, 1e-9);
         }
 
         [TestMethod]
-        public void Zone2_FullSlopeIn7_22_LimitedIn7_16()
+        public void Zone2_EaveToRidge_BothEditions()
         {
-            // 100 ft deep across the ridge, 8 ft eave, 10 deg: half depth 50 ft > 2.5 he = 20 ft, and Zone 2 is negative.
+            // Zone 2 (windward slope) and Zone 3 (leeward slope) run from the eave to the ridge in 7-16 and 7-22 (user).
+            // 100 ft deep across the ridge, 8 ft eave, 10 deg: rise 50 tan 10 over the 60 ft wall less the 2a end zone.
             var b = Bldg.Make(100, 60, 8, RoofTypes.ROOF_TYPE_GABLE, 10, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH);
-            var e22 = WindLateralLoads.Compute(Analysis(b), false, LateralProcedure.Envelope).EnvelopeAlongLength;
-            Assert.IsTrue(e22.Transverse);
-            Assert.IsFalse(e22.Zones.Any(z => z.Zone.StartsWith("3 (windward)")));   // 7-22: Zone 2 eave to ridge (Fig. 28.3-2)
-
-            var e16 = WindLateralLoads.Compute(Analysis(b, ASCE7_Versions.ASCE_VER_7_16), false, LateralProcedure.Envelope).EnvelopeAlongLength;
-            var rest = e16.Zones.Single(z => z.Zone == "3 (windward)");                 // 7-16: Zone 3 beyond 20 ft
-            Assert.AreEqual(30 * Tan(10) * (60 - 2 * e16.A), rest.ProjectedArea, 0.2);   // interior part (end zone 2a = 9.9 ft; strips)
+            foreach (var v in new[] { ASCE7_Versions.ASCE_VER_7_16, ASCE7_Versions.ASCE_VER_7_22 })
+            {
+                var e = WindLateralLoads.Compute(Analysis(b, v), false, LateralProcedure.Envelope).EnvelopeAlongLength;
+                Assert.IsTrue(e.Transverse);
+                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Single(z => z.Zone == "2").ProjectedArea, 0.5);   // strip rounding at the end-zone edge
+                Assert.AreEqual(50 * Tan(10) * (60 - 2 * e.A), e.Zones.Single(z => z.Zone == "3").ProjectedArea, 0.5);
+            }
         }
 
         [TestMethod]
