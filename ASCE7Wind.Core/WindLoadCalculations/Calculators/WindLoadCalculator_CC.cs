@@ -40,6 +40,31 @@ namespace ASCE7WindLoadCalculator
         {
             extGCpCurve_Roof = Edition.CreateCCRoofFigure(buildingData);
             extGCpCurve_Wall = Edition.CreateCCWallFigure();
+            ApplyParapetRoofZoneNote();
+        }
+
+        /// <summary>Smallest parapet height (ft) for the Fig. 30.3-2A note 5 roof-zone adjustment (3 ft, 0.9 m).</summary>
+        public const double ParapetZoneNoteMinHeight = 3.0;
+
+        /// <summary>True when Fig. 30.3-2A note 5 was applied to the roof curves (parapet of 3 ft or more, roof 7 deg or flatter).</summary>
+        public bool ParapetRoofZoneNoteApplied { get; private set; }
+
+        /// <summary>
+        /// Fig. 30.3-2A note 5 (7-16 and 7-22): with a parapet 3 ft (0.9 m) or higher around the perimeter of a roof of
+        /// 7 deg or less, negative (GCp) in roof Zone 3 equals Zone 2, and positive (GCp) in roof Zones 2 and 3 equal
+        /// wall Zones 4 and 5 (Fig. 30.3-1). The parapet is taken to run around the whole perimeter. The figure objects
+        /// are created fresh for this calculator, so the curves are replaced in place.
+        /// </summary>
+        private void ApplyParapetRoofZoneNote()
+        {
+            ParapetRoofZoneNoteApplied = false;
+            if (!buildingData.HasParapet || buildingData.ParapetHeight < ParapetZoneNoteMinHeight) return;
+            var roofPos = extGCpCurve_Roof.RoofCurves_Pos; var roofNeg = extGCpCurve_Roof.RoofCurves_Neg; var wallPos = extGCpCurve_Wall.WallCurves_Pos;
+            if (!roofNeg.ContainsKey("Zone2") || !roofNeg.ContainsKey("Zone3") || !wallPos.ContainsKey("Zone4") || !wallPos.ContainsKey("Zone5")) return;
+            roofNeg["Zone3"] = roofNeg["Zone2"];
+            if (roofPos.ContainsKey("Zone2")) roofPos["Zone2"] = wallPos["Zone4"];
+            if (roofPos.ContainsKey("Zone3")) roofPos["Zone3"] = wallPos["Zone5"];
+            ParapetRoofZoneNoteApplied = true;
         }
 
         public override void CalculateExternalPressures()
@@ -137,7 +162,7 @@ namespace ASCE7WindLoadCalculator
                 {
                     Case = "A", Location = location, Qp = qp, GCpi = gcpi,
                     FrontSource = wallZone + " (wall, +)", GCpFront = wp, FrontPressure = Face(wp),
-                    BackSource = roofZone + " (roof, -)", GCpBack = rn, BackPressure = Face(rn),
+                    BackSource = roofZone + (ParapetRoofZoneNoteApplied && roofZone == "Zone3" ? " (roof, -, = Zone2 by note 5)" : " (roof, -)"), GCpBack = rn, BackPressure = Face(rn),
                     NetPressure = qp * kd * (wp - rn),
                 });
                 ParapetCases.Add(new ParapetCladdingCase

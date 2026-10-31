@@ -194,6 +194,9 @@ namespace ASCE7WindLoadCalculator
             // Roof: zones + graph, then the table
             var roofRows = CladdingRows(cc.RoofAreaCalculator.effWindAreas, cc.windPressureRoof_Pos_External, cc.windPressureRoof_Neg_External, roofArea);
             page.Children.Add(Section("Roof"));
+            if ((cc as WindLoadCalculator_CC)?.ParapetRoofZoneNoteApplied == true)
+                page.Children.Add(Para($"Parapet {cc.buildingData.ParapetHeight:0.##} ft (≥ {WindLoadCalculator_CC.ParapetZoneNoteMinHeight:0} ft) around the roof, " +
+                                       "Fig. 30.3-2A note 5: negative GCp in Zone 3 = Zone 2; positive GCp in Zones 2 and 3 = wall Zones 4 and 5."));
             page.Children.Add(FigureRow(
                 ZoneDrawing(cc.RoofAreaCalculator, cc.buildingData, "Roof zones (plan)"),
                 GCpGraph(cc.extGCpCurve_Roof, roofRows)));
