@@ -42,6 +42,21 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Eave height (ft).</summary>
         public double BuildingHeight { get; set; } = 15;
 
+        /// <summary>Number of stories (floors), 1 to <see cref="MaxStories"/>. The eave height is split equally between them; each floor
+        /// diaphragm and the roof get the wind on their own horizontal strip of the walls (shear-wall design).</summary>
+        public int NumberOfStories
+        {
+            get => stories;
+            set => stories = Math.Max(1, Math.Min(MaxStories, value));
+        }
+        private int stories = 1;
+
+        /// <summary>The most stories the shear-wall design handles.</summary>
+        public const int MaxStories = 3;
+
+        /// <summary>Story (floor-to-floor) height: eave height / stories (ft).</summary>
+        public double StoryHeight => BuildingHeight / NumberOfStories;
+
         /// <summary>Roof slope (degrees).</summary>
         public double RoofPitch { get; set; } = 15;
 

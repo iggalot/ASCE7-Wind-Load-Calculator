@@ -528,6 +528,17 @@
                                         </Border>
                                     </StackPanel>
                                 </UniformGrid>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                            ToolTip="Stories (floors) for the shear-wall design, 1 to 3. The eave height is split equally; each floor diaphragm and the roof take the wind on their own strip of the walls, and the shear walls are designed from the top story down.">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Floors" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox x:Name="cbStories" Width="60" Height="30" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Input_Changed"
+                                              AutomationProperties.Name="Number of stories">
+                                        <ComboBoxItem Content="1"/>
+                                        <ComboBoxItem Content="2"/>
+                                        <ComboBoxItem Content="3"/>
+                                    </ComboBox>
+                                    <TextBlock x:Name="tbStoryHeight" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#52514E"/>
+                                </StackPanel>
                                 <TextBlock x:Name="msgSize" Style="{StaticResource FieldMessage}"/>
                             </StackPanel>
                         </Border>

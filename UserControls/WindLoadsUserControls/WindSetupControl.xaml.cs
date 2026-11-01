@@ -120,6 +120,7 @@ namespace ASCE7WindLoadCalculator
                 tbL.Text = Format(Building.BuildingLength);
                 tbB.Text = Format(Building.BuildingWidth);
                 tbH.Text = Format(Building.BuildingHeight);
+                cbStories.SelectedIndex = Building.NumberOfStories - 1;
                 tbOverhang.Text = Format(Building.OverhangWidth);
                 tbParapet.Text = Format(Building.ParapetHeight);
                 cbParapetEnvelope.SelectedIndex = (int)Building.ParapetEnclosure;
@@ -380,6 +381,7 @@ namespace ASCE7WindLoadCalculator
             b.BuildingLength = Parse(tbL.Text);
             b.BuildingWidth = Parse(tbB.Text);
             b.BuildingHeight = Parse(tbH.Text);
+            b.NumberOfStories = cbStories.SelectedIndex + 1;
             // Blank = no overhang; a bad entry is flagged (ShowIssues) and counted as none.
             double overhang = string.IsNullOrWhiteSpace(tbOverhang.Text) ? 0 : Parse(tbOverhang.Text);
             b.OverhangWidth = double.IsNaN(overhang) || overhang < 0 ? 0 : overhang;
@@ -391,6 +393,8 @@ namespace ASCE7WindLoadCalculator
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
             b.RidgeDirection = rbRidgeAcross.IsChecked == true ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
             Building = b;
+            tbStoryHeight.Text = b.NumberOfStories > 1 && b.BuildingHeight > 0
+                ? $"{b.NumberOfStories} stories of {b.StoryHeight.ToString("0.##", CultureInfo.CurrentCulture)} ft (eave height / floors); shear walls designed from the top story down" : "";
         }
 
         // ---------------------------------------------------------------- cladding component

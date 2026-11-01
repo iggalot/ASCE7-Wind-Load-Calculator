@@ -128,13 +128,23 @@ namespace ASCE7WindLoadCalculator
                 OnlyCases1And3 = onlyCases1And3,
             };
 
-            double vx = r.AlongLength.DesignKips, vy = r.AlongWidth.DesignKips;
-            double bx = r.AlongLength.WidthNormalToWind; // building width B (normal to x wind)
-            double by = r.AlongWidth.WidthNormalToWind;  // building length L (normal to y wind)
+            AddDirectionalCases(r.LoadCases, r.AlongLength.DesignKips, r.AlongWidth.DesignKips,
+                r.AlongLength.WidthNormalToWind, r.AlongWidth.WidthNormalToWind, onlyCases1And3);
+            return r;
+        }
+
+        /// <summary>
+        /// The Fig. 27.3-8 load cases for the forces <paramref name="vx"/> and <paramref name="vy"/> (kips): the whole building, or
+        /// one floor of it (each floor gets the same cases, with its own forces and the building's 0.15 B eccentricities).
+        /// </summary>
+        /// <param name="bx">Building width B normal to the x wind (ft).</param>
+        /// <param name="by">Building length L normal to the y wind (ft).</param>
+        internal static void AddDirectionalCases(List<WindLoadCase> list, double vx, double vy, double bx, double by, bool onlyCases1And3)
+        {
             double ex = CaseEccentricity * bx, ey = CaseEccentricity * by;
 
             void Add(int n, string name, double x, double y, double mt) =>
-                r.LoadCases.Add(new WindLoadCase { CaseNumber = n, Name = name, Vx = x + 0.0, Vy = y + 0.0, Mt = mt + 0.0 });
+                list.Add(new WindLoadCase { CaseNumber = n, Name = name, Vx = x + 0.0, Vy = y + 0.0, Mt = mt + 0.0 });
 
             // The wind blows from either side along each axis: the 180° direction reverses the forces. The torsion
             // (Cases 2 and 4) is taken with both signs of the eccentricity in each direction.
@@ -170,7 +180,6 @@ namespace ASCE7WindLoadCalculator
                                 Add(4, $"Case 4, both directions ({Sign(sx)} length, {Sign(sy)} width), torsion {Sign(s1)}{Sign(s2)}",
                                     sx * 0.563 * vx, sy * 0.563 * vy, 0.563 * (s1 * vx * ex + s2 * vy * ey));
             }
-            return r;
         }
 
         private static string Sign(int s) => s > 0 ? "+" : "-";
