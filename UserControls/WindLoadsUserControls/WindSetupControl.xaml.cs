@@ -79,7 +79,7 @@ namespace ASCE7WindLoadCalculator
         public void SetInputs(BuildingData building, ASCE7_Versions version, WindParameters_Base parameters)
         {
             Building = building?.Clone() ?? new BuildingData();
-            Parameters = parameters?.Clone() ?? new WindParameters_Base { RiskCategory = "II", ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C };
+            Parameters = parameters?.Clone() ?? new WindParameters_Base(); // the engine holds the starting values
             Version = version;
 
             loading = true;

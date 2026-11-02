@@ -79,6 +79,36 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH, WindAdapter.From(b).Building.RidgeDirection);
         }
 
+        /// <summary>The wind section lives in the model file: it starts from the engine's values and goes through a save unchanged.</summary>
+        [TestMethod]
+        public void WindSection_EngineDefaults_RoundTripInTheModel()
+        {
+            var b = Box();
+            Assert.IsNull(WindSection.Read(b), "no wind set up yet");
+            var s = WindSection.New();
+            var p = new WindParameters_Base();
+            Assert.AreEqual(p.WindSpeed, s.WindSpeed);
+            Assert.AreEqual(p.ExposureCategory, s.Exposure);
+            Assert.AreEqual("II", s.RiskCategory);
+            Assert.AreEqual(WindSection.NewestEdition, s.Edition);
+
+            s.WindSpeed = 140;
+            s.Exposure = WindExposureCategories.WIND_EXP_CAT_D;
+            s.Enclosure = BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED;
+            s.RoofComponent = new ComponentChoice(ComponentChoice.Area, 25);
+            s.OnlyCases1And3 = true;
+            s.Write(b);
+            var json = BuildingModel.Serialization.ModelFile.ToJson(new BuildingModel.Serialization.ModelDocument { Building = b });
+            var back = WindSection.Read(BuildingModel.Serialization.ModelFile.FromJson(json).Building);
+            Assert.AreEqual(140, back.WindSpeed);
+            Assert.AreEqual(WindExposureCategories.WIND_EXP_CAT_D, back.Exposure);
+            Assert.AreEqual(25, back.RoofComponent.Entry);
+            Assert.IsTrue(back.OnlyCases1And3);
+            Assert.AreEqual(140, back.ToParameters().WindSpeed);
+            Assert.AreEqual(BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED, back.BuildingFor(b).Building.EnclosureType, "the engine's building: the model's size, the section's enclosure");
+            Assert.AreEqual(60, back.BuildingFor(b).Building.BuildingLength, Tol);
+        }
+
         [TestMethod]
         public void LShape_UsesTheEnclosingRectangle_AndSaysSo()
         {

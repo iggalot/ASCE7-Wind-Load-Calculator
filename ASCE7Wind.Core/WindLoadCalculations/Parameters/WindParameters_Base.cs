@@ -6,12 +6,12 @@ namespace ASCE7WindLoadCalculator
     public class WindParameters_Base
     {
         /// <summary>Risk category (I-IV). Informational: it selects which wind-speed map V comes from.</summary>
-        public string RiskCategory { get; set; }
+        public string RiskCategory { get; set; } = "II";
 
         /// <summary>Basic wind speed V (mph), from the map for the building's risk category.</summary>
         public double WindSpeed { get; set; } = 115.0;
 
-        public WindExposureCategories ExposureCategory { get; set; }
+        public WindExposureCategories ExposureCategory { get; set; } = WindExposureCategories.WIND_EXP_CAT_C;
 
         /// <summary>Topographic factor Kzt (26.8); 1.0 on flat terrain.</summary>
         public double Kzt { get; set; } = 1.0;
