@@ -131,6 +131,8 @@ namespace ASCE7WindLoadCalculator
             envelopeModels.Clear();
             foreach (var l in zoneLabels) labelLayer.Children.Remove(l.label);
             zoneLabels.Clear();
+            foreach (var l in markerLabels) markerLayer.Children.Remove(l.label);
+            markerLabels.Clear();
             bdHover.Visibility = Visibility.Collapsed;
 
             if (building == null)
@@ -174,7 +176,12 @@ namespace ASCE7WindLoadCalculator
             AddZoneLabels(size);
             AddOutlines(size);
             AddEnvelopeEdges(model, size);
-            if (scene.WindDirection.HasValue) AddWindArrow(model, scene.WindDirection.Value, size);
+            AddStoryLines(model, size);
+            if (scene.WindDirection.HasValue)
+            {
+                AddWindArrow(model, scene.WindDirection.Value, size);
+                AddWallMarkers(model, scene.WindDirection.Value, size);
+            }
 
             if (resetCamera)
             {
@@ -438,6 +445,69 @@ namespace ASCE7WindLoadCalculator
             sceneRoot.Children.Add(Model(tris, Color.FromRgb(0x52, 0x51, 0x4E)));
         }
 
+        /// <summary>Labels pinned to 3D points other than the zone labels: the wall markers (always shown) and the floor labels (hidden behind the building).</summary>
+        private readonly List<(TextBlock label, Vec3 at, bool alwaysShown)> markerLabels = new List<(TextBlock, Vec3, bool)>();
+
+        private void AddMarker(string text, Vec3 at, bool alwaysShown, Brush background, Brush foreground)
+        {
+            var label = new TextBlock
+            {
+                Text = text, FontSize = 11, FontWeight = FontWeights.SemiBold,
+                Foreground = foreground, Background = background, Padding = new Thickness(4, 1, 4, 1),
+            };
+            markerLayer.Children.Add(label);
+            markerLabels.Add((label, at, alwaysShown));
+        }
+
+        /// <summary>
+        /// Whole-building wind: WINDWARD, LEEWARD and SIDE WALL markers on the roof edge over the middle of each wall
+        /// (by the wall's outward normal against the wind direction), always drawn so the far walls are named too.
+        /// </summary>
+        private void AddWallMarkers(BuildingModel m, Vec3 dir, double size)
+        {
+            var walls = new[]
+            {
+                (mid: new Vec3(0, m.B / 2, m.EaveHeight), n: new Vec3(-1, 0, 0)),
+                (mid: new Vec3(m.L, m.B / 2, m.EaveHeight), n: new Vec3(1, 0, 0)),
+                (mid: new Vec3(m.L / 2, 0, m.EaveHeight), n: new Vec3(0, -1, 0)),
+                (mid: new Vec3(m.L / 2, m.B, m.EaveHeight), n: new Vec3(0, 1, 0)),
+            };
+            var bg = new SolidColorBrush(Color.FromArgb(0xE8, 0x24, 0x24, 0x22));
+            bg.Freeze();
+            foreach (var (mid, n) in walls)
+            {
+                double d = n.Dot(dir.Normalized());
+                string text = d < -0.5 ? "WINDWARD" : d > 0.5 ? "LEEWARD" : "SIDE WALL";
+                AddMarker(text, mid + n * (0.03 * size) + Vec3.UnitZ * (0.03 * size), true, bg, Brushes.White);
+            }
+        }
+
+        /// <summary>
+        /// Several stories: each floor drawn as a horizontal rectangle around the building at its elevation (the sum of the
+        /// plate heights below it), labeled with its level and height. The top story ends at the eave.
+        /// </summary>
+        private void AddStoryLines(BuildingModel m, double size)
+        {
+            if (building == null || building.NumberOfStories < 2) return;
+            var elevations = building.StoryElevations;
+            var strips = new List<Vec3>();
+            double w = size / 260, off = size / 900;
+            var bg = new SolidColorBrush(Color.FromArgb(0xD8, 0xFF, 0xFF, 0xFF));
+            bg.Freeze();
+            for (int i = 0; i < elevations.Length - 1; i++)
+            {
+                double z = elevations[i];
+                if (!(z > 0) || z >= m.EaveHeight) continue;
+                // a loop just outside the four walls
+                var c = new[] { new Vec3(-off, -off, z), new Vec3(m.L + off, -off, z), new Vec3(m.L + off, m.B + off, z), new Vec3(-off, m.B + off, z) };
+                var normals = new[] { new Vec3(0, -1, 0), new Vec3(1, 0, 0), new Vec3(0, 1, 0), new Vec3(-1, 0, 0) };
+                for (int k = 0; k < 4; k++) AddFlatStrip(strips, c[k], c[(k + 1) % 4], normals[k], w);
+                AddMarker($"Level {i + 2} floor  {z.ToString("0.#", CultureInfo.CurrentCulture)} ft", new Vec3(-off, -off, z) + new Vec3(-1, -1, 0).Normalized() * (0.04 * size),
+                          false, bg, (Brush)FindResource("InkPrimary"));
+            }
+            sceneRoot.Children.Add(Model(strips, Color.FromRgb(0x2A, 0x78, 0xD6)));
+        }
+
         // ---- mesh helpers -------------------------------------------------------------------------
 
         private static Point3D P(Vec3 v) => new Point3D(v.X, v.Z, -v.Y);      // model z-up -> WPF y-up
@@ -564,6 +634,19 @@ namespace ASCE7WindLoadCalculator
             }
             Pin(lblNorth, northLabelAt);
             Pin(lblWind, windLabelAt);
+            foreach (var (label, at, alwaysShown) in markerLabels)
+            {
+                if (alwaysShown)
+                {
+                    var s = Project(at);
+                    label.Visibility = s.HasValue ? Visibility.Visible : Visibility.Collapsed;
+                    if (!s.HasValue) continue;
+                    label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    Canvas.SetLeft(label, s.Value.X - label.DesiredSize.Width / 2);
+                    Canvas.SetTop(label, s.Value.Y - label.DesiredSize.Height / 2);
+                }
+                else Pin(label, at);
+            }
             PlaceZoneLabels();
         }
 

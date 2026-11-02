@@ -146,5 +146,53 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(first.Vx * 0.5, r.Levels[0].LoadCases.Single(c => c.Name == first.Name).Vx, 1e-9);
             Assert.AreEqual(first.Vx / 6, r.Levels[2].LoadCases.Single(c => c.Name == first.Name).Vx, 1e-9);
         }
+
+        /// <summary>Plate heights per story: the eave height is their sum, and the floors sit at the running sums.</summary>
+        [TestMethod]
+        public void PlateHeights_EaveIsTheSum_ElevationsAreRunningSums()
+        {
+            var b = Bldg.Make(60, 40, 30);
+            b.NumberOfStories = 3;
+            Assert.AreEqual(10, b.StoryPlateHeight(2), 1e-12, "not given: the eave split equally");
+            b.PlateHeights = new System.Collections.Generic.List<double> { 12, 10, 9 };
+            Assert.AreEqual(31, b.BuildingHeight, 1e-12);
+            CollectionAssert.AreEqual(new[] { 12.0, 22.0, 31.0 }, b.StoryElevations);
+            Assert.IsTrue(b.UnequalStories);
+            var c = b.Clone();
+            c.PlateHeights = new System.Collections.Generic.List<double> { 8 };
+            Assert.AreEqual(31, b.BuildingHeight, 1e-12, "a clone does not share the plate heights");
+            Assert.AreEqual(24, c.BuildingHeight, 1e-12, "fewer entries than stories repeat the last one");
+            b.NumberOfStories = 2;
+            Assert.AreEqual(22, b.BuildingHeight, 1e-12, "only the stories in use count");
+            b.BuildingHeight = 20;
+            Assert.IsNull(b.PlateHeights, "entering the eave height clears the plate heights");
+            Assert.AreEqual(10, b.StoryPlateHeight(1), 1e-12);
+        }
+
+        /// <summary>Unequal stories: each strip runs from mid-height of the story below to mid-height of the story above.</summary>
+        [TestMethod]
+        public void Strips_UnequalPlateHeights()
+        {
+            var s = StoryWindLoads.Strips(new[] { 12.0, 10.0, 8.0 });
+            Assert.AreEqual((0.0, 17.0, 12.0), s[0]);
+            Assert.AreEqual((17.0, 26.0, 22.0), s[1]);
+            Assert.AreEqual(26.0, s[2].bottom, 1e-12);
+            Assert.IsTrue(double.IsPositiveInfinity(s[2].top));
+            Assert.AreEqual(30.0, s[2].elevation, 1e-12);
+        }
+
+        /// <summary>The building's plate heights drive the floor forces, and the floors still add up to the base shear.</summary>
+        [TestMethod]
+        public void Compute_UsesThePlateHeights_FloorsAddUp()
+        {
+            var b = Bldg.Make(60, 40, 30);
+            b.NumberOfStories = 2;
+            b.PlateHeights = new System.Collections.Generic.List<double> { 18, 12 };
+            var r = StoryWindLoads.Compute(Analysis(b), false, 2);
+            Assert.AreEqual(24.0, r.Levels[0].StripTop, 1e-12, "18 + 12/2");
+            Assert.AreEqual(18.0, r.Levels[0].Elevation, 1e-12);
+            Assert.AreEqual(r.Building.AlongLength.DesignKips, r.Levels.Sum(l => l.AlongLengthDesignKips), 1e-6);
+            Assert.AreEqual(r.Building.AlongWidth.DesignKips, r.Levels.Sum(l => l.AlongWidthDesignKips), 1e-6);
+        }
     }
 }

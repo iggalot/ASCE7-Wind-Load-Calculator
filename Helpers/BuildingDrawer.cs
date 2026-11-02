@@ -169,6 +169,27 @@ namespace ASCE7WindLoadCalculator
             canvas.Children.Add(title);
         }
 
+        /// <summary>Several stories: each floor as a dashed horizontal line across the elevation at its height (the sum of the plate heights below), labeled.</summary>
+        private static void DrawFloorLines(Canvas canvas, BuildingData b, double length, Func<Point, Point> toCanvas)
+        {
+            if (b == null || b.NumberOfStories < 2) return;
+            var z = b.StoryElevations;
+            for (int i = 0; i < z.Length - 1; i++)
+            {
+                Point a = toCanvas(new Point(0, z[i])), c = toCanvas(new Point(length, z[i]));
+                canvas.Children.Add(new Line
+                {
+                    X1 = a.X, Y1 = a.Y, X2 = c.X, Y2 = c.Y,
+                    Stroke = new SolidColorBrush(Color.FromRgb(0x2A, 0x78, 0xD6)), StrokeThickness = 1.5,
+                    StrokeDashArray = new DoubleCollection { 6, 3 },
+                });
+                var t = new TextBlock { Text = $"Level {i + 2}  {z[i]:0.#} ft", FontSize = 10, Foreground = new SolidColorBrush(Color.FromRgb(0x2A, 0x78, 0xD6)) };
+                Canvas.SetLeft(t, a.X + 4);
+                Canvas.SetTop(t, a.Y - 14);
+                canvas.Children.Add(t);
+            }
+        }
+
         public static void DrawElevation_BuildingLength(Canvas canvas, BuildingData buildingData, double marginRatio = 0.1)
         {
             if (canvas == null || buildingData == null) return;
@@ -252,6 +273,7 @@ namespace ASCE7WindLoadCalculator
                 wallOutline.Points.Add(ToCanvas(pt));
 
             canvas.Children.Add(wallOutline);
+            DrawFloorLines(canvas, buildingData, length, ToCanvas);
 
             // Draw the ground line
             // Add dashed green ground line between bottom of walls
@@ -448,6 +470,7 @@ namespace ASCE7WindLoadCalculator
             foreach (var pt in points)
                 wallOutline.Points.Add(ToCanvas(pt));
             canvas.Children.Add(wallOutline);
+            DrawFloorLines(canvas, buildingData, length, ToCanvas);
 
             // Draw dashed green ground line
             Point groundLeft = ToCanvas(new Point(-5, 0));

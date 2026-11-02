@@ -270,7 +270,7 @@ namespace ASCE7Wind.UI.Tests
             c.InputsChanged += (s, e) => raised++;
             c.SendLoadsRequested += (s, r) => sent = r;
 
-            Find<TextBox>(c, "tbH").Text = "18";
+            Find<TextBox>(c, "tbPlate1").Text = "18";
             c.FlushPendingChange();
             Assert.AreEqual(1, raised);
 

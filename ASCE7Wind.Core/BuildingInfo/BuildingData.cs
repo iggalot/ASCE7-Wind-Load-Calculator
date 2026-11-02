@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASCE7WindLoadCalculator
 {
@@ -39,11 +41,23 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Plan dimension B (ft).</summary>
         public double BuildingWidth { get; set; } = 40;
 
-        /// <summary>Eave height (ft).</summary>
-        public double BuildingHeight { get; set; } = 15;
+        /// <summary>
+        /// Eave height (ft): the sum of the story plate heights when they are given (<see cref="PlateHeights"/>), otherwise
+        /// the height entered. Setting it clears the plate heights (the stories then share it equally).
+        /// </summary>
+        public double BuildingHeight
+        {
+            get => plateHeights != null && plateHeights.Count > 0 ? StoryPlateHeights.Sum() : eave;
+            set
+            {
+                eave = value;
+                plateHeights = null;
+            }
+        }
+        private double eave = 15;
 
-        /// <summary>Number of stories (floors), 1 to <see cref="MaxStories"/>. The eave height is split equally between them; each floor
-        /// diaphragm and the roof get the wind on their own horizontal strip of the walls (shear-wall design).</summary>
+        /// <summary>Number of stories (floors), 1 to <see cref="MaxStories"/>. Each floor diaphragm and the roof get the wind on
+        /// their own horizontal strip of the walls (shear-wall design).</summary>
         public int NumberOfStories
         {
             get => stories;
@@ -54,8 +68,44 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The most stories the shear-wall design handles.</summary>
         public const int MaxStories = 3;
 
-        /// <summary>Story (floor-to-floor) height: eave height / stories (ft).</summary>
+        /// <summary>
+        /// The plate height of each story, bottom first (ft: floor to the top plate of its walls); the eave height is their sum.
+        /// Null = not given: the eave height is split equally. Fewer entries than stories repeat the last one. Declared after
+        /// <see cref="BuildingHeight"/> so a saved file sets the eave first and then the plate heights.
+        /// </summary>
+        public List<double> PlateHeights
+        {
+            get => plateHeights?.ToList();
+            set => plateHeights = value == null || value.Count == 0 ? null : value.ToList();
+        }
+        private List<double> plateHeights;
+
+        /// <summary>The plate height of story <paramref name="story"/> (1 = the first story), ft.</summary>
+        public double StoryPlateHeight(int story)
+        {
+            if (plateHeights == null || plateHeights.Count == 0) return eave / NumberOfStories;
+            return plateHeights[Math.Max(0, Math.Min(plateHeights.Count - 1, story - 1))];
+        }
+
+        /// <summary>The plate height of each story in use, bottom first (ft).</summary>
+        public double[] StoryPlateHeights => Enumerable.Range(1, NumberOfStories).Select(StoryPlateHeight).ToArray();
+
+        /// <summary>Top of the walls of each story (floor and roof elevations), bottom first (ft).</summary>
+        public double[] StoryElevations
+        {
+            get
+            {
+                var h = StoryPlateHeights;
+                double z = 0;
+                return h.Select(x => z += x).ToArray();
+            }
+        }
+
+        /// <summary>Average story height: eave height / stories (ft).</summary>
         public double StoryHeight => BuildingHeight / NumberOfStories;
+
+        /// <summary>True when the stories have different plate heights.</summary>
+        public bool UnequalStories => StoryPlateHeights.Distinct().Count() > 1;
 
         /// <summary>Roof slope (degrees).</summary>
         public double RoofPitch { get; set; } = 15;
@@ -162,6 +212,11 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
-        public BuildingData Clone() => (BuildingData)MemberwiseClone();
+        public BuildingData Clone()
+        {
+            var c = (BuildingData)MemberwiseClone();
+            c.plateHeights = plateHeights?.ToList();
+            return c;
+        }
     }
 }

@@ -47,7 +47,7 @@ namespace ASCE7WindLoadCalculator
     }
 
     /// <summary>
-    /// The wind on each diaphragm of a building of 1 to 3 stories (equal story heights, the eave height split equally).
+    /// The wind on each diaphragm of a building of 1 to 3 stories (each story its own plate height; the eave height is their sum).
     /// Each diaphragm takes the walls' wind from the mid-height of the story below it to the mid-height of the story above;
     /// the roof takes from the mid-height of the top story to the top of the walls plus the roof and parapet forces. Level 1
     /// also takes the bottom half of the first story (which really goes straight into the foundation): conservative, and the
@@ -62,13 +62,25 @@ namespace ASCE7WindLoadCalculator
         public static List<(double bottom, double top, double elevation)> Strips(double eaveHeight, int stories)
         {
             stories = Math.Max(1, stories);
-            double hs = eaveHeight / stories;
+            return Strips(Enumerable.Repeat(eaveHeight / stories, stories).ToArray());
+        }
+
+        /// <summary>
+        /// The wall strip of each level for stories of these plate heights (bottom first, ft): from the mid-height of the story
+        /// below the diaphragm to the mid-height of the story above it (level 1 from the ground; the roof open to the top).
+        /// </summary>
+        public static List<(double bottom, double top, double elevation)> Strips(IList<double> plateHeights)
+        {
+            var h = plateHeights == null || plateHeights.Count == 0 ? new List<double> { 0 } : plateHeights;
             var list = new List<(double, double, double)>();
-            for (int i = 1; i <= stories; i++)
+            double z = 0;
+            for (int i = 0; i < h.Count; i++)
             {
-                double bottom = i == 1 ? 0 : (i - 0.5) * hs;
-                double top = i == stories ? double.PositiveInfinity : (i + 0.5) * hs;
-                list.Add((bottom, top, i * hs));
+                double floor = z;
+                z += h[i];
+                double bottom = i == 0 ? 0 : floor + h[i] / 2;
+                double top = i == h.Count - 1 ? double.PositiveInfinity : z + h[i + 1] / 2;
+                list.Add((bottom, top, z));
             }
             return list;
         }
@@ -80,7 +92,8 @@ namespace ASCE7WindLoadCalculator
 
             var whole = WindLateralLoads.Compute(analysis, onlyCases1And3);
             var b = mx.buildingData;
-            var strips = Strips(b.BuildingHeight, stories);
+            // The building's own plate heights when it has this many stories; otherwise the eave height split equally.
+            var strips = Math.Max(1, stories) == b.NumberOfStories ? Strips(b.StoryPlateHeights) : Strips(b.BuildingHeight, stories);
             var r = new StoryWindResult { Building = whole, StoryHeight = b.BuildingHeight / Math.Max(1, stories) };
 
             var dx = whole.AlongLength;

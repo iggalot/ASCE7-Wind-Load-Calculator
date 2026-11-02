@@ -513,12 +513,15 @@
                                                 <TextBox x:Name="tbB" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Width B in feet"/></DockPanel>
                                         </Border>
                                     </StackPanel>
-                                    <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Eave height"/>
-                                        <Border x:Name="bdH" Style="{StaticResource NumberFrame}">
-                                            <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
-                                                <TextBox x:Name="tbH" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Wall height to eave in feet"/></DockPanel>
-                                        </Border>
+                                    <StackPanel Margin="0,0,10,0"
+                                                ToolTip="Stories (floors), 1 to 3. Each floor diaphragm and the roof take the wind on their own strip of the walls, and the shear walls are designed from the top story down.">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="Floors"/>
+                                        <ComboBox x:Name="cbStories" Height="36" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Input_Changed"
+                                                  AutomationProperties.Name="Number of stories">
+                                            <ComboBoxItem Content="1"/>
+                                            <ComboBoxItem Content="2"/>
+                                            <ComboBoxItem Content="3"/>
+                                        </ComboBox>
                                     </StackPanel>
                                     <StackPanel ToolTip="Roof overhang beyond the wall face. Overhang pressures (27.3.3 and the Chapter 30 overhang zones) are listed in Detailed calculations; 0 for none.">
                                         <TextBlock Style="{StaticResource FieldLabel}" Text="Eave overhang"/>
@@ -528,17 +531,29 @@
                                         </Border>
                                     </StackPanel>
                                 </UniformGrid>
-                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
-                                            ToolTip="Stories (floors) for the shear-wall design, 1 to 3. The eave height is split equally; each floor diaphragm and the roof take the wind on their own strip of the walls, and the shear walls are designed from the top story down.">
-                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Floors" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ComboBox x:Name="cbStories" Width="60" Height="30" VerticalContentAlignment="Center" SelectedIndex="0" SelectionChanged="Input_Changed"
-                                              AutomationProperties.Name="Number of stories">
-                                        <ComboBoxItem Content="1"/>
-                                        <ComboBoxItem Content="2"/>
-                                        <ComboBoxItem Content="3"/>
-                                    </ComboBox>
-                                    <TextBlock x:Name="tbStoryHeight" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#52514E"/>
-                                </StackPanel>
+                                <!-- Plate height of each story (floor to top plate); the eave height is their sum -->
+                                <UniformGrid Columns="4" Margin="0,6,0,0"
+                                             ToolTip="Each story's plate height, from its floor to the top plate of its walls. The eave height is their sum.">
+                                    <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" TextWrapping="Wrap" LineHeight="15" LineStackingStrategy="BlockLineHeight">
+                                        <Run Text="Plate heights" Foreground="{StaticResource InkSecondary}"/><LineBreak/><Run Text="eave" Foreground="{StaticResource InkSecondary}"/>
+                                        <Run x:Name="tbH" FontWeight="SemiBold" Foreground="#0B0B0B" Text="-"/><Run Text=" ft"/>
+                                    </TextBlock>
+                                    <Border x:Name="bdPlate1" Style="{StaticResource NumberFrame}" Height="30" MinHeight="0" Margin="0,0,10,0" Padding="6,0">
+                                        <DockPanel><TextBlock x:Name="lblPlate1" DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,4,0" Text="1st"/>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                            <TextBox x:Name="tbPlate1" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="First story plate height in feet"/></DockPanel>
+                                    </Border>
+                                    <Border x:Name="bdPlate2" Style="{StaticResource NumberFrame}" Height="30" MinHeight="0" Margin="0,0,10,0" Padding="6,0">
+                                        <DockPanel><TextBlock x:Name="lblPlate2" DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,4,0" Text="2nd"/>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                            <TextBox x:Name="tbPlate2" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Second story plate height in feet"/></DockPanel>
+                                    </Border>
+                                    <Border x:Name="bdPlate3" Style="{StaticResource NumberFrame}" Height="30" MinHeight="0" Padding="6,0">
+                                        <DockPanel><TextBlock x:Name="lblPlate3" DockPanel.Dock="Left" Style="{StaticResource Unit}" Margin="0,0,4,0" Text="3rd"/>
+                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
+                                            <TextBox x:Name="tbPlate3" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Third story plate height in feet"/></DockPanel>
+                                    </Border>
+                                </UniformGrid>
                                 <TextBlock x:Name="msgSize" Style="{StaticResource FieldMessage}"/>
                             </StackPanel>
                         </Border>

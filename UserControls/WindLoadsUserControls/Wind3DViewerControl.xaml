@@ -125,6 +125,8 @@
                 <TextBlock x:Name="lblNorth" Text="N" FontWeight="SemiBold" FontSize="14" Foreground="#52514E"/>
                 <TextBlock x:Name="lblWind" Text="Wind" FontWeight="SemiBold" FontSize="14" Foreground="#52514E"/>
             </Canvas>
+            <!-- Wall markers (windward, leeward, side) and floor labels, pinned the same way -->
+            <Canvas x:Name="markerLayer" IsHitTestVisible="False"/>
 
             <!-- Title -->
             <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,8,0,0" IsHitTestVisible="False">

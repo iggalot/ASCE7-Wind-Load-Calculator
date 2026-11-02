@@ -121,6 +121,10 @@ namespace ASCE7WindLoadCalculator
                 tbB.Text = Format(Building.BuildingWidth);
                 tbH.Text = Format(Building.BuildingHeight);
                 cbStories.SelectedIndex = Building.NumberOfStories - 1;
+                tbPlate1.Text = Format(Building.StoryPlateHeight(1));
+                tbPlate2.Text = Format(Building.StoryPlateHeight(2));
+                tbPlate3.Text = Format(Building.StoryPlateHeight(3));
+                ShowPlateBoxes(Building.NumberOfStories);
                 tbOverhang.Text = Format(Building.OverhangWidth);
                 tbParapet.Text = Format(Building.ParapetHeight);
                 cbParapetEnvelope.SelectedIndex = (int)Building.ParapetEnclosure;
@@ -380,8 +384,10 @@ namespace ASCE7WindLoadCalculator
                        : RoofTypes.ROOF_TYPE_FLAT;
             b.BuildingLength = Parse(tbL.Text);
             b.BuildingWidth = Parse(tbB.Text);
-            b.BuildingHeight = Parse(tbH.Text);
             b.NumberOfStories = cbStories.SelectedIndex + 1;
+            b.PlateHeights = PlateHeightsTyped(b.NumberOfStories);
+            ShowPlateBoxes(b.NumberOfStories);
+            tbH.Text = double.IsNaN(b.BuildingHeight) ? "-" : Format(b.BuildingHeight); // the eave height is the sum of the plate heights
             // Blank = no overhang; a bad entry is flagged (ShowIssues) and counted as none.
             double overhang = string.IsNullOrWhiteSpace(tbOverhang.Text) ? 0 : Parse(tbOverhang.Text);
             b.OverhangWidth = double.IsNaN(overhang) || overhang < 0 ? 0 : overhang;
@@ -393,8 +399,9 @@ namespace ASCE7WindLoadCalculator
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
             b.RidgeDirection = rbRidgeAcross.IsChecked == true ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
             Building = b;
-            tbStoryHeight.Text = b.NumberOfStories > 1 && b.BuildingHeight > 0
-                ? $"{b.NumberOfStories} stories of {b.StoryHeight.ToString("0.##", CultureInfo.CurrentCulture)} ft (eave height / floors); shear walls designed from the top story down" : "";
+            // the floor heights show on the 3D view (and in the Floors tooltip)
+            cbStories.ToolTip = b.NumberOfStories > 1 && b.BuildingHeight > 0
+                ? "Floors and roof at " + string.Join(", ", b.StoryElevations.Select(z => Format(z) + " ft")) + " (the sums of the plate heights); shear walls are designed from the top story down." : null;
         }
 
         // ---------------------------------------------------------------- cladding component
@@ -546,7 +553,10 @@ namespace ASCE7WindLoadCalculator
             ShowField(msgSize, null, WindInputField.Length, WindInputField.Width, WindInputField.WallHeight);
             bdL.BorderBrush = Has(WindInputField.Length) ? WarnBrush : ControlBrush;
             bdB.BorderBrush = Has(WindInputField.Width) ? WarnBrush : ControlBrush;
-            bdH.BorderBrush = Has(WindInputField.WallHeight) ? WarnBrush : ControlBrush;
+            var plates = Building.PlateHeights ?? new List<double>();
+            var plateFrames = new[] { bdPlate1, bdPlate2, bdPlate3 };
+            for (int i = 0; i < plateFrames.Length; i++)
+                plateFrames[i].BorderBrush = i < plates.Count && !(plates[i] > 0) ? WarnBrush : ControlBrush;
             double typedOverhang = Parse(tbOverhang.Text);
             bool overhangBad = !string.IsNullOrWhiteSpace(tbOverhang.Text) && (double.IsNaN(typedOverhang) || typedOverhang < 0);
             bdOverhang.BorderBrush = overhangBad ? WarnBrush : ControlBrush;
@@ -703,6 +713,26 @@ namespace ASCE7WindLoadCalculator
 
         private static double Parse(string text) =>
             double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out double v) ? v : double.NaN;
+
+        /// <summary>The plate heights typed for the first <paramref name="stories"/> stories (NaN where not a number); a blank box takes the story below.</summary>
+        private List<double> PlateHeightsTyped(int stories)
+        {
+            var boxes = new[] { tbPlate1, tbPlate2, tbPlate3 };
+            var list = new List<double>();
+            for (int i = 0; i < stories && i < boxes.Length; i++)
+            {
+                double h = string.IsNullOrWhiteSpace(boxes[i].Text) && i > 0 ? list[i - 1] : Parse(boxes[i].Text);
+                list.Add(double.IsNaN(h) || h <= 0 ? double.NaN : h);
+            }
+            return list;
+        }
+
+        /// <summary>One plate-height box per story.</summary>
+        private void ShowPlateBoxes(int stories)
+        {
+            var boxes = new[] { bdPlate1, bdPlate2, bdPlate3 };
+            for (int i = 0; i < boxes.Length; i++) boxes[i].Visibility = i < stories ? Visibility.Visible : Visibility.Hidden; // hidden keeps the columns
+        }
 
         private static string Format(double v) => double.IsNaN(v) ? string.Empty : v.ToString("0.###", CultureInfo.CurrentCulture);
 
