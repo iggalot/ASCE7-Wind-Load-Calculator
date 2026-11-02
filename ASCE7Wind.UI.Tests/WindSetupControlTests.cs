@@ -419,5 +419,42 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(10.0, c.Parameters.RoofComponentArea);
             Assert.AreEqual(string.Empty, Find<TextBox>(c, "tbRoofComp").Text);
         }
+
+        /// <summary>With a building model the size, stories and roof are the model's: shown, not editable, and kept whatever is typed; the enclosure stays the wind screen's.</summary>
+        [STATestMethod]
+        public void ModelGeometry_IsShownNotEdited_EnclosureStaysHere()
+        {
+            var c = Make();
+            int notified = 0;
+            c.InputsChanged += (s, e) => notified++;
+            Find<RadioButton>(c, "rbEncPartEnc").IsChecked = true;
+            var model = new BuildingData { BuildingLength = 72, BuildingWidth = 36, NumberOfStories = 2, PlateHeights = new System.Collections.Generic.List<double> { 10, 9 },
+                                           RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 26.57, OverhangWidth = 1.5 };
+            c.SetModelGeometry(model, "from Job.bldg.json");
+            Layout(c);
+
+            Assert.IsTrue(c.GeometryFromModel);
+            Assert.AreEqual(Visibility.Visible, Find<Border>(c, "bdModel").Visibility);
+            Assert.IsTrue(Find<TextBox>(c, "tbL").IsReadOnly);
+            Assert.IsFalse(Find<ComboBox>(c, "cbStories").IsEnabled);
+            Assert.IsFalse(Find<RadioButton>(c, "rbRoofHip").IsEnabled);
+            Assert.AreEqual("72", Find<TextBox>(c, "tbL").Text);
+            Assert.AreEqual(72, c.Building.BuildingLength, 1e-9);
+            Assert.AreEqual(2, c.Building.NumberOfStories);
+            Assert.AreEqual(RoofTypes.ROOF_TYPE_GABLE, c.Building.RoofType);
+            Assert.AreEqual(BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED, c.Building.EnclosureType, "the wind screen's own input");
+            Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnEditBuilding").Visibility, "no host handles Edit building");
+
+            // a value forced into a box does not change the building: the model's size is used
+            Find<TextBox>(c, "tbL").Text = "10";
+            Assert.AreEqual(72, c.Building.BuildingLength, 1e-9);
+            Find<RadioButton>(c, "rbEncOpen").IsChecked = true;
+            Assert.AreEqual(BuildingEnclosures.BLDG_OPEN, c.Building.EnclosureType);
+
+            c.SetModelGeometry(null);
+            Assert.IsFalse(c.GeometryFromModel);
+            Assert.IsFalse(Find<TextBox>(c, "tbL").IsReadOnly);
+            Assert.IsTrue(Find<ComboBox>(c, "cbStories").IsEnabled);
+        }
     }
 }

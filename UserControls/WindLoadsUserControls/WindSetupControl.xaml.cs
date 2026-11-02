@@ -252,6 +252,48 @@ namespace ASCE7WindLoadCalculator
         /// <summary>MWFRS procedure for the shear-wall loads (also kept in <see cref="WindParameters_Base.LateralProcedure"/>).</summary>
         public LateralProcedure Procedure => rbProc28.IsChecked == true ? LateralProcedure.Envelope : LateralProcedure.Directional;
 
+        // ---------------------------------------------------------------- geometry from a building model
+
+        private BuildingData modelGeometry;
+
+        /// <summary>True when the size, stories and roof come from a building model (shown, not edited here).</summary>
+        public bool GeometryFromModel => modelGeometry != null;
+
+        /// <summary>"Edit building…" on the Building step (shown only when the host handles it and a model is loaded).</summary>
+        public event EventHandler EditBuildingRequested;
+
+        /// <summary>
+        /// The building's size, stories, plate heights and roof from a building model (null: typed here again). They show
+        /// on the Building step but cannot be edited; the wind app's own inputs (enclosure, parapet envelope, components,
+        /// the site) stay editable. Does not notify the host.
+        /// </summary>
+        public void SetModelGeometry(BuildingData geometry, string note = null)
+        {
+            modelGeometry = geometry?.Clone();
+            bool locked = modelGeometry != null;
+            foreach (var t in new[] { tbL, tbB, tbOverhang, tbPlate1, tbPlate2, tbPlate3, tbPitch, tbParapet }) t.IsReadOnly = locked;
+            foreach (var c in new Control[] { rbRoofFlat, rbRoofGable, rbRoofHip, cbStories, rbRidgeAlong, rbRidgeAcross }) c.IsEnabled = !locked;
+            bdModel.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
+            btnEditBuilding.Visibility = locked && EditBuildingRequested != null ? Visibility.Visible : Visibility.Collapsed;
+            tbModel.Text = "The size, stories and roof below come from the building model. Change them in the Building Model editor; " +
+                           "the enclosure, parapet envelope and components are set here." + (string.IsNullOrEmpty(note) ? "" : Environment.NewLine + note);
+            if (locked) SetInputs(WithWindInputs(modelGeometry, Building), Version, Parameters);
+        }
+
+        /// <summary>The model's geometry with this screen's own building inputs (enclosure, parapet envelope).</summary>
+        private static BuildingData WithWindInputs(BuildingData geometry, BuildingData screen)
+        {
+            var b = geometry.Clone();
+            if (screen != null)
+            {
+                b.EnclosureType = screen.EnclosureType;
+                b.ParapetEnclosure = screen.ParapetEnclosure;
+            }
+            return b;
+        }
+
+        private void EditBuilding_Click(object sender, RoutedEventArgs e) => EditBuildingRequested?.Invoke(this, EventArgs.Empty);
+
         /// <summary>Sets the Fig. 27.3-8 exception (e.g. chosen in another dialog) without notifying the host.</summary>
         public void SetOnlyCases1And3(bool value)
         {
@@ -398,6 +440,7 @@ namespace ASCE7WindLoadCalculator
             // A flat roof ignores the pitch box; keep the last good value so switching back restores it.
             b.RoofPitch = double.IsNaN(pitch) && !b.RoofTypeIsSloped() ? Building.RoofPitch : pitch;
             b.RidgeDirection = rbRidgeAcross.IsChecked == true ? RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH : RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH;
+            if (modelGeometry != null) b = WithWindInputs(modelGeometry, b); // the model's size and roof, whatever the boxes say
             Building = b;
             // the floor heights show on the 3D view (and in the Floors tooltip)
             cbStories.ToolTip = b.NumberOfStories > 1 && b.BuildingHeight > 0

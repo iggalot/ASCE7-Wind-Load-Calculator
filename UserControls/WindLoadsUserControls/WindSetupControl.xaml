@@ -469,6 +469,17 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer x:Name="svBuildingInputs" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
+                        <!-- with a building model: the size, stories and roof are the model's (shown, not edited here) -->
+                        <Border x:Name="bdModel" Visibility="Collapsed" Margin="0,0,0,8" Padding="12,10" CornerRadius="8"
+                                Background="#EEF4FC" BorderBrush="#9CC0EC" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock FontWeight="SemiBold" Foreground="#104281" Text="From the building model"/>
+                                <TextBlock x:Name="tbModel" TextWrapping="Wrap" Foreground="#104281" Margin="0,4,0,0"
+                                           Text="The size, stories and roof below come from the building model. Change them in the Building Model editor; the enclosure, parapet envelope and components are set here."/>
+                                <Button x:Name="btnEditBuilding" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                        Content="Edit building…" Click="EditBuilding_Click" Visibility="Collapsed"/>
+                            </StackPanel>
+                        </Border>
                         <Border Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Roof shape"/>
