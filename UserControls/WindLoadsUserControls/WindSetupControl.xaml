@@ -687,7 +687,6 @@
                                 <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="h/B (wind from S)"/><TextBlock x:Name="valHB" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                         </UniformGrid>
-                        <TextBlock x:Name="msgBuilding" Style="{StaticResource FieldMessage}"/>
                     </StackPanel>
                 </ScrollViewer>
 
@@ -695,12 +694,15 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Border Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
                         <ContentControl x:Name="ccViewerBuilding"/>
                     </Border>
+                    <!-- Building-level warnings (e.g. over 60 ft) go here, under the view, so the inputs column never scrolls for them; the view gives up the room -->
+                    <TextBlock x:Name="msgBuilding" Grid.Row="1" Style="{StaticResource FieldMessage}" Margin="2,8,2,0"/>
                     <!-- Live results while the building is edited (same numbers as the Results page) -->
-                    <UniformGrid x:Name="ugLiveResults" Grid.Row="1" Columns="4" Margin="0,10,0,0">
+                    <UniformGrid x:Name="ugLiveResults" Grid.Row="2" Columns="4" Margin="0,10,0,0">
                         <Border Style="{StaticResource StatCard}" Padding="12,6">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource StatLabel}" Text="Roof uplift · cladding"/>

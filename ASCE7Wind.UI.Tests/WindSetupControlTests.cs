@@ -88,8 +88,8 @@ namespace ASCE7Wind.UI.Tests
                 c.GoToStep(step);
                 Layout(c);
                 var sv = Find<ScrollViewer>(c, scrollers[step]);
+                Snapshot(c, $"fit_step{step + 1}_h{wallHeight:0}"); // first, so a failing step still leaves its picture
                 Assert.AreEqual(0, sv.ScrollableHeight, 0.5, $"step {step + 1} must not scroll (h = {wallHeight} ft)");
-                Snapshot(c, $"fit_step{step + 1}_h{wallHeight:0}");
             }
         }
 
