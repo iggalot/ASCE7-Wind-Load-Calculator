@@ -64,6 +64,14 @@ namespace ASCE7WindLoadCalculator
             return Paginate(info, Asce7Edition.For(version).Name, sections);
         }
 
+        /// <summary>
+        /// A document of any sections (no cover, no wind pages) on the same pages as the report: landscape Letter, the
+        /// project and section in the header, <paramref name="subtitle"/> at the header's right (where the report names
+        /// the ASCE 7 edition), date and page numbers in the footer. The shear-wall designer prints its hold-down catalog so.
+        /// </summary>
+        public static FixedDocument Document(ReportInfo info, string subtitle, IEnumerable<ReportSection> sections) =>
+            Paginate(info ?? new ReportInfo(), subtitle ?? string.Empty, sections ?? Enumerable.Empty<ReportSection>());
+
         // ------------------------------------------------------------------ pagination
 
         private sealed class PageBlocks
