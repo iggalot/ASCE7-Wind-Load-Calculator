@@ -16,7 +16,7 @@ namespace ASCE7Wind.Tests
         [TestMethod]
         public void FlatRoof_Box()
         {
-            var m = new BuildingModel(Bldg.Make(60, 40, 15));
+            var m = new WindGeometry(Bldg.Make(60, 40, 15));
             Assert.AreEqual(5, m.Surfaces.Count);
             Assert.AreEqual(60 * 40, m.Roofs.Single().Area, 1e-9);
             Assert.AreEqual(2 * (60 + 40) * 15, m.Walls.Sum(w => w.Area), 1e-9);
@@ -28,7 +28,7 @@ namespace ASCE7Wind.Tests
         public void GableRoof_PlanesAndGableEnds(RidgeDirections ridge)
         {
             double L = 60, B = 40, H = 15, slope = 25;
-            var m = new BuildingModel(Bldg.Make(L, B, H, RoofTypes.ROOF_TYPE_GABLE, slope, ridge));
+            var m = new WindGeometry(Bldg.Make(L, B, H, RoofTypes.ROOF_TYPE_GABLE, slope, ridge));
             Assert.AreEqual(2, m.Roofs.Count());
             Assert.AreEqual(L * B / Cos(slope), m.Roofs.Sum(r => r.Area), 1e-6, "sloped area = plan / cos(theta)");
 
@@ -45,7 +45,7 @@ namespace ASCE7Wind.Tests
         public void HipRoof_FourPlanesMeetAtRidge(double L, double B)
         {
             double H = 12, slope = 20;
-            var m = new BuildingModel(Bldg.Make(L, B, H, RoofTypes.ROOF_TYPE_HIP, slope));
+            var m = new WindGeometry(Bldg.Make(L, B, H, RoofTypes.ROOF_TYPE_HIP, slope));
             Assert.AreEqual(4, m.Roofs.Count());
             Assert.AreEqual(L * B / Cos(slope), m.Roofs.Sum(r => r.Area), 1e-6);
             Assert.AreEqual(2 * (L + B) * H, m.Walls.Sum(w => w.Area), 1e-9, "hip roofs have no gable walls");
@@ -60,7 +60,7 @@ namespace ASCE7Wind.Tests
             foreach (var roof in new[] { RoofTypes.ROOF_TYPE_GABLE, RoofTypes.ROOF_TYPE_HIP })
                 foreach (var ridge in new[] { RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH })
                 {
-                    var m = new BuildingModel(Bldg.Make(50, 30, 10, roof, 30, ridge));
+                    var m = new WindGeometry(Bldg.Make(50, 30, 10, roof, 30, ridge));
                     foreach (var s in m.Roofs)
                     {
                         var c = new Vec2(s.PlanRegion.Average(p => p.X), s.PlanRegion.Average(p => p.Y));
@@ -72,7 +72,7 @@ namespace ASCE7Wind.Tests
         [TestMethod]
         public void Normals_PointOutward()
         {
-            var m = new BuildingModel(Bldg.Make(60, 40, 15, RoofTypes.ROOF_TYPE_HIP, 20));
+            var m = new WindGeometry(Bldg.Make(60, 40, 15, RoofTypes.ROOF_TYPE_HIP, 20));
             var center = new Vec3(30, 20, 10);
             foreach (var s in m.Surfaces)
             {

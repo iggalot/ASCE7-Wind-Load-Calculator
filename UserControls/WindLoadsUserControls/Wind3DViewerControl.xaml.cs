@@ -199,7 +199,7 @@ namespace ASCE7WindLoadCalculator
             sceneRoot.Children.Add(new DirectionalLight(Color.FromRgb(0x22, 0x22, 0x22), new Vector3D(0.5, -0.3, 0.7)));
         }
 
-        private void AddGround(BuildingModel m, double size)
+        private void AddGround(WindGeometry m, double size)
         {
             double pad = 0.9 * size;
             double x0 = -pad, x1 = m.L + pad, y0 = -pad, y1 = m.B + pad, z = -0.02 * size / 50;
@@ -228,7 +228,7 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>Neutral envelope drawn slightly inside the zones so surfaces without zones still read as solid.</summary>
-        private void AddEnvelope(BuildingModel m, double size)
+        private void AddEnvelope(WindGeometry m, double size)
         {
             double inset = size / 2000;
             var tris = new List<Vec3>();
@@ -412,7 +412,7 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>Building edges - eaves, rakes, ridge and hip lines - always drawn so the roof shape reads clearly.</summary>
-        private void AddEnvelopeEdges(BuildingModel m, double size)
+        private void AddEnvelopeEdges(WindGeometry m, double size)
         {
             var strips = new List<Vec3>();
             double w = size / 220, lift = size / 1200;
@@ -422,7 +422,7 @@ namespace ASCE7WindLoadCalculator
             sceneRoot.Children.Add(Model(strips, Color.FromRgb(0x24, 0x24, 0x22)));
         }
 
-        private void AddWindArrow(BuildingModel m, Vec3 dir, double size)
+        private void AddWindArrow(WindGeometry m, Vec3 dir, double size)
         {
             // Arrow upwind of the building, at mid eave height, pointing downwind.
             var center = new Vec3(m.L / 2, m.B / 2, m.EaveHeight * 0.5);
@@ -463,7 +463,7 @@ namespace ASCE7WindLoadCalculator
         /// Whole-building wind: WINDWARD, LEEWARD and SIDE WALL markers on the roof edge over the middle of each wall
         /// (by the wall's outward normal against the wind direction), always drawn so the far walls are named too.
         /// </summary>
-        private void AddWallMarkers(BuildingModel m, Vec3 dir, double size)
+        private void AddWallMarkers(WindGeometry m, Vec3 dir, double size)
         {
             var walls = new[]
             {
@@ -486,7 +486,7 @@ namespace ASCE7WindLoadCalculator
         /// Several stories: each floor drawn as a horizontal rectangle around the building at its elevation (the sum of the
         /// plate heights below it), labeled with its level and height. The top story ends at the eave.
         /// </summary>
-        private void AddStoryLines(BuildingModel m, double size)
+        private void AddStoryLines(WindGeometry m, double size)
         {
             if (building == null || building.NumberOfStories < 2) return;
             var elevations = building.StoryElevations;

@@ -214,7 +214,7 @@ namespace ASCE7WindLoadCalculator
         public static EnvelopeDirection Direction(WindLoadCalculator_MWFRS mwfrs, string direction)
         {
             var b = mwfrs.buildingData;
-            var model = new BuildingModel(b);
+            var model = new WindGeometry(b);
             double W = b.BuildingWidth, D = b.BuildingLength;
             double qh = mwfrs.CalculateDynamicWindPressure(b.MeanRoofHeight), kd = mwfrs.PressureKd, q = qh * kd;
             double a = ZoneWidthA(b);

@@ -191,7 +191,7 @@ namespace ASCE7WindLoadCalculator
                 throw new ArgumentException("An MWFRS calculator is needed.", nameof(calculator));
 
             var b = calculator.buildingData;
-            var model = new BuildingModel(b);
+            var model = new WindGeometry(b);
 
             double walls = MwfrsLateralLoad.WallBaseShearKips(calculator);
             double roofA = RoofHorizontalKips(calculator, model, calculator.windPressureRoof_Neg_External);
@@ -218,7 +218,7 @@ namespace ASCE7WindLoadCalculator
         /// Horizontal force along +x from roof pressures (kips). A pressure p on a plane z = Z0 + Zx x + Zy y
         /// acting over plan area A pushes along x with F = p Zx A (inward pressure positive).
         /// </summary>
-        public static double RoofHorizontalKips(WindLoadCalculator_Base calculator, BuildingModel model, Dictionary<int, PressureData> pressures)
+        public static double RoofHorizontalKips(WindLoadCalculator_Base calculator, WindGeometry model, Dictionary<int, PressureData> pressures)
         {
             var zones = calculator.RoofAreaCalculator;
             if (zones == null) return 0;
@@ -243,7 +243,7 @@ namespace ASCE7WindLoadCalculator
         /// Areas projected on a vertical plane normal to +x: the windward wall (up to its top edge, which is
         /// the rake on a gable end) and the roof silhouette above it.
         /// </summary>
-        public static (double wall, double roof) ProjectedAreas(BuildingModel model, int samples = 2000)
+        public static (double wall, double roof) ProjectedAreas(WindGeometry model, int samples = 2000)
         {
             double L = model.L, B = model.B, wall = 0, roof = 0, dy = B / samples;
             for (int i = 0; i < samples; i++)
@@ -257,7 +257,7 @@ namespace ASCE7WindLoadCalculator
             return (wall, roof);
         }
 
-        private static double RoofTopAlongX(BuildingModel model, double y, double L)
+        private static double RoofTopAlongX(WindGeometry model, double y, double L)
         {
             double best = double.MinValue;
             foreach (double x in new[] { 0.0, L / 2, L, Math.Min(y, L), Math.Max(0, L - y) }.Concat(Enumerable.Range(0, 65).Select(i => L * i / 64.0)))

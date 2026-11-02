@@ -94,7 +94,7 @@ namespace ASCE7WindLoadCalculator
     /// <summary>Everything the 3D view needs, computed without any UI types.</summary>
     public sealed class WindScene
     {
-        public BuildingModel Model { get; internal set; }
+        public WindGeometry Model { get; internal set; }
         public WindViewMode Mode { get; internal set; }
         public MwfrsRoofCase RoofCase { get; internal set; }
         public string Title { get; internal set; }
@@ -137,7 +137,7 @@ namespace ASCE7WindLoadCalculator
             MwfrsRoofCase roofCase = MwfrsRoofCase.MaxSuction)
         {
             if (building == null) throw new ArgumentNullException(nameof(building));
-            var model = new BuildingModel(building);
+            var model = new WindGeometry(building);
             var scene = new WindScene { Model = model, Mode = mode, RoofCase = roofCase };
 
             switch (mode)

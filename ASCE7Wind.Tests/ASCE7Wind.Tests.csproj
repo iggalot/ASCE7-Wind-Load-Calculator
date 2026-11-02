@@ -15,8 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Tests target the engine only; it must build and run with no WPF reference. -->
+    <!-- Tests target the engine and its building-model adapter; both must build and run with no WPF reference. -->
     <ProjectReference Include="..\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
+    <ProjectReference Include="..\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj" />
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,7 +13,7 @@ namespace ASCE7WindLoadCalculator
     ///   (ZoneWWR) or leeward roof (ZoneLWR), with Cp read against slope;
     /// - every other plane, and every plane when the slope is &lt; 10 deg, is divided into the distance bands
     ///   0-h/2 (Zone4), h/2-h (Zone3), h-2h (Zone2) and beyond 2h (Zone1) from the windward edge.
-    /// Built on <see cref="BuildingModel"/>, so it covers any plan proportions without special cases.
+    /// Built on <see cref="WindGeometry"/>, so it covers any plan proportions without special cases.
     /// </summary>
     public class RoofAreaCalculator_MWFRS : AreaCalculator_Base
     {
@@ -27,7 +27,7 @@ namespace ASCE7WindLoadCalculator
 
         public override void ComputeEffectiveWindAreas()
         {
-            var model = new BuildingModel(buildingData);
+            var model = new WindGeometry(buildingData);
             double h = buildingData.MeanRoofHeight;
             double L = buildingData.BuildingLength;
             bool steep = buildingData.RoofPitch >= NormalToRidgeMinSlope;

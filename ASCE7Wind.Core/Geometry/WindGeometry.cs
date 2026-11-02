@@ -76,7 +76,7 @@ namespace ASCE7WindLoadCalculator
     /// wind zoning, drawings and the 3D view all share one geometry. Plan origin at the south-west
     /// eave corner: x along BuildingLength, y along BuildingWidth, z up from grade.
     /// </summary>
-    public sealed class BuildingModel
+    public sealed class WindGeometry
     {
         public BuildingData Building { get; }
         public IReadOnlyList<BuildingSurface> Surfaces { get; }
@@ -91,7 +91,7 @@ namespace ASCE7WindLoadCalculator
 
         public BuildingSurface Surface(BuildingFace face) => Surfaces.FirstOrDefault(s => s.Face == face);
 
-        public BuildingModel(BuildingData building)
+        public WindGeometry(BuildingData building)
         {
             Building = building ?? throw new ArgumentNullException(nameof(building));
             if (L <= 0 || B <= 0 || EaveHeight <= 0)

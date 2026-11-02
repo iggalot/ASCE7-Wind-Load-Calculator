@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Building model -> the wind engine's inputs. The wind app reads the shared building model (BuildingModel.Core, which
+    knows nothing of wind); the engine (ASCE7Wind.Core) knows nothing of the model. No WPF.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>ASCE7WindLoadCalculator.ModelAdapter</RootNamespace>
+    <AssemblyName>ASCE7Wind.ModelAdapter</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+  </ItemGroup>
+
+</Project>
