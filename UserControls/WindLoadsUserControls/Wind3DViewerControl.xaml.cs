@@ -66,6 +66,30 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Show the numbers card over the view. Hosts that show the same numbers elsewhere can turn it off.</summary>
         public bool ShowSummaryCard { get; set; } = true;
 
+        /// <summary>
+        /// The building only: its shape, floors and roof as entered, with no pressures, legend or wind modes. For checking
+        /// the geometry before the results (the Wind Setup's Building page).
+        /// </summary>
+        public bool GeometryOnly
+        {
+            get => geometryOnly;
+            set
+            {
+                if (geometryOnly == value) return;
+                geometryOnly = value;
+                var v = value ? Visibility.Collapsed : Visibility.Visible;
+                bdModes.Visibility = v;
+                cbBlocks.Visibility = v;
+                cbOutlines.Visibility = v;
+                cbPsfLabels.Visibility = v;
+                Rebuild(resetCamera: false);
+            }
+        }
+        private bool geometryOnly;
+
+        private static string RoofName(RoofTypes r) =>
+            r == RoofTypes.ROOF_TYPE_GABLE ? "gable roof" : r == RoofTypes.ROOF_TYPE_HIP ? "hip roof" : "flat roof";
+
         public WindViewMode Mode
         {
             get
@@ -144,11 +168,18 @@ namespace ASCE7WindLoadCalculator
 
             try
             {
+                if (geometryOnly)
+                {
+                    // the building alone: no calculators, so no zones; the envelope and the floor marks are drawn
+                    scene = WindSceneBuilder.Build(building, null, null, null, WindViewMode.MwfrsAlongLength, RoofCase);
+                    scene.Messages.Clear();
+                }
+                else
                 scene = WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
 
                 // Never leave the designer looking at a building with no pressures (e.g. cladding above the
                 // 60 ft limit): fall back to whole-building wind, which always applies, and say why.
-                if (!scene.Zones.Any(z => z.HasPressure) && !IsWholeBuilding(Mode) && mwfrsLength != null)
+                if (!geometryOnly && !scene.Zones.Any(z => z.HasPressure) && !IsWholeBuilding(Mode) && mwfrsLength != null)
                 {
                     var reasons = scene.Messages.ToList();
                     SetModeSilently(WindViewMode.MwfrsAlongLength);
@@ -177,7 +208,7 @@ namespace ASCE7WindLoadCalculator
             AddOutlines(size);
             AddEnvelopeEdges(model, size);
             AddStoryLines(model, size);
-            if (scene.WindDirection.HasValue)
+            if (scene.WindDirection.HasValue && !geometryOnly) // the building alone: no wind arrow or windward / leeward marks
             {
                 AddWindArrow(model, scene.WindDirection.Value, size);
                 AddWallMarkers(model, scene.WindDirection.Value, size);
@@ -811,8 +842,10 @@ namespace ASCE7WindLoadCalculator
                 return;
             }
 
-            tbTitle.Text = scene.Title;
-            tbSubtitle.Text = scene.Subtitle;
+            tbTitle.Text = geometryOnly ? "The building" : scene.Title;
+            tbSubtitle.Text = geometryOnly
+                ? $"{building.BuildingLength:0.#} × {building.BuildingWidth:0.#} ft, {RoofName(building.RoofType)}, mean roof height {building.BuildingHeight:0.#} ft"
+                : scene.Subtitle;
 
             bdWarnings.Visibility = scene.Messages.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             tbWarnings.Text = string.Join(Environment.NewLine, scene.Messages);
@@ -852,7 +885,7 @@ namespace ASCE7WindLoadCalculator
                 if (roof != null) AddSummary($"Highest roof {what}", $"{FormatPsf(roof.PressurePsf)}  at the {Short(roof.Description)}");
                 if (wall != null) AddSummary($"Highest wall {(scene.Mode == WindViewMode.CladdingSuction ? "suction" : "pressure")}", $"{FormatPsf(wall.PressurePsf)}  at the {Short(wall.Description)}");
             }
-            if (spSummary.Children.Count == 0 || !ShowSummaryCard) bdSummary.Visibility = Visibility.Collapsed;
+            if (spSummary.Children.Count == 0 || !ShowSummaryCard || geometryOnly) bdSummary.Visibility = Visibility.Collapsed;
         }
 
         private void AddSummary(string label, string value)

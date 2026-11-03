@@ -157,6 +157,8 @@ namespace ASCE7WindLoadCalculator
             // One 3D view, moved to whichever step shows it (keeps the camera and the chosen view).
             ccViewerBuilding.Content = null;
             ccViewerResults.Content = null;
+            Viewer.GeometryOnly = Step == BuildingStep;   // the Building page shows the building; its pressures are on Results
+            ugLiveResults.Visibility = Step == BuildingStep ? Visibility.Collapsed : Visibility.Visible;
             if (Step == BuildingStep) ccViewerBuilding.Content = Viewer;
             if (Step == ResultsStep) ccViewerResults.Content = Viewer;
 
@@ -575,7 +577,7 @@ namespace ASCE7WindLoadCalculator
             if (Analysis != null)
                 Viewer.SetResults(Building, Analysis.Cladding, Analysis.MwfrsAlongLength, Analysis.MwfrsAlongWidth, keepCamera: true);
             else
-                Viewer.SetResults(null, null, null, null, keepCamera: true); // nothing sensible to draw
+                Viewer.SetResults(Building, null, null, null, keepCamera: true); // no pressures: the building is still drawn (the Building page shows it as keyed)
 
             UpdateSendState();
             tbSendStatus.Text = string.Empty;

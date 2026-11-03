@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -62,6 +63,19 @@ namespace ASCE7Wind.UI.Tests
             c.GoToStep(2);
             c.GoToStep(0);
             CollectionAssert.AreEqual(new[] { false, true, false }, seen, "one event per page: Building, Results, Site");
+        }
+
+        [STATestMethod]
+        public void BuildingPage_ShowsTheBuildingOnly_ResultsShowThePressures()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
+            c.GoToStep(1);
+            Assert.IsTrue(c.Viewer.GeometryOnly, "Building page: the building, no pressures");
+            Assert.AreEqual(Visibility.Collapsed, Find<FrameworkElement>(c, "ugLiveResults").Visibility, "no result cards before Results");
+            Assert.IsFalse(c.Viewer.Scene.Zones.Any(z => z.HasPressure), "no pressure zones drawn");
+            c.GoToStep(2);
+            Assert.IsFalse(c.Viewer.GeometryOnly, "Results: the pressures");
+            Assert.IsTrue(c.Viewer.Scene.Zones.Any(z => z.HasPressure));
         }
 
         [STATestMethod]

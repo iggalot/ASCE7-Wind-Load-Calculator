@@ -72,7 +72,7 @@
         </Grid.RowDefinitions>
 
         <!-- Toolbar: one compact row. Explanations are in the tooltips. -->
-        <Border Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
+        <Border x:Name="bdModes" Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
             <WrapPanel VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
                     <TextBlock Text="Cladding" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
