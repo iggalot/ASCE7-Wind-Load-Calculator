@@ -166,7 +166,14 @@ namespace ASCE7WindLoadCalculator
             tbStepOf.Text = $"Page {Step + 1} of 3";
             UpdateStepIndicator();
             UpdateSendState();
+            StepChanged?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>Raised when the page changes (Site, Building, Results): a host can show what depends on the results.</summary>
+        public event EventHandler StepChanged;
+
+        /// <summary>True on the Results page: the inputs have been gone through and the loads stand.</summary>
+        public bool OnResults => Step == ResultsStep;
 
         private static readonly string[] StepTitles = { "Where is the building?", "Describe the building", "Wind results" };
 

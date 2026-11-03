@@ -52,6 +52,19 @@ namespace ASCE7Wind.UI.Tests
         }
 
         [STATestMethod]
+        public void StepChanged_TellsTheHost_OnResultsOnlyOnTheLastPage()
+        {
+            var c = Make();
+            var seen = new System.Collections.Generic.List<bool>();
+            c.StepChanged += (s, e) => seen.Add(c.OnResults);
+            Assert.IsFalse(c.OnResults, "starts on Site");
+            c.GoToStep(1);
+            c.GoToStep(2);
+            c.GoToStep(0);
+            CollectionAssert.AreEqual(new[] { false, true, false }, seen, "one event per page: Building, Results, Site");
+        }
+
+        [STATestMethod]
         public void EachStep_ShowsOnlyItsOwnPanel_AndRenders()
         {
             var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
