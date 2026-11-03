@@ -159,7 +159,7 @@ namespace ASCE7WindLoadCalculator
             ccViewerResults.Content = null;
             Viewer.GeometryOnly = Step == BuildingStep;   // the Building page shows the building; its pressures are on Results
             ugLiveResults.Visibility = Step == BuildingStep ? Visibility.Collapsed : Visibility.Visible;
-            if (Step == BuildingStep) ccViewerBuilding.Content = Viewer;
+            if (Step == BuildingStep) ccViewerBuilding.Content = BuildingPreview ?? (object)Viewer;
             if (Step == ResultsStep) ccViewerResults.Content = Viewer;
 
             btnBack.Visibility = Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
@@ -267,6 +267,17 @@ namespace ASCE7WindLoadCalculator
 
         /// <summary>True when the size, stories and roof come from a building model (shown, not edited here).</summary>
         public bool GeometryFromModel => modelGeometry != null;
+
+        /// <summary>
+        /// The host's own view of the building for the Building page (e.g. the building model's 3D view), shown instead of
+        /// the wind viewer's plain building; null: the plain building. The host keeps it up to date.
+        /// </summary>
+        public FrameworkElement BuildingPreview
+        {
+            get => buildingPreview;
+            set { buildingPreview = value; if (Step == BuildingStep) GoToStep(Step); }
+        }
+        private FrameworkElement buildingPreview;
 
         /// <summary>"Edit building…" on the Building step (shown only when the host handles it and a model is loaded).</summary>
         public event EventHandler EditBuildingRequested;
