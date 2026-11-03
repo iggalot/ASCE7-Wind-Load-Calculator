@@ -15,12 +15,12 @@ namespace ASCE7WindLoadCalculator
         public ReportPreviewWindow(FixedDocument report, string title)
         {
             Title = "Report preview: " + title + "  (Print: Ctrl+P; choose \"Microsoft Print to PDF\" for a PDF)";
-            Width = 1200;
-            Height = 900;
+            Width = WindDetailsWindow.FitSize(1200, SystemParameters.WorkArea.Width); // never larger than the screen
+            Height = WindDetailsWindow.FitSize(900, SystemParameters.WorkArea.Height);
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Viewer.Document = report;
             Content = Viewer;
-            Loaded += (s, e) => Viewer.FitToMaxPagesAcross(1);
+            Loaded += (s, e) => { WindDetailsWindow.KeepOnScreen(this, SystemParameters.WorkArea); Viewer.FitToMaxPagesAcross(1); };
         }
     }
 }

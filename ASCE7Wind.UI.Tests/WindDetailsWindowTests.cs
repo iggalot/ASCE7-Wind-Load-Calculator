@@ -104,5 +104,38 @@ namespace ASCE7Wind.UI.Tests
             enc.Frames.Add(BitmapFrame.Create(bmp));
             using (var fs = File.Create(System.IO.Path.Combine(dir, name + ".png"))) enc.Save(fs);
         }
+
+        [TestMethod]
+        public void FitSize_WantedOr95PercentOfTheRoom()
+        {
+            Assert.AreEqual(900, WindDetailsWindow.FitSize(900, 1400), "room enough: as wanted");
+            Assert.AreEqual(788, WindDetailsWindow.FitSize(900, 830), "a 1038 px screen at 125%: 0.95 × 830 = 788.5 → 788");
+            Assert.AreEqual(900, WindDetailsWindow.FitSize(900, 0), "no screen information: as wanted");
+        }
+
+        [STATestMethod]
+        public void NeverLargerThanTheWorkArea()
+        {
+            var w = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_FLAT }, out _);
+            var area = SystemParameters.WorkArea;
+            Assert.IsTrue(w.Width <= area.Width && w.Height <= area.Height, $"{w.Width} × {w.Height} in {area.Width} × {area.Height}");
+            Assert.IsTrue(w.MinHeight <= w.Height && w.MinWidth <= w.Width);
+        }
+
+        [STATestMethod]
+        public void KeepOnScreen_TitleBarAboveTheScreen_MovedDown()
+        {
+            // what was seen: top at -53 with a window taller than the screen
+            var w = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_FLAT }, out _);
+            w.Width = 1200; w.Height = 700; w.Left = 85; w.Top = -53;
+            w.KeepOnScreen(new Rect(0, 0, 1550, 800));
+            Assert.AreEqual(0, w.Top);
+            Assert.AreEqual(85, w.Left);
+
+            w.Left = 600; w.Top = 300; // off the bottom right: moved back in
+            w.KeepOnScreen(new Rect(0, 0, 1550, 800));
+            Assert.AreEqual(350, w.Left);
+            Assert.AreEqual(100, w.Top);
+        }
     }
 }
