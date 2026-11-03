@@ -284,8 +284,9 @@ namespace ASCE7WindLoadCalculator
             foreach (var c in new Control[] { rbRoofFlat, rbRoofGable, rbRoofHip, cbStories, rbRidgeAlong, rbRidgeAcross }) c.IsEnabled = !locked;
             bdModel.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
             btnEditBuilding.Visibility = locked && EditBuildingRequested != null ? Visibility.Visible : Visibility.Collapsed;
-            tbModel.Text = "The size, stories and roof below come from the building model. Change them in the Building Model editor; " +
-                           "the enclosure, parapet envelope and components are set here." + (string.IsNullOrEmpty(note) ? "" : Environment.NewLine + note);
+            // the model's geometry is shown as text, not as inputs that cannot be changed
+            secRoof.Visibility = secSize.Visibility = pnlParapetHeight.Visibility = locked ? Visibility.Collapsed : Visibility.Visible;
+            tbModel.Text = "Change these in the Building Model editor." + (string.IsNullOrEmpty(note) ? "" : Environment.NewLine + note);
             if (locked) SetInputs(WithWindInputs(modelGeometry, Building), Version, Parameters);
         }
 
@@ -619,7 +620,8 @@ namespace ASCE7WindLoadCalculator
             SetMessage(msgBuilding, string.Join(Environment.NewLine, bldg));
 
             bool sloped = Building.RoofTypeIsSloped();
-            secSlope.Visibility = sloped ? Visibility.Visible : Visibility.Collapsed;
+            secSlope.Visibility = sloped && !GeometryFromModel ? Visibility.Visible : Visibility.Collapsed; // the model's: in its read-out
+            ShowModelFacts();
             secParapet.Visibility = sloped ? Visibility.Collapsed : Visibility.Visible; // parapets are counted on flat roofs
             double typedParapet = Parse(tbParapet.Text);
             bool parapetBad = !string.IsNullOrWhiteSpace(tbParapet.Text) && (double.IsNaN(typedParapet) || typedParapet < 0);
@@ -648,6 +650,37 @@ namespace ASCE7WindLoadCalculator
         {
             tb.Text = text ?? string.Empty;
             tb.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>The model's geometry as label / value rows (read only), on the Building page.</summary>
+        private void ShowModelFacts()
+        {
+            gModelFacts.Children.Clear();
+            gModelFacts.RowDefinitions.Clear();
+            gModelFacts.ColumnDefinitions.Clear();
+            if (!GeometryFromModel) return;
+            var b = Building;
+            gModelFacts.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            gModelFacts.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            string roof = b.RoofType == RoofTypes.ROOF_TYPE_GABLE ? $"Gable, {b.RoofPitch:0.#}°, ridge {(b.RidgeDirection == RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH ? "along the length" : "across the width")}"
+                        : b.RoofType == RoofTypes.ROOF_TYPE_HIP ? $"Hip, {b.RoofPitch:0.#}°" : "Flat";
+            var rows = new List<(string, string)>
+            {
+                ("Size", $"{b.BuildingLength:0.#} × {b.BuildingWidth:0.#} ft  (L W-E × B S-N)"),
+                ("Floors", $"{b.NumberOfStories}  ·  plates {string.Join(" + ", b.StoryPlateHeights.Select(h => h.ToString("0.#")))} ft  ·  eave {b.BuildingHeight:0.#} ft"),
+                ("Roof", roof),
+                ("Eave overhang", $"{b.OverhangWidth:0.#} ft"),
+            };
+            if (!b.RoofTypeIsSloped()) rows.Add(("Parapet", $"{b.ParapetHeight:0.#} ft"));
+            foreach (var (label, value) in rows)
+            {
+                int r = gModelFacts.RowDefinitions.Count;
+                gModelFacts.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                var l = new TextBlock { Text = label, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x51, 0x4E)), Margin = new Thickness(0, 2, 8, 2) };
+                var v = new TextBlock { Text = value, FontWeight = FontWeights.SemiBold, Foreground = Brushes.Black, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2) };
+                Grid.SetRow(l, r); Grid.SetRow(v, r); Grid.SetColumn(v, 1);
+                gModelFacts.Children.Add(l); gModelFacts.Children.Add(v);
+            }
         }
 
         private void ShowBuildingNumbers()

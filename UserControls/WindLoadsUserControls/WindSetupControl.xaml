@@ -474,13 +474,15 @@
                                 Background="#EEF4FC" BorderBrush="#9CC0EC" BorderThickness="1">
                             <StackPanel>
                                 <TextBlock FontWeight="SemiBold" Foreground="#104281" Text="From the building model"/>
-                                <TextBlock x:Name="tbModel" TextWrapping="Wrap" Foreground="#104281" Margin="0,4,0,0"
-                                           Text="The size, stories and roof below come from the building model. Change them in the Building Model editor; the enclosure, parapet envelope and components are set here."/>
+                                <!-- the model's geometry, read only (MainWindow: ShowModelFacts): label / value rows -->
+                                <Grid x:Name="gModelFacts" Margin="0,8,0,0"/>
+                                <TextBlock x:Name="tbModel" TextWrapping="Wrap" Foreground="#104281" Margin="0,8,0,0"
+                                           Text="Change these in the Building Model editor."/>
                                 <Button x:Name="btnEditBuilding" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                         Content="Edit building…" Click="EditBuilding_Click" Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
-                        <Border Style="{StaticResource Section}" Margin="0,0,0,8">
+                        <Border x:Name="secRoof" Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Roof shape"/>
                                 <StackPanel Orientation="Horizontal">
@@ -506,7 +508,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Style="{StaticResource Section}" Margin="0,0,0,8">
+                        <Border x:Name="secSize" Style="{StaticResource Section}" Margin="0,0,0,8">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Size (to the outside of the walls)"/>
                                 <UniformGrid Columns="4">
@@ -596,7 +598,7 @@
                                 ToolTip="Parapets add horizontal force to the shear walls (27.3.4): pp = qp Kd (GCpn), +1.5 windward and -1.0 leeward, qp at the top of the parapet.">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="Parapet"/>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel x:Name="pnlParapetHeight" Orientation="Horizontal">
                                     <Border x:Name="bdParapet" Style="{StaticResource NumberFrame}" Width="120">
                                         <DockPanel><TextBlock DockPanel.Dock="Right" Style="{StaticResource Unit}" Text="ft"/>
                                             <TextBox x:Name="tbParapet" Style="{StaticResource NumberBox}" TextChanged="Input_Changed" AutomationProperties.Name="Parapet height above the roof in feet"/></DockPanel>

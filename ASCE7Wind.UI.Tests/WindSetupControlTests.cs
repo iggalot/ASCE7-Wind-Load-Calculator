@@ -471,6 +471,15 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(RoofTypes.ROOF_TYPE_GABLE, c.Building.RoofType);
             Assert.AreEqual(BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED, c.Building.EnclosureType, "the wind screen's own input");
             Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnEditBuilding").Visibility, "no host handles Edit building");
+            // shown as text, not as inputs that cannot be changed
+            Assert.AreEqual(Visibility.Collapsed, Find<Border>(c, "secRoof").Visibility, "no roof buttons");
+            Assert.AreEqual(Visibility.Collapsed, Find<Border>(c, "secSize").Visibility, "no size boxes");
+            Assert.AreEqual(Visibility.Collapsed, Find<Border>(c, "secSlope").Visibility, "no pitch box");
+            var facts = string.Join(" | ", Find<Grid>(c, "gModelFacts").Children.OfType<TextBlock>().Select(t => t.Text));
+            StringAssert.Contains(facts, "72 × 36 ft");
+            StringAssert.Contains(facts, "plates 10 + 9 ft");
+            StringAssert.Contains(facts, "Gable, 26.6°");
+            StringAssert.Contains(facts, "1.5 ft");
 
             // a value forced into a box does not change the building: the model's size is used
             Find<TextBox>(c, "tbL").Text = "10";
@@ -480,6 +489,7 @@ namespace ASCE7Wind.UI.Tests
 
             c.SetModelGeometry(null);
             Assert.IsFalse(c.GeometryFromModel);
+            Assert.AreEqual(Visibility.Visible, Find<Border>(c, "secSize").Visibility, "typed here again");
             Assert.IsFalse(Find<TextBox>(c, "tbL").IsReadOnly);
             Assert.IsTrue(Find<ComboBox>(c, "cbStories").IsEnabled);
         }
