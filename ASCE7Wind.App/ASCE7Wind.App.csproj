@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Wind Load Calculator on its own: a window around the wind library's page (ASCE7WindLoadCalculator: the Site,
+    Building and Results steps, the 3D view, the detailed calculations and the report). Two ways to use it:
+      - a quick check: type the building's size and roof, read the pressures (no file);
+      - a project: open a .bldg.json, the building comes from the model (read only here) and the wind inputs are saved
+        in the file's Wind section, the one the Shear Wall Calculator and the Load Manager read.
+    Named WindLoadCalculator.exe. No calculation lives here: it is all in ASCE7Wind.Core.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>ASCE7WindLoadCalculator.App</RootNamespace>
+    <AssemblyName>WindLoadCalculator</AssemblyName>
+    <StartupObject>ASCE7WindLoadCalculator.App.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ASCE7WindLoadCalculator.csproj" />
+    <ProjectReference Include="..\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
+    <ProjectReference Include="..\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj" />
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+    <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Building > Edit building) -->
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj" />
+  </ItemGroup>
+
+</Project>

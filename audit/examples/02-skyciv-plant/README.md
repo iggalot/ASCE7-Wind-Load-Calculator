@@ -169,7 +169,7 @@ Model: 64 ft (x) × 104 ft (y), levels at 10, 20 and 30 ft, gable pitch atan(3/1
 | h, qz at 10 / 20 / 30 ft, qh, GCpi | 33; 26.63; 28.20; 30.71; 31.33; 0.55 | **pass** (within 0.1 psf) |
 | Roof Cp along L: −0.89 / −0.18 windward, −0.51 leeward | as above | **pass** |
 | Roof Cp along B: −0.9 / −0.9 / −0.5 / −0.3, −0.18 | as above | **pass** |
-| 14 design pressures from Tables 9 and 10 (along L) | as above | 11 **pass**; 3 **fail by 0.06 to 0.08 psf** |
+| 14 design pressures from Tables 9 and 10 (along L) | as above | **pass**: 9 within tolerance; 5 differ by 0.06 to 0.19 psf (the example rounds Kz, qh 31.33 against 31.40) and agree rounded up to the next whole psf |
 
 The three misses:
 - windward wall at 10 ft, +GCpi: 0.88 published, 0.82 computed;

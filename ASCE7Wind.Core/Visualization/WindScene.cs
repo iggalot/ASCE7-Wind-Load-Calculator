@@ -200,12 +200,18 @@ namespace ASCE7WindLoadCalculator
         /// The envelope of all the wind cases: each cell with its largest (<paramref name="max"/>) or smallest net
         /// pressure, and the case that puts it there. Max and min are separate views.
         /// </summary>
-        public static WindScene FromEnvelope(BuildingData building, IReadOnlyList<WindEnvelopeCell> cells, bool max, int caseCount)
+        /// <param name="from">The wind direction the cases share ("W", "SW" ...): the envelope of that direction's cases, with its
+        /// wind arrow; null: of every case.</param>
+        public static WindScene FromEnvelope(BuildingData building, IReadOnlyList<WindEnvelopeCell> cells, bool max, int caseCount, string from = null)
         {
             if (building == null) throw new ArgumentNullException(nameof(building));
             var scene = new WindScene { Model = new WindGeometry(building), Mode = WindViewMode.WindCases };
-            scene.Title = max ? "Envelope: largest pressure (toward the surface)" : "Envelope: largest suction (away from the surface)";
-            scene.Subtitle = $"Each piece shows the {(max ? "most positive" : "most negative")} net pressure of all {caseCount} wind cases, and the case that gives it";
+            string what = max ? "largest pressure (toward the surface)" : "largest suction (away from the surface)";
+            scene.Title = from == null ? "Envelope: " + what : $"Envelope, wind from the {DirectionWord(from)}: {what}";
+            scene.Subtitle = from == null
+                ? $"Each piece shows the {(max ? "most positive" : "most negative")} net pressure of all {caseCount} wind cases, and the case that gives it"
+                : $"Each piece shows the {(max ? "most positive" : "most negative")} net pressure of the {caseCount} wind cases from the {from}, and the case that gives it";
+            if (from != null) scene.WindDirection = Toward(from);
             if (cells == null || cells.Count == 0) { scene.Messages.Add("No wind cases yet - enter the wind inputs."); return scene; }
 
             int id = 0;
@@ -219,6 +225,14 @@ namespace ASCE7WindLoadCalculator
                     by == null ? "No case loads this piece" : $"{zone}, from {by.Name}", p));
             }
             return scene;
+        }
+
+        /// <summary>"W" → "west", "SW" → "southwest" (a direction as words).</summary>
+        public static string DirectionWord(string from)
+        {
+            if (string.IsNullOrEmpty(from)) return from;
+            string Word(char c) => c == 'N' ? "north" : c == 'S' ? "south" : c == 'E' ? "east" : c == 'W' ? "west" : c.ToString();
+            return string.Concat(from.Select(Word));
         }
 
         /// <summary>The way a wind from <paramref name="from"/> (W, SW, S ... ) blows: from the W toward +x, from the S toward +y.</summary>

@@ -484,8 +484,11 @@ namespace ASCE7Wind.UI.Tests
             // a value forced into a box does not change the building: the model's size is used
             Find<TextBox>(c, "tbL").Text = "10";
             Assert.AreEqual(72, c.Building.BuildingLength, 1e-9);
-            Find<RadioButton>(c, "rbEncOpen").IsChecked = true;
-            Assert.AreEqual(BuildingEnclosures.BLDG_OPEN, c.Building.EnclosureType);
+            Find<RadioButton>(c, "rbEncPartEnc").IsChecked = true;
+            Assert.AreEqual(BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED, c.Building.EnclosureType);
+            // open buildings (free roofs, Figs. 27.3-4 to 27.3-7) are not calculated yet: the choice is greyed, its tooltip says so
+            Assert.IsFalse(Find<RadioButton>(c, "rbEncOpen").IsEnabled);
+            StringAssert.StartsWith((string)Find<RadioButton>(c, "rbEncOpen").ToolTip, "Not implemented at this time");
 
             c.SetModelGeometry(null);
             Assert.IsFalse(c.GeometryFromModel);
@@ -512,6 +515,8 @@ namespace ASCE7Wind.UI.Tests
                 var strip = (FrameworkElement)Find<TextBlock>(c, "valRoof").Parent;
                 Assert.IsTrue(((FrameworkElement)strip.Parent).ActualHeight < 34, "one line of numbers");
                 Assert.IsTrue(Find<TextBlock>(c, "subWest").Text.Contains("Minimum"), "the make-up is in the tooltip");
+                int all = ASCE7WindLoadCalculator.WindCases.For(c.Analysis).Count;
+                StringAssert.StartsWith(Find<TextBlock>(c, "tbCaseCount").Text, $"{all} wind cases", "the count the shear walls take (WindCases.For), not the old per-direction list");
                 var view = Find<FrameworkElement>(c, "ccViewerResults");
                 double withPanel = view.ActualWidth;
 

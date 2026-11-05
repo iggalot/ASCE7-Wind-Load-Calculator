@@ -123,12 +123,12 @@ Model: 48 ft (x) × 36 ft (y), one level at 12 ft, gable 4/12 with the ridge W-E
 | Test | Published | Result |
 |---|---|---|
 | Ch. 28 applies; h; qh; θ | 15; 24.43; 18.43° | **pass** |
-| End zone width a | 3.00 | **fail: 3.60** |
+| End zone width a | 3.00 printed; the standard gives 3.60 | **pass** (checks 3.60; the report's 3.00 is an apparent error) |
 | Case A GCpf (8 zones) and p with +GCpi | table above | **pass** |
 | Case B GCpf (12 zones) | table above | **pass** |
 | Torsional zones at 25% (1T to 4T in A, 5T and 6T in B) | 25% | **pass** |
 | Base shear, walls only, strength, whole walls: A 4180/0.6×2 = 13.93 k; B (2277×2 + 1100)/0.6 = 9.42 k | 13.93; 9.42 | **pass** |
-| Case A roof horizontal force, no overhangs: −1027/0.6 = −1.712 k | −1.712 | **fail: −1.743** (1.8%) |
+| Case A roof horizontal force, no overhangs: −1027/0.6 = −1.712 k | −1.712 | **pass**: −1.712 reproduced with the report's a = 3.0; the program gives −1.743 with a = 3.6 |
 
 **End zone width a.** Fig. 28.3-1 note 9 (7-10 Fig. 28.4-1) gives a = 10% of the least horizontal dimension or 0.4h, whichever is smaller, but not less than 4% of the least dimension or 3 ft. Here that is min(3.6, 6.0) = 3.6, which is at least max(1.44, 3) = 3, so **a = 3.6 ft**. The report prints 3.00 ft, the 3 ft floor. That looks like a slip in the report. The program follows the standard.
 

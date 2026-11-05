@@ -91,6 +91,13 @@
                                 <Setter TargetName="bd" Property="BorderBrush" Value="#2A78D6"/>
                                 <Setter TargetName="bd" Property="BorderThickness" Value="2"/>
                             </Trigger>
+                            <!-- a choice not available yet: greyed, its tooltip says why -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Background" Value="#F1F0EC"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#D6D4CE"/>
+                                <Setter TargetName="bd" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -472,8 +479,11 @@
                                 <RadioButton x:Name="rbEncPartOpen" GroupName="enc" Style="{StaticResource Card}" Checked="Input_Changed">
                                     <StackPanel><TextBlock FontWeight="SemiBold" Text="Partially open"/><TextBlock Style="{StaticResource Hint}" Text="None of the other three"/></StackPanel>
                                 </RadioButton>
-                                <RadioButton x:Name="rbEncOpen" GroupName="enc" Style="{StaticResource Card}" Margin="0" Checked="Input_Changed">
-                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Open"/><TextBlock Style="{StaticResource Hint}" Text="Every wall at least 80% open, e.g. a carport"/></StackPanel>
+                                <!-- not available: an open building takes the free-roof figures (Figs. 27.3-4 to 27.3-7), not written yet -->
+                                <RadioButton x:Name="rbEncOpen" GroupName="enc" Style="{StaticResource Card}" Margin="0" Checked="Input_Changed"
+                                             IsEnabled="False" ToolTipService.ShowOnDisabled="True"
+                                             ToolTip="Not implemented at this time. An open building (every wall at least 80% open) takes the free-roof pressures of Figs. 27.3-4 to 27.3-7, which this calculator does not have yet.">
+                                    <StackPanel><TextBlock FontWeight="SemiBold" Text="Open"/><TextBlock Style="{StaticResource Hint}" Text="Not available yet (free roofs, Figs. 27.3-4 to 27.3-7)"/></StackPanel>
                                 </RadioButton>
                             </UniformGrid>
                         </Grid>
@@ -887,7 +897,8 @@
                                     <CheckBox x:Name="cbOnlyCases13" VerticalContentAlignment="Top" Checked="Input_Changed" Unchecked="Input_Changed">
                                         <StackPanel>
                                             <TextBlock x:Name="tbOnlyCasesTitle" FontWeight="SemiBold" Text="Use load cases 1 and 3 only"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."/>
+                                            <!-- the title and this hint follow the procedure: Ch. 27 skips Cases 2 and 4, Ch. 28 its torsional Load Cases 3 and 4 -->
+                                            <TextBlock x:Name="tbOnlyCasesHint" Style="{StaticResource Hint}" Text="Allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."/>
                                         </StackPanel>
                                     </CheckBox>
                                     <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,4"/>

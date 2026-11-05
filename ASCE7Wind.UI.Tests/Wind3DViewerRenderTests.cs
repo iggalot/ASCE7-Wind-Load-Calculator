@@ -264,12 +264,20 @@ namespace ASCE7Wind.UI.Tests
             var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
             var v = Viewer(b, WindViewMode.WindCases);
             var groups = v.CaseGroups;
-            CollectionAssert.AreEqual(new[] { "From the west (W)", "From the east (E)", "From the south (S)", "From the north (N)",
+            CollectionAssert.AreEqual(new[] { "Envelope of all 212 cases", "From the west (W)", "From the east (E)", "From the south (S)", "From the north (N)",
                                               "From the southwest (SW)", "From the southeast (SE)", "From the northwest (NW)", "From the northeast (NE)" },
                                       groups.Where(g => !g.Contains("|")).ToList());
-            CollectionAssert.AreEqual(new[] { "From the west (W)|Case 1", "From the west (W)|Case 2" }, groups.Where(g => g.StartsWith("From the west (W)|")).ToList());
-            CollectionAssert.AreEqual(new[] { "From the southwest (SW)|Case 3", "From the southwest (SW)|Case 4" }, groups.Where(g => g.StartsWith("From the southwest (SW)|")).ToList());
-            Assert.AreEqual(212, v.ShownCaseCount, "every case once");
+            // each principal wind lists every Fig. 27.3-8 case it takes part in: Cases 1 and 2 (its own), then Cases 3 and 4
+            // with each of the two winds across it (the same cases as under the quartering direction)
+            CollectionAssert.AreEqual(new[] { "From the west (W)|Envelope", "From the west (W)|Case 1", "From the west (W)|Case 2",
+                                              "From the west (W)|Cases 3 and 4 with the south wind (from SW)", "From the west (W)|Cases 3 and 4 with the north wind (from NW)" },
+                                      groups.Where(g => g.StartsWith("From the west (W)|")).ToList());
+            CollectionAssert.AreEqual(new[] { "From the southwest (SW)|Envelope", "From the southwest (SW)|Case 3", "From the southwest (SW)|Case 4" }, groups.Where(g => g.StartsWith("From the southwest (SW)|")).ToList());
+            Assert.AreEqual(212, v.ShownCaseCount, "every case (a quartering case is listed under its own direction and under its two winds)");
+            var west = ((System.Windows.Controls.TreeView)v.FindName("tvCases")).Items.OfType<System.Windows.Controls.TreeViewItem>()
+                        .First(i => ((System.Windows.Controls.TextBlock)i.Header).Inlines.OfType<System.Windows.Documents.Run>().First().Text == "From the west (W)");
+            Assert.AreEqual((13 + 2 * 40).ToString(), ((System.Windows.Controls.TextBlock)west.Header).Inlines.OfType<System.Windows.Documents.Run>().Last().Text.Trim(),
+                            "W: its own 13 and the 40 of SW and of NW");
             foreach (var d in new[] { "W", "E", "S", "N" })
             {
                 Assert.AreEqual(4, v.WindCases.Count(c => c.From == d && c.FigureCase == 1));
@@ -289,7 +297,7 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(c4.Name, v.Scene.Title);
             ((System.Windows.Controls.TextBox)v.FindName("tbCaseFilter")).Text = "torsion ++";
             Assert.AreEqual(v.WindCases.Count(c => c.Name.Contains("torsion ++")), v.ShownCaseCount);
-            Assert.IsTrue(v.CaseGroups.Where(g => !g.Contains("|")).All(g => new[] { "(SW)", "(SE)", "(NW)", "(NE)" }.Any(g.Contains)), "only the quartering winds have torsion ++");
+            Assert.IsTrue(v.CaseGroups.Where(g => !g.Contains("|") && !g.StartsWith("Envelope")).All(g => new[] { "(SW)", "(SE)", "(NW)", "(NE)" }.Any(g.Contains)), "only the quartering winds have torsion ++");
         }
 
         /// <summary>The VIEW flyout: its tab closes and opens the panel (remembered); the building-only view has neither.</summary>
@@ -319,6 +327,52 @@ namespace ASCE7Wind.UI.Tests
                 Assert.AreEqual(Visibility.Collapsed, tab.Visibility);
             }
             finally { if (File.Exists(prefs)) File.Delete(prefs); }
+        }
+
+        /// <summary>
+        /// The envelopes: of every case at the top (Max +, Max −) and of each wind direction's cases inside its group. A
+        /// direction's envelope is of that direction's cases alone (its title and arrow say which); the envelope of every case
+        /// is the largest of the eight: its Max + is the largest of the directions' Max +, its Max − the most negative of
+        /// their Max −.
+        /// </summary>
+        [STATestMethod]
+        public void WindCases_EnvelopePerDirectionAndOfEveryCase()
+        {
+            var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
+            var v = Viewer(b, WindViewMode.WindCases);
+            Assert.IsNull(v.SelectedCase);
+            Assert.IsTrue(v.SelectedEnvelope.From == null && v.SelectedEnvelope.Max, "the envelope of every case, Max +, first");
+            double allMax = v.Scene.MaxPsf;
+            v.EnvelopeMax = false;
+            double allMin = v.Scene.MinPsf;
+
+            double dirMax = double.MinValue, dirMin = double.MaxValue;
+            foreach (var d in new[] { "W", "E", "S", "N", "SW", "SE", "NW", "NE" })
+            {
+                int n = v.WindCases.Count(c => c.From == d);
+                v.SelectedEnvelope = new Wind3DViewerControl.EnvelopeChoice(d, true);
+                Assert.IsNull(v.SelectedCase);
+                StringAssert.Contains(v.Scene.Subtitle, $"the {n} wind cases from the {d}");
+                StringAssert.Contains(v.Scene.Title, "wind from the " + WindSceneBuilder.DirectionWord(d));
+                Assert.AreEqual(WindSceneBuilder.Toward(d).Value.X, v.Scene.WindDirection.Value.X, 1e-12, "the arrow of that wind");
+                Assert.IsTrue(v.Scene.MaxPsf <= allMax + 1e-9, d + ": no more than the envelope of every case");
+                dirMax = Math.Max(dirMax, v.Scene.MaxPsf);
+                v.SelectedEnvelope = new Wind3DViewerControl.EnvelopeChoice(d, false);
+                StringAssert.Contains(v.Scene.Title, "suction");
+                Assert.IsTrue(v.Scene.MinPsf >= allMin - 1e-9, d + ": no more suction than the envelope of every case");
+                dirMin = Math.Min(dirMin, v.Scene.MinPsf);
+            }
+            Assert.AreEqual(allMax, dirMax, 1e-9, "every case's Max + is the largest of the directions' Max +");
+            Assert.AreEqual(allMin, dirMin, 1e-9, "every case's Max − is the most negative of the directions' Max −");
+
+            // a case, then back to the envelope of every case
+            var c1 = v.WindCases.First(c => c.From == "E" && c.FigureCase == 1);
+            v.SelectedCase = c1;
+            Assert.AreEqual(c1.Name, v.Scene.Title);
+            Assert.IsNull(v.SelectedEnvelope);
+            v.EnvelopeMax = true;
+            Assert.IsNull(v.SelectedCase);
+            Assert.AreEqual(allMax, v.Scene.MaxPsf, 1e-9);
         }
     }
 }

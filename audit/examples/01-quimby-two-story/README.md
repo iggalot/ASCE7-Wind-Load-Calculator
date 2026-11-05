@@ -187,7 +187,7 @@ Model: 90 ft (x, E-W) × 50 ft (y), levels at 11 and 22 ft, gable pitch atan(3/1
 | Horizontal totals: N/S 65.66 (governing), E/W 34.01 | 65.66; 34.01 | **pass** |
 | E/W uplift, Cases I and II | 83.34; 44.43 | **pass** |
 | N/S Cp: walls 0.8 / −0.5 / −0.7, leeward roof −0.5, windward −0.18 | as above | **pass** |
-| N/S windward roof Cp, first value | −0.70 | **fail: −0.740** |
-| N/S uplift, Case II / Case I | 62.58; 92.06 | II **pass**; I **fail: 94.37** |
+| N/S windward roof Cp, first value | −0.70 (15° value) | **pass**: checks −0.74, interpolated at 14.04° |
+| N/S uplift, Case II / Case I | 62.58; 92.06 | **pass**: II as printed; I reproduced with the example's −0.70 put in, 94.37 with −0.74 |
 
-**The two failures come from the example, not the program.** The author takes the 15° row for a 14.04° roof ("not worth interpolating"). Fig. 27.3-1 interpolated at 14.04° and h/L = 0.50 gives −0.74. The 2.3 k difference in Case I uplift is exactly that 0.04 × qh·G × 2319 ft².
+**The windward roof value is the example's simplification, not the program's.** The author takes the 15° row for a 14.04° roof ("not worth interpolating"). Fig. 27.3-1 interpolated at 14.04° and h/L = 0.50 gives −0.74. The 2.3 k difference in Case I uplift is exactly that 0.04 × qh·G × 2319 ft². Rounding the angle up is the usual hand shortcut, but here it is slightly unconservative: between 10° (−0.9) and 15° (−0.7) the suction falls as the angle rises.

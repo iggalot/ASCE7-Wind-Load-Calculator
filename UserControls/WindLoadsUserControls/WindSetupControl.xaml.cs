@@ -753,16 +753,29 @@ namespace ASCE7WindLoadCalculator
                 }
             }
             rows.Add(new CheckRow(false, "Confirm the wind speed V against the map for your site and risk category."));
+            // only rigid buildings are calculated (G = 0.85, 26.11.1; torsion at ±0.15B, Fig. 27.3-8)
+            rows.Add(new CheckRow(false, "Rigid building assumed (G = 0.85, 26.11); flexible buildings are not handled at this time."));
             icChecks.ItemsSource = rows;
 
-            int cases = s?.Lateral?.LoadCases.Count ?? 0;
+            // the wind cases the shear walls and the Load Manager take (WindCases.For: every case of the code and commentary)
+            int cases = 0;
+            if (s?.Lateral != null && Analysis != null)
+            {
+                try { cases = ASCE7WindLoadCalculator.WindCases.For(Analysis, OnlyCases1And3).Count; }
+                catch (ArgumentException) { cases = s.Lateral.LoadCases.Count; }
+            }
             bool envelope = s?.Lateral?.Procedure == LateralProcedure.Envelope;
             tbCaseCount.Text = s?.Lateral == null
                 ? "Load cases are not available until the inputs can be calculated."
                 : s.Lateral.ProcedureNote != null
-                    ? $"Ch. 28 does not apply here (see details); Ch. 27, {cases} load cases:"
-                    : $"{cases} load cases ({(envelope ? "Fig. 28.3-1" : "Fig. 27.3-8")}); each wall uses its worst case:";
-            tbOnlyCasesTitle.Text = envelope ? "Skip the torsional cases" : "Use load cases 1 and 3 only";
+                    ? $"Ch. 28 does not apply here (see details); Ch. 27, {cases} wind cases:"
+                    : $"{cases} wind cases ({(envelope ? "Figs. 28.3-1, 28.3-2" : "Fig. 27.3-8")}, every direction); each wall uses its worst case:";
+            // one choice, the exception of the procedure in use: Ch. 27 (27.3.5, Appendix D) drops Fig. 27.3-8 Cases 2 and 4;
+            // Ch. 28 (28.3.2) drops its torsional Load Cases 3 and 4
+            tbOnlyCasesTitle.Text = envelope ? "Skip the torsional Load Cases 3 and 4" : "Use Cases 1 and 3 only (skip 2 and 4)";
+            tbOnlyCasesHint.Text = envelope
+                ? "28.3.2 exception: allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."
+                : "27.3.5 exception (Appendix D): allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms.";
             tbCase1b.Text = envelope ? "Basic: full wind, end zones at one corner, then the other" : "Full wind, each direction alone";
             tbCase2b.Text = envelope ? (s?.Lateral?.EnvelopeAlongLength?.PrintedTorsional == true ? "Torsional: far half at the printed T values (twists the building)" : "Torsional: far half at 25% (twists the building)") : "75%, 15% off-center (twists the building)";
             tbCase3b.Text = envelope ? "Minimum: 16 psf walls, 8 psf roof, a separate case" : "75% from both directions at once";

@@ -254,13 +254,6 @@
                         <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Segment}" Margin="0" Content="Ch. 28" Checked="Procedure_Checked"
                                      ToolTip="Envelope procedure (low-rise): Figs. 28.3-1 and 28.3-2, Load Cases 1 to 4 with each building corner as the reference corner. The two procedures are alternatives: each has its own envelope."/>
                     </StackPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                        <TextBlock Text="Envelope" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <RadioButton x:Name="rbEnvMax" GroupName="env" Style="{StaticResource Segment}" IsChecked="True" Content="Max" Checked="Envelope_Checked"
-                                     ToolTip="Each piece of the building with the most positive net pressure (toward the surface) of all the cases, and the case that gives it."/>
-                        <RadioButton x:Name="rbEnvMin" GroupName="env" Style="{StaticResource Segment}" Margin="0" Content="Min" Checked="Envelope_Checked"
-                                     ToolTip="Each piece of the building with the most negative net pressure (suction) of all the cases, and the case that gives it."/>
-                    </StackPanel>
                     <TextBox x:Name="tbCaseFilter" DockPanel.Dock="Top" Margin="0,0,0,6" TextChanged="CaseFilter_Changed"
                              ToolTip="Show only the cases whose name holds this text (e.g. &quot;Case 3&quot;, &quot;torsion&quot;, &quot;−GCpi&quot;); the groups with a match open"/>
                     <TextBlock x:Name="tbCaseCount" DockPanel.Dock="Top" Foreground="{StaticResource InkMuted}" FontSize="11" Margin="0,0,0,4"/>

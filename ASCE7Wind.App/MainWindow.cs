@@ -1,0 +1,337 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using ASCE7WindLoadCalculator.ModelAdapter;
+using BuildingModel.Diagnostics;
+using BuildingModel.Model;
+using BuildingModel.Serialization;
+using Microsoft.Win32;
+
+namespace ASCE7WindLoadCalculator.App
+{
+    /// <summary>
+    /// The Wind Load Calculator: the wind library's page (Site, Building, Results) in a window of its own.
+    /// <list type="bullet">
+    /// <item>Quick check (no file): the building's size and roof are typed on the Building step.</item>
+    /// <item>Project (.bldg.json): the building comes from the model (shown, not edited: Building > Edit building opens the
+    /// Building Model editor); the wind inputs are the file's Wind section and saving writes only that section.</item>
+    /// </list>
+    /// </summary>
+    public sealed class MainWindow : Window
+    {
+        private const string AppName = "Wind Load Calculator";
+
+        private readonly ContentControl host = new ContentControl();
+        private readonly TextBlock modeText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x51, 0x4E)), Margin = new Thickness(12, 0, 6, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        private readonly TextBlock status = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(10, 0, 10, 0) };
+        private readonly MenuItem saveItem, closeItem, editItem, reloadItem;
+
+        private WindSetupControl setup;
+        private ModelDocument doc;          // the project as opened or last saved (null: a quick check)
+        private string path;
+        private string savedWind;           // the Wind section's text when opened or saved
+        private Process editor;             // the Building Model editor, while it is open on the project
+
+        public MainWindow()
+        {
+            FontFamily = new FontFamily("Segoe UI");
+            FontSize = 12;
+            Background = Brushes.White;
+            Width = 1440; Height = 900; MinWidth = 900; MinHeight = 600;
+            WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            // a laptop: the whole screen (the model and the results want every pixel)
+            var area = SystemParameters.WorkArea;
+            if (area.Width < Width + 40 || area.Height < Height + 40) WindowState = WindowState.Maximized;
+
+            var menu = new Menu { Background = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
+            MenuItem Item(ItemsControl parent, string header, string keys, Action a, string tip = null)
+            {
+                var m = new MenuItem { Header = header, InputGestureText = keys ?? "", ToolTip = tip };
+                if (a != null) m.Click += (s, e) => a();
+                parent.Items.Add(m);
+                return m;
+            }
+            var file = Item(menu, "_File", null, null);
+            Item(file, "_New quick check", "Ctrl+N", () => { if (ConfirmLeave()) NewQuickCheck(); }, "Type a building's size and roof and read the pressures (no file)");
+            Item(file, "_Open project…", "Ctrl+O", OpenDialog, "A project's building model (.bldg.json): the building from the model, the wind inputs from its Wind section");
+            saveItem = Item(file, "_Save", "Ctrl+S", () => Save(), "Writes the wind inputs into the project file (its Wind section; the building and everything else are left as they are)");
+            closeItem = Item(file, "_Close project", null, () => { if (ConfirmLeave()) NewQuickCheck(); }, "Back to a quick check");
+            file.Items.Add(new Separator());
+            Item(file, "Open the _log folder", null, () => OpenFolder(Log.Folder));
+            file.Items.Add(new Separator());
+            Item(file, "E_xit", "Alt+F4", Close);
+            var building = Item(menu, "_Building", null, null);
+            editItem = Item(building, "_Edit building…", null, EditBuilding, "Opens the project in the Building Model editor, the one place the size, levels and roof are changed; this window updates when it saves");
+            reloadItem = Item(building, "_Reload the building", null, () => ReloadBuilding(true), "Reads the building from the file again (another app has changed it); your wind inputs are kept");
+
+            var bar = new DockPanel { LastChildFill = true };
+            var name = new TextBlock { Text = AppName, FontWeight = FontWeights.SemiBold, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 12, 0) };
+            DockPanel.SetDock(name, Dock.Left);
+            DockPanel.SetDock(menu, Dock.Left);
+            bar.Children.Add(name);
+            bar.Children.Add(menu);
+            bar.Children.Add(modeText);
+            var line = new SolidColorBrush(Color.FromRgb(0xE1, 0xE0, 0xD9));
+            var appBar = new Border { Child = bar, BorderBrush = line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(6, 3, 6, 3) };
+            var statusBar = new Border { Child = status, BorderBrush = line, BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 3, 0, 3), Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xF7)) };
+
+            var root = new DockPanel();
+            DockPanel.SetDock(appBar, Dock.Top);
+            DockPanel.SetDock(statusBar, Dock.Bottom);
+            root.Children.Add(appBar);
+            root.Children.Add(statusBar);
+            root.Children.Add(host);
+            Content = root;
+
+            InputBindings.Add(new KeyBinding(new Command(() => { if (ConfirmLeave()) NewQuickCheck(); }), Key.N, ModifierKeys.Control));
+            InputBindings.Add(new KeyBinding(new Command(OpenDialog), Key.O, ModifierKeys.Control));
+            InputBindings.Add(new KeyBinding(new Command(() => Save()), Key.S, ModifierKeys.Control));
+            Closing += (s, e) => { if (!ConfirmLeave()) e.Cancel = true; };
+            Activated += (s, e) => UpdateTitle();
+
+            NewQuickCheck();
+        }
+
+        // ------------------------------------------------------------------ quick check / project
+
+        private bool HasProject => path != null;
+
+        /// <summary>A fresh page for a quick check: the size and roof typed on the Building step, nothing saved.</summary>
+        private void NewQuickCheck()
+        {
+            doc = null;
+            path = savedWind = null;
+            ProjectFolder.Close();
+            Show(new WindSetupControl());
+            modeText.Text = "Quick check: type the building's size and roof on the Building page (nothing is saved).";
+            ShowStatus("A quick check. To work on a project's building, use File > Open project.");
+            Log.Info("App", "New quick check.");
+        }
+
+        private void Show(WindSetupControl page)
+        {
+            setup = page;
+            setup.ShowSendButton = false;          // no shear walls in this window: they read the saved Wind section
+            setup.InputsChanged += (s, e) => UpdateTitle();
+            host.Content = setup;
+            UpdateTitle();
+        }
+
+        private void OpenDialog()
+        {
+            if (!ConfirmLeave()) return;
+            var d = new OpenFileDialog
+            {
+                Title = "Open a project",
+                Filter = "Building model (*.bldg.json)|*.bldg.json|All files (*.*)|*.*",
+                InitialDirectory = ProjectFolder.DialogFolder,
+            };
+            if (d.ShowDialog(this) == true) Open(d.FileName);
+        }
+
+        /// <summary>Opens a project: the building from its model, the wind inputs from its Wind section (the starting ones without).</summary>
+        public void Open(string file)
+        {
+            ModelDocument opened;
+            try
+            {
+                ProjectFolder.OpenFor(file); // first, so the opening is in the project's log
+                opened = ModelFile.Load(file);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
+                                       ex is System.Runtime.Serialization.SerializationException || ex is ArgumentException)
+            {
+                Log.Warning("App", "Could not open " + file, ex);
+                MessageBox.Show(this, "The project could not be opened:\n" + ex.Message, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var b = opened.Building;
+            var wind = WindSection.Read(b);
+            bool had = wind != null;
+            wind = wind ?? WindSection.New();
+
+            var page = new WindSetupControl(new BuildingData { EnclosureType = wind.Enclosure, ParapetEnclosure = wind.ParapetEnclosure }, wind.Edition, wind.ToParameters());
+            page.EditBuildingRequested += (s, e) => EditBuilding();   // before the geometry, so its "Edit building…" shows
+            page.SetComponents(wind.RoofComponent, wind.WallComponent);
+            page.SetOnlyCases1And3(wind.OnlyCases1And3);
+            doc = opened;
+            path = file;
+            Show(page);
+            bool ok = ApplyGeometry(b);
+            savedWind = had ? CurrentWind().ToJson() : string.Empty;   // no Wind section yet: unsaved until saved
+            if (ok) setup.GoToStep(WindSetupControl.ResultsStep);
+            modeText.Text = $"Project: {Path.GetFileName(file)} (the building from the model; wind inputs saved in the file)";
+            Log.Info("App", $"Opened {file}; " + (had ? $"wind {wind.WindSpeed:0} mph, exposure {wind.Exposure}, {wind.Edition}." : "no Wind section yet: the starting inputs."));
+            UpdateTitle();
+        }
+
+        /// <summary>The model's size, stories and roof into the page (shown, not editable). False when the model gives none.</summary>
+        private bool ApplyGeometry(Building b)
+        {
+            try
+            {
+                var input = WindAdapter.From(b, new WindOptions { Enclosure = setup.Building?.EnclosureType ?? BuildingEnclosures.BLDG_ENCLOSED,
+                                                                  ParapetEnclosure = setup.Building?.ParapetEnclosure ?? BuildingEnclosures.BLDG_ENCLOSED });
+                string note = input.Notes.Count > 0 ? string.Join(" ", input.Notes) : null;
+                setup.SetModelGeometry(input.Building, note);
+                var g = input.Building;
+                ShowStatus($"Building from the model: {g.BuildingLength:0.#} × {g.BuildingWidth:0.#} ft, {g.NumberOfStories} stor{(g.NumberOfStories == 1 ? "y" : "ies")}, mean roof height {g.MeanRoofHeight:0.#} ft." + (note == null ? "" : " " + note));
+                Log.Info("Wind", $"Building from the model: L {g.BuildingLength:0.##} ft, B {g.BuildingWidth:0.##} ft, {g.NumberOfStories} stories, roof {g.RoofType} {g.RoofPitch:0.#}°, h {g.MeanRoofHeight:0.##} ft" + (note == null ? "." : ". " + note));
+                return true;
+            }
+            catch (InvalidOperationException ex)
+            {
+                ShowStatus("No wind geometry from the model: " + ex.Message + " Draw the building in the Building Model editor (Building > Edit building).");
+                Log.Warning("Wind", "No wind geometry from the model: " + ex.Message, null);
+                return false;
+            }
+        }
+
+        private WindSection CurrentWind() =>
+            WindSection.From(setup.Version, setup.Parameters, setup.Building.EnclosureType, setup.Building.ParapetEnclosure,
+                             setup.OnlyCases1And3, setup.RoofComponent, setup.WallComponent);
+
+        private bool Dirty => HasProject && savedWind != null && CurrentWind().ToJson() != savedWind;
+
+        /// <summary>
+        /// Writes the wind inputs into the project file: the file is read again and only its Wind section is replaced, so what
+        /// the other apps saved meanwhile (the building, the shear walls, the loads) is kept.
+        /// </summary>
+        private bool Save()
+        {
+            if (!HasProject)
+            {
+                ShowStatus("A quick check is not saved. Open a project (File > Open project) to keep the wind inputs with a building.");
+                return false;
+            }
+            setup.FlushPendingChange(); // a value still being typed counts
+            try
+            {
+                var latest = ModelFile.Load(path);
+                var wind = CurrentWind();
+                wind.Write(latest.Building);
+                ModelFile.Save(path, latest);
+                doc = latest;
+                savedWind = wind.ToJson();
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
+                                       ex is System.Runtime.Serialization.SerializationException)
+            {
+                Log.Warning("App", "Could not save " + path, ex);
+                MessageBox.Show(this, "The project could not be saved:\n" + ex.Message, "Save", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            Log.Info("App", $"Saved the wind inputs in {path} (revision {doc.Revision}).");
+            ShowStatus($"Saved the wind inputs in {Path.GetFileName(path)}. The Shear Wall Calculator and the Load Manager use them when they open the project.");
+            UpdateTitle();
+            return true;
+        }
+
+        /// <summary>Asks to save unsaved wind inputs; false: stay.</summary>
+        private bool ConfirmLeave()
+        {
+            if (!Dirty) return true;
+            var r = MessageBox.Show(this, $"Save the wind inputs in {Path.GetFileName(path)}?", AppName, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (r == MessageBoxResult.Cancel) return false;
+            return r == MessageBoxResult.No || Save();
+        }
+
+        // ------------------------------------------------------------------ the building: edited in the Building Model editor
+
+        private static string EditorPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BuildingModel.exe");
+
+        /// <summary>
+        /// Saves the wind inputs and opens the project in the Building Model editor. This window waits while it is open and
+        /// reads the building again when it closes (the wind inputs are kept).
+        /// </summary>
+        private void EditBuilding()
+        {
+            if (!HasProject) { ShowStatus("A quick check has no building model: its size and roof are typed on the Building page."); return; }
+            if (editor != null && !editor.HasExited) return;
+            if (!File.Exists(EditorPath))
+            {
+                MessageBox.Show(this, "The Building Model editor (BuildingModel.exe) is not next to this program:\n" + EditorPath, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (Dirty && !Save()) return;
+            try
+            {
+                editor = Process.Start(new ProcessStartInfo(EditorPath, "\"" + path + "\"") { UseShellExecute = false });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is InvalidOperationException)
+            {
+                Log.Error("App", "Could not start the Building Model editor", ex);
+                MessageBox.Show(this, "The Building Model editor could not be started:\n" + ex.Message, "Edit building", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            Log.Info("App", "Building Model editor opened on " + path);
+            host.IsEnabled = false;
+            ShowStatus("The building is open in the Building Model editor. Edit and save it there, then close it: this window reads the building again.");
+            editor.EnableRaisingEvents = true;
+            editor.Exited += (s, a) => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                editor = null;
+                host.IsEnabled = true;
+                ReloadBuilding(false);
+            }));
+        }
+
+        /// <summary>Reads the building from the file again; the wind inputs on the screen are kept.</summary>
+        private void ReloadBuilding(bool ask)
+        {
+            if (!HasProject) return;
+            try
+            {
+                doc = ModelFile.Load(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
+                                       ex is System.Runtime.Serialization.SerializationException)
+            {
+                MessageBox.Show(this, "The building could not be read again:\n" + ex.Message, "Reload", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            ApplyGeometry(doc.Building);
+            Log.Info("App", "Building read again from " + path);
+            UpdateTitle();
+        }
+
+        // ------------------------------------------------------------------ the frame
+
+        private void UpdateTitle()
+        {
+            Title = HasProject ? $"{Path.GetFileName(path).Replace(ProjectFolder.ModelExtension, "")}{(Dirty ? " *" : "")} - {AppName}" : $"Quick check - {AppName}";
+            saveItem.IsEnabled = HasProject;
+            closeItem.IsEnabled = HasProject;
+            editItem.IsEnabled = HasProject;
+            reloadItem.IsEnabled = HasProject;
+        }
+
+        private void ShowStatus(string text) => status.Text = text ?? "";
+
+        private void OpenFolder(string folder)
+        {
+            try
+            {
+                Directory.CreateDirectory(folder);
+                Process.Start(new ProcessStartInfo("explorer.exe", "\"" + folder + "\"") { UseShellExecute = true });
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.ComponentModel.Win32Exception)
+            {
+                ShowStatus("The folder could not be opened: " + ex.Message);
+            }
+        }
+
+        private sealed class Command : ICommand
+        {
+            private readonly Action run;
+            public Command(Action run) => this.run = run;
+            public event EventHandler CanExecuteChanged { add { } remove { } }
+            public bool CanExecute(object parameter) => true;
+            public void Execute(object parameter) => run();
+        }
+    }
+}
