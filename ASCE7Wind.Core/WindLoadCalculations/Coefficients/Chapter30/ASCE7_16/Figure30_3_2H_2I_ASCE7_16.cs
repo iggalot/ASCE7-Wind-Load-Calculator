@@ -1,167 +1,41 @@
-﻿namespace ASCE7WindLoadCalculator
+namespace ASCE7WindLoadCalculator
 {
+    /// <summary>
+    /// ASCE 7-16 Figs. 30.3-2H (roof) and 30.3-2I (overhang), hip roofs 27° &lt; θ ≤ 45° (pp. 343-344). The small-area values
+    /// (and the large-area value of Zone 1) are equations in θ; between the printed breakpoints each curve is a straight line
+    /// on log(area). Amin = 9 − 0.135θ sq ft (Zone 3: areas below Amin take the value at Amin, note 7) and Amax = 280 − 5θ
+    /// sq ft (Zone 2e: areas above Amax take the value at Amax, note 8). At θ = 45° the figures show the plotted values.
+    /// </summary>
     public class Figure30_3_2H_2I_ASCE7_16 : Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2H and 2I - Hip Roofs";
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30.3-2H and 2I - Hip Roofs";
         public override string ChartCriteria { get; set; } = "h <= 60ft, 27deg < slope <= 45deg";
 
-        // TODO:  These figures have limits on Amax and Amin when retrieving values
         public Figure30_3_2H_2I_ASCE7_16(double slope)
         {
-            // Calculate parameters
-            double a = -0.6175 - 0.02 * slope;    // Zone1_neg_Roof upper Y1
-            double b1 = -0.0950 - 0.0135 * slope; // Zone1_neg_Roof lower Y2
-            double c = 0.2 - 0.067 * slope;       // Zone2e_neg_Roof Y1
-            double d = 1.0 - 0.082 * slope;       // Zone2r_neg_Roof Y1
-            double e = 1.25 - 0.108 * slope;      // Zone3_neg_Roof Y1
+            // the figures cover 27° to 45°; a steeper roof (outside them, warned elsewhere as for gables) is read at 45°
+            double t = System.Math.Min(45, System.Math.Max(27, slope));
+            double amin = 9 - 0.135 * t;      // Zone 3 (2H and 2I)
+            double amax = 280 - 5.0 * t;      // Zone 2e (2H and 2I)
+            ChartCriteria = $"h <= 60ft, 27deg < slope <= 45deg; slope = {t:0.#}deg, Amin = {amin:0.##} sq ft, Amax = {amax:0.#} sq ft";
 
-            double amin = 9 - 0.135 * slope;
-            double amax = 280 - 5.0 * slope;
+            // Fig. 30.3-2H, roof
+            double r1 = -0.6175 - 0.0200 * t, r1Large = -0.0950 - 0.0135 * t;
+            double r2e = 0.2000 - 0.0670 * t, r2r = 1.0000 - 0.0820 * t, r3 = 1.25 - 0.108 * t;
+            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, r1), (10, r1), (200, r1Large), (1000, r1Large) });
+            RoofCurves_Neg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, r2e), (3, r2e), (amax, -0.8), (1000, -0.8) });
+            RoofCurves_Neg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, r2r), (7, r2r), (100, -1.0), (1000, -1.0) });
+            RoofCurves_Neg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, r3), (amin, r3), (50, -1.0), (1000, -1.0) });
+            foreach (var zone in new[] { "Zone3", "Zone2r", "Zone2e", "Zone1" })   // all zones: +0.9 to 3 sq ft, +0.3 from 100
+                RoofCurves_Pos[zone] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, 0.9), (3, 0.9), (100, 0.3), (1000, 0.3) });
 
-            // Roof Negative Curves
-            RoofCurves_Neg["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, a),
-                (10, a),
-                (20, a-(a-b1)/4),
-                (50, a-(a-b1)/2),
-                (100, a-(a-b1)*3/4),
-                (200, b1),
-                (500, b1),
-                (1000, b1)
-            });
-            RoofCurves_Neg["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, c),
-                (3, c),
-                (5, c-(c+0.8)/4),
-                (10, c-(c+0.8)/2),
-                (20, c-(c+0.8)*3/4),
-                (50, -0.8),
-                (500, -0.8),
-                (1000, -0.8)
-            });
-            RoofCurves_Neg["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, d),
-                (7, d),
-                (10, d-(d+1.0)/4),
-                (20, d-(d+1.0)/2),
-                (50, d-(d+1.0)*3/4),
-                (100, -1.0),
-                (500, -1.0),
-                (1000, -1.0)
-            });
-            RoofCurves_Neg["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, e),
-                (5, e),
-                (8, e-(e+1.0)/4),
-                (10, e-(e+1.0)/2),
-                (20, e-(e+1.0)*3/4),
-                (50, -1.0),
-                (200, -1.0),
-                (1000, -1.0)
-            });
-
-            // Roof Positive Curves (fixed values)
-            RoofCurves_Pos["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, 0.9),
-                (3, 0.9),
-                (10, 0.65),
-                (20, 0.55),
-                (50, 0.4),
-                (100, 0.3),
-                (200, 0.3),
-                (1000, 0.3)
-            });
-            RoofCurves_Pos["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, 0.9),
-                (3, 0.9),
-                (10, 0.65),
-                (20, 0.55),
-                (50, 0.4),
-                (100, 0.3),
-                (200, 0.3),
-                (1000, 0.3)
-            });
-            RoofCurves_Pos["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, 0.9),
-                (3, 0.9),
-                (10, 0.65),
-                (20, 0.55),
-                (50, 0.4),
-                (100, 0.3),
-                (200, 0.3),
-                (1000, 0.3)
-            });
-            RoofCurves_Pos["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, 0.9),
-                (3, 0.9),
-                (10, 0.65),
-                (20, 0.55),
-                (50, 0.4),
-                (100, 0.3),
-                (200, 0.3),
-                (1000, 0.3)
-            });
-
-            // Overhang negative parameters
-            double f = -1.4175 - 0.02 * slope;
-            double g = -0.895 - 0.0135 * slope;
-            double i = -0.6 - 0.067 * slope;
-            double j = 0.2 - 0.082 * slope;
-            double k = 0.45 - 0.108 * slope;
-
-            // Overhang Curves
-            OverhangCurves["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, k),
-                (5, k),
-                (7, k-(k+1.8)/4),
-                (10, k-(k+1.8)/2),
-                (20, k-(k+1.8)*3/4),
-                (50, -1.8),
-                (200, -1.8),
-                (1000, -1.8)
-            });
-            OverhangCurves["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, j),
-                (3, j),
-                (7, j-(j+1.8)/4),
-                (10, j-(j+1.8)/2),
-                (20, j-(j+1.8)*3/4),
-                (50, -1.8),
-                (200, -1.8),
-                (1000, -1.8)
-            });
-            OverhangCurves["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, i),
-                (3, i),
-                (7, i-(i+1.6)/4),
-                (10, i-(i+1.6)/2),
-                (20, i-(i+1.6)*3/4),
-                (50, -1.6),
-                (200, -1.6),
-                (1000, -1.6)
-            });
-            OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
-            {
-                (1.0, f),
-                (10, f),
-                (20, f-(f+1.5)/4),
-                (50, f-(f+1.5)/2),
-                (100, f-(f+1.5)*3/4),
-                (200, -1.5),
-                (500, -1.5),
-                (1000, -1.5)
-            });
+            // Fig. 30.3-2I, overhang
+            double o1 = -1.4175 - 0.02 * t, o1Large = -0.895 - 0.0135 * t;
+            double o2e = -0.60 - 0.067 * t, o2r = 0.20 - 0.082 * t, o3 = 0.45 - 0.108 * t;
+            OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, o1), (10, o1), (200, o1Large), (1000, o1Large) });
+            OverhangCurves["Zone2e"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, o2e), (3, o2e), (amax, -1.6), (1000, -1.6) });
+            OverhangCurves["Zone2r"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, o2r), (7, o2r), (100, -1.8), (1000, -1.8) });
+            OverhangCurves["Zone3"] = ExternalGCpCurve.ForArea(new (double X, double Y)[] { (1.0, o3), (amin, o3), (50, -1.8), (1000, -1.8) });
         }
     }
 }

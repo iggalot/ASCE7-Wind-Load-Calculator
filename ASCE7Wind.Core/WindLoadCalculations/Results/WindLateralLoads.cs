@@ -69,7 +69,7 @@ namespace ASCE7WindLoadCalculator
         public DirectionalWindForce AlongWidth { get; internal set; }
         public List<WindLoadCase> LoadCases { get; } = new List<WindLoadCase>();
 
-        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception), or, for Chapter 28, when the torsional cases were skipped (28.3.2.1 exceptions).</summary>
+        /// <summary>True when only Load Cases 1 and 3 were generated (Fig. 27.3-8 exception), or, for Chapter 28, when the torsional cases were skipped (28.3.2 exception in 7-22, Fig. 28.3-1 note 5 in 7-16).</summary>
         public bool OnlyCases1And3 { get; internal set; }
 
         /// <summary>The procedure these loads came from.</summary>
@@ -229,7 +229,7 @@ namespace ASCE7WindLoadCalculator
             {
                 Direction = direction,
                 WallsKips = walls,
-                RoofKips = roofA >= roofB ? roofA : roofB,
+                RoofKips = Math.Max(0, roofA >= roofB ? roofA : roofB),   // Fig. 27.3-1 last note: not less than with the roof neglected
                 ParapetKips = mwfrs.ParapetKips,
                 GoverningRoofCase = roofA >= roofB ? MwfrsRoofCase.CaseA : MwfrsRoofCase.CaseB,
                 ProjectedWallArea = wallArea,

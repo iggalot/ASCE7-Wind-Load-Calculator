@@ -1,14 +1,14 @@
 ﻿namespace ASCE7WindLoadCalculator
 {
     /// <summary>
-    /// ASCE 7-22 Figure 30-3-2A
+    /// ASCE 7-22 Figure 30.3-2A
     /// Gable Roofs
     /// h <= 60ft
     /// slope <= 7deg
     /// </summary>
     public class Figure30_3_2A_ASCE7_22 : Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-22 Figure 30-3-2A";
+        public override string ChartTitle { get; set; } = "ASCE 7-22 Figure 30.3-2A";
         public override string ChartCriteria { get; set; } = "h <= 60ft, slope <= 7deg";
         public Figure30_3_2A_ASCE7_22()
         {
@@ -94,13 +94,9 @@
             });
             RoofCurves_Neg["Zone1'"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
+                // Fig. 30.3-2A (7-22 p. 319): -0.9 up to 100 sq ft, then a straight line (log area) to -0.4 at 1000
                 (1.0, -0.9),
-                (10,  -0.9),
-                (20, -0.9),
-                (50, -0.9),
                 (100, -0.9),
-                (200, -0.75),
-                (500, -0.4),
                 (1000, -0.4)
             });
 
@@ -119,14 +115,12 @@
             });
             OverhangCurves["Zone2"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {
-                (1.0, -2.5),
-                (10,  -2.5),
-                (20, -2.08),
-                (50, -1.8),
+                // Fig. 30.3-2A overhang (7-22 p. 319): -2.3 up to 10 sq ft, meets Zones 1/1' at -1.6 at 100, then -1.0 at 500
+                (1.0, -2.3),
+                (10, -2.3),
                 (100, -1.6),
-                (200, -1.36),
-                (500, -1.1),
-                (1000, -1.1)
+                (500, -1.0),
+                (1000, -1.0)
             });
             OverhangCurves["Zone1"] = ExternalGCpCurve.ForArea(new (double X, double Y)[]
             {

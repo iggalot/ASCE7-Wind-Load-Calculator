@@ -2,7 +2,7 @@
 {
     public class ParallelToRidge_LowSlope_Roof_Low : Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
+        public override string ChartTitle { get; set; } = "ASCE 7-16 and 7-22 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L <= 0.5";
         public ParallelToRidge_LowSlope_Roof_Low()
         {

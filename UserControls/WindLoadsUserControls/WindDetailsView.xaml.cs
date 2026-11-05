@@ -250,7 +250,7 @@ namespace ASCE7WindLoadCalculator
                 var forceRows = new List<string[]>
                 {
                     new[] { "Walls (windward + leeward)", $"{force.WallsKips:0.00} kips", $"projected wall area {force.ProjectedWallArea:0} sq ft" },
-                    new[] { "Roof (horizontal part)", $"{force.RoofKips:0.00} kips", $"projected roof area {force.ProjectedRoofArea:0} sq ft, roof Cp: {(force.GoverningRoofCase == MwfrsRoofCase.CaseB ? "Case B" : "Case A")} governs" },
+                    new[] { "Roof (horizontal part)", $"{force.RoofKips:0.00} kips", $"projected roof area {force.ProjectedRoofArea:0} sq ft, roof Cp: {(force.GoverningRoofCase == MwfrsRoofCase.CaseB ? "Case B" : "Case A")} governs" + (force.RoofKips == 0 ? "; a roof force against the wind is taken as 0 (Fig. 27.3-1 note: the shear is not less than with the roof neglected)" : "") },
                 };
                 if (force.ParapetKips > 0 && m is WindLoadCalculator_MWFRS mp)
                     forceRows.Add(new[] { "Parapets (windward + leeward)", $"{force.ParapetKips:0.00} kips",
@@ -383,7 +383,7 @@ namespace ASCE7WindLoadCalculator
                 page.Children.Add(Para("Chapter 28 envelope procedure (details on the Chapter 28 page). Per direction: the basic case with the end zones at " +
                                        "one corner and then the other (torsion of either sign), the torsional case (T zones beyond the center), and the " +
                                        $"minimum ({analysis.MwfrsAlongLength?.Edition.EnvelopeMinimumSection}: 16 psf walls, 8 psf roof) as a separate load case. Each shear wall is designed for its worst case. " +
-                                       "The torsional cases may be skipped under the 28.3.2.1 exceptions (one story with h ≤ 30 ft, or one- and two-story " +
+                                       $"The torsional cases may be skipped under the {analysis.MwfrsAlongLength?.Edition.EnvelopeTorsionExemption ?? "torsional exception"} (one story with h ≤ 30 ft, or one- and two-story " +
                                        "light-frame, or one- and two-story with flexible diaphragms)."));
             else
                 page.Children.Add(Para($"Px = {lateral.AlongLength.DesignKips:0.00} kips (wind from W), Py = {lateral.AlongWidth.DesignKips:0.00} kips (wind from S). " +
@@ -702,7 +702,7 @@ namespace ASCE7WindLoadCalculator
         // ------------------------------------------------------------------ figures
 
         private const double GraphW = 460, GraphH = 300;
-        private const double XMin = 1, XMax = 1000, YMin = -4, YMax = 1; // the axes FigureDrawer uses
+        private const double XMin = 1, XMax = 1000, YMax = 1; // the axes FigureDrawer uses (the bottom is FigureDrawer.AxisMin)
 
         /// <summary>The GCp curves the calculation used, with this building's zones marked at their effective area.</summary>
         private static FrameworkElement GCpGraph(Chapter27and30_GCpCurveBase figure, List<CladdingRow> rows)
@@ -711,8 +711,8 @@ namespace ASCE7WindLoadCalculator
             FigureDrawer.DrawCurvesOnCanvas(canvas, figure);
             foreach (var r in rows)
             {
-                Mark(canvas, r.Area, r.GCpNeg, Suction);
-                Mark(canvas, r.Area, r.GCpPos, PushIn);
+                Mark(canvas, r.Area, r.GCpNeg, Suction, FigureDrawer.AxisMin(figure));
+                Mark(canvas, r.Area, r.GCpPos, PushIn, FigureDrawer.AxisMin(figure));
             }
             var panel = new StackPanel { Margin = new Thickness(0, 0, 24, 0) };
             panel.Children.Add(new TextBlock { Text = figure?.ChartTitle, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxWidth = GraphW });
@@ -720,19 +720,19 @@ namespace ASCE7WindLoadCalculator
             panel.Children.Add(new Border { BorderBrush = Hairline, BorderThickness = new Thickness(1), Padding = new Thickness(28, 10, 28, 22), Background = Brushes.White, Child = canvas, HorizontalAlignment = HorizontalAlignment.Left });
             var legend = new TextBlock { FontSize = 12, Foreground = InkSecondary, Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap, MaxWidth = GraphW };
             legend.Inlines.Add(new System.Windows.Documents.Run("● ") { Foreground = Suction });
-            legend.Inlines.Add("suction and ");
+            legend.Inlines.Add("negative (outward) and ");
             legend.Inlines.Add(new System.Windows.Documents.Run("● ") { Foreground = PushIn });
-            legend.Inlines.Add("push-in GCp of this building's zones, at the component's effective wind area (sq ft, log scale). Negative GCp is up.");
+            legend.Inlines.Add("positive (inward) GCp of this building's zones, at the component's effective wind area (sq ft, log scale). Negative GCp is up.");
             panel.Children.Add(legend);
             return panel;
         }
 
-        private static void Mark(Canvas canvas, double area, double gcp, Brush brush)
+        private static void Mark(Canvas canvas, double area, double gcp, Brush brush, double yMin)
         {
             if (!(area > 0) || gcp == 0) return;
             double x = Math.Max(XMin, Math.Min(XMax, area));
             double px = (Math.Log10(x) - Math.Log10(XMin)) / (Math.Log10(XMax) - Math.Log10(XMin)) * GraphW;
-            double py = (gcp - YMin) / (YMax - YMin) * GraphH;
+            double py = (gcp - yMin) / (YMax - yMin) * GraphH;
             var dot = new Ellipse { Width = 9, Height = 9, Fill = brush, Stroke = Brushes.White, StrokeThickness = 1.5 };
             Canvas.SetLeft(dot, px - 4.5);
             Canvas.SetTop(dot, py - 4.5);

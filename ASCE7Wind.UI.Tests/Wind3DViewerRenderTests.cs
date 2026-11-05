@@ -293,7 +293,7 @@ namespace ASCE7Wind.UI.Tests
             Assert.IsNull(v.SelectedCase);
             Assert.IsTrue(v.Scene.Subtitle.Contains("36 wind cases"));
 
-            // the four windward corners (28.3.2.1) listed after the four wind directions, each with its envelope and its
+            // the four windward corners (28.3.2.1 in 7-22, Fig. 28.3-1 note 3 in 7-16) listed after the four wind directions, each with its envelope and its
             // Load Cases 1 to 4 (one wind each: LC 1 and 3 across the ridge, LC 2 and 4 along it) x the two signs of GCpi
             var groups = v.CaseGroups;
             CollectionAssert.AreEqual(new[] { "Envelope of all 36 cases", "From the west (W)", "From the east (E)", "From the south (S)", "From the north (N)",

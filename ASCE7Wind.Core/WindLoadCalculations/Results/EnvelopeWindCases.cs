@@ -22,7 +22,7 @@ namespace ASCE7WindLoadCalculator
         /// <summary>28.3.3: the positive pressure on the soffit of a windward roof overhang, GCp = 0.7.</summary>
         public const double EnvelopeSoffitGCp = 0.7;
 
-        /// <param name="torsionalExempt">28.3.2.1 exceptions: no torsional cases (3 and 4).</param>
+        /// <param name="torsionalExempt">the torsional exception (28.3.2 in 7-22, Fig. 28.3-1 note 5 in 7-16): no torsional cases (3 and 4).</param>
         public static List<WindCase> BuildEnvelope(WindAnalysisResult analysis, bool torsionalExempt = false)
         {
             if (!(analysis?.MwfrsAlongLength is WindLoadCalculator_MWFRS mx) || !(analysis.MwfrsAlongWidth is WindLoadCalculator_MWFRS my))

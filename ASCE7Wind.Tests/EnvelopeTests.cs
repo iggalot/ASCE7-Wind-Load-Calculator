@@ -331,7 +331,7 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(0.4 * (10 + Tan(11) * 75 / 2), EnvelopeLateralLoads.ZoneWidthA(b11), 1e-9);
         }
 
-        /// <summary>Fig. 28.3-1 note 9 exception: θ 0 to 7° and least dimension over 300 ft, a is at most 0.8h.</summary>
+        /// <summary>Fig. 28.3-1 notation, exception: θ 0 to 7° and least dimension over 300 ft, a is at most 0.8h.</summary>
         [TestMethod]
         public void ZoneWidthA_LargeLowSlopeException()
         {

@@ -114,7 +114,7 @@ namespace ASCE7WindLoadCalculator
         public double Qh { get; internal set; }
         public double Kd { get; internal set; }
 
-        /// <summary>Zone width a (ft), Fig. 28.3-1 note 9.</summary>
+        /// <summary>Zone width a (ft), Fig. 28.3-1 notation.</summary>
         public double A { get; internal set; }
 
         /// <summary>Case A: how far from the windward eave a negative zone 2/2E coefficient applies, min(0.5 D, 2.5 he) (ft);
@@ -246,10 +246,10 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Case A GCpf at roof angle theta (deg), zones 1, 2, 3, 4, 1E, 2E, 3E, 4E.</summary>
         public static double[] CaseACoefficients(double theta) => Interpolate(CaseA, theta);
 
-        /// <summary>The least plan dimension above which the Fig. 28.3-1 note 9 exception caps a at 0.8h (θ 0 to 7°), ft.</summary>
+        /// <summary>The least plan dimension above which the Fig. 28.3-1 notation exception caps a at 0.8h (θ 0 to 7°), ft.</summary>
         public const double LargeBuildingLeastDimension = 300;
 
-        /// <summary>Zone width a (ft), Fig. 28.3-1 note 9 (7-16 and 7-22): 10% of the least horizontal dimension or 0.4h,
+        /// <summary>Zone width a (ft), Fig. 28.3-1 notation (7-16 and 7-22): 10% of the least horizontal dimension or 0.4h,
         /// whichever is smaller, but not less than 4% of the least horizontal dimension or 3 ft. Exception: for θ = 0 to 7°
         /// and a least horizontal dimension over 300 ft, a is limited to 0.8h at most. h is the figure height (the eave height
         /// for θ ≤ 10°, <see cref="BuildingData.MwfrsFigureHeight"/>).</summary>
@@ -260,7 +260,7 @@ namespace ASCE7WindLoadCalculator
             return LargeFlatException(b) ? Math.Min(a, 0.8 * h) : a;
         }
 
-        /// <summary>True when the note 9 exception applies: θ = 0 to 7° and a least horizontal dimension over 300 ft.</summary>
+        /// <summary>True when the Fig. 28.3-1 notation exception applies: θ = 0 to 7° and a least horizontal dimension over 300 ft.</summary>
         public static bool LargeFlatException(BuildingData b) =>
             (b.RoofTypeIsFlat() || b.RoofPitch <= 7) && Math.Min(b.BuildingLength, b.BuildingWidth) > LargeBuildingLeastDimension;
 
@@ -325,7 +325,7 @@ namespace ASCE7WindLoadCalculator
             if (exposure == WindExposureCategories.WIND_EXP_CAT_B && h < 30)
                 r.Notes.Add($"Kz = {WindLoadCalculator_Base.EnvelopeMinimumKzExposureB:0.00} at h = {h:0.##} ft (Table 26.10-1 footnote a: Chapter 28, Exposure B, z < 30 ft).");
             if (LargeFlatException(b))
-                r.Notes.Add($"a is limited to 0.8h = {0.8 * h:0.##} ft (Fig. 28.3-1 note 9 exception: θ 0 to 7°, least horizontal dimension over {LargeBuildingLeastDimension:0} ft).");
+                r.Notes.Add($"a is limited to 0.8h = {0.8 * h:0.##} ft (Fig. 28.3-1 notation, exception: θ 0 to 7°, least horizontal dimension over {LargeBuildingLeastDimension:0} ft).");
             if (b.RoofTypeIsFlat())
                 r.Notes.Add("Flat roof: run as though it had a ridge at mid-building, once parallel to the long side and once parallel to the short side, so each direction takes Case A (0-5° row) and Case B.");
             if (hip)
@@ -454,7 +454,7 @@ namespace ASCE7WindLoadCalculator
                 Wall(0, "1", "Windward wall (x = 0)", ww, end, W, true);
                 Wall(1, "4E", "Leeward wall (x = D), end zone", lwE, 0, end, true);
                 Wall(1, "4", "Leeward wall (x = D)", lw, end, W, true);
-                // Fig. 28.3-1 note (7-10 note 8, 7-16 and 7-22 alike): a negative GCpf in zone 2 or 2E applies only for a
+                // Fig. 28.3-1 note 8 (7-16) and 28.3.2.1 (7-22), alike: a negative GCpf in zone 2 or 2E applies only for a
                 // distance from the roof edge of min(0.5 × the dimension parallel to the wind, 2.5 he); the rest of the windward
                 // slope up to the ridge takes the zone 3 or 3E coefficient. 0.5 D is the ridge, so only 2.5 he can cut it short.
                 double reach = Math.Min(0.5 * D, 2.5 * b.BuildingHeight);
@@ -568,7 +568,7 @@ namespace ASCE7WindLoadCalculator
         /// Chapter 28 load cases for the shear walls: per wind axis, each of the four corners as the reference corner (the wind
         /// from either side), the basic case and (unless exempt) the torsional case, and the minimum (28.3.4 in 7-16, 28.3.6 in 7-22) from either side as a separate load case.
         /// </summary>
-        /// <param name="torsionalExempt">28.3.2.1 exceptions: one-story buildings with h &lt;= 30 ft, one- and two-story light-frame buildings, or
+        /// <param name="torsionalExempt">the torsional exception (28.3.2 in 7-22, Fig. 28.3-1 note 5 in 7-16): one-story buildings with h &lt;= 30 ft, one- and two-story light-frame buildings, or
         /// one- and two-story buildings with flexible diaphragms need not be designed for the torsional load cases.</param>
         public static WindLateralResult Compute(WindAnalysisResult analysis, bool torsionalExempt)
         {

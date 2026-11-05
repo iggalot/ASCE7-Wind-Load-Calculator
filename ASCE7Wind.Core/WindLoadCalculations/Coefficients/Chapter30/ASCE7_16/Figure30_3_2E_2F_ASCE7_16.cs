@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace ASCE7WindLoadCalculator
 {
     /// <summary>
-    /// ASCE7-16 Figure 30-3-2E
+    /// ASCE7-16 Figure 30.3-2E
     /// Hip Roofs
     /// h/B >= 0.8
     /// h <= 60ft
@@ -12,10 +12,10 @@ namespace ASCE7WindLoadCalculator
     /// </summary>
     public class Figure30_3_2E_2F_ASCE7_16:Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30-3-2E and 2F - Hip Roofs";
+        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 30.3-2E and 2F - Hip Roofs";
         public override string ChartCriteria { get; set; } = "h <= 60ft, 7deg < slope <= 20deg";
         /// <summary>
-        /// ASCE7-16 Figure 30-3-2E (Roof) and 2F (Overhang)
+        /// ASCE7-16 Figure 30.3-2E (Roof) and 2F (Overhang)
         /// </summary>
         /// <param name="h">mean roof height</param>
         /// <param name="B">width of building -- normal to wind</param>

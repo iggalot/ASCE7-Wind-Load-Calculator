@@ -56,6 +56,15 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Commentary figure for hip roofs under Chapter 28: Fig. C28.3-2 (7-16), Fig. C28.3-3 (7-22).</summary>
         public abstract string EnvelopeHipFigure { get; }
 
+        /// <summary>Where Chapter 28 puts each corner in turn as the windward corner: Fig. 28.3-1 note 3 (7-16), 28.3.2.1 (7-22).</summary>
+        public abstract string EnvelopeCornerRule { get; }
+
+        /// <summary>Where Chapter 28 lets the torsional load cases be skipped: Fig. 28.3-1 note 5 exception (7-16), 28.3.2 exception (7-22).</summary>
+        public abstract string EnvelopeTorsionExemption { get; }
+
+        /// <summary>Where the negative zone 2/2E coefficient is limited to min(0.5 L, 2.5 he): Fig. 28.3-1 note 8 (7-16), 28.3.2.1 (7-22).</summary>
+        public abstract string EnvelopeZone2Reach { get; }
+
         /// <summary>Leading coefficient of the Kz power law, Kz = c (z/zg)^(2/alpha).</summary>
         public abstract double KzCoefficient { get; }
 
@@ -88,6 +97,9 @@ namespace ASCE7WindLoadCalculator
         public override string EnvelopeMinimumSection => "28.3.4";
         public override string EnvelopeParapetSection => "28.3.2";
         public override string EnvelopeHipFigure => "Fig. C28.3-2";
+        public override string EnvelopeCornerRule => "Fig. 28.3-1 note 3";
+        public override string EnvelopeTorsionExemption => "Fig. 28.3-1 note 5 exception";
+        public override string EnvelopeZone2Reach => "Fig. 28.3-1 note 8";
 
         // ASCE 7-16 Table 26.11-1
         public override (double alpha, double zg) TerrainConstants(WindExposureCategories exposure)
@@ -134,6 +146,9 @@ namespace ASCE7WindLoadCalculator
         public override string EnvelopeMinimumSection => "28.3.6";
         public override string EnvelopeParapetSection => "28.3.4";
         public override string EnvelopeHipFigure => "Fig. C28.3-3";
+        public override string EnvelopeCornerRule => "28.3.2.1";
+        public override string EnvelopeTorsionExemption => "28.3.2 exception";
+        public override string EnvelopeZone2Reach => "28.3.2.1";
 
         // ASCE 7-22 Table 26.11-1 (revised from 7-16: gradient heights and alpha re-derived; with the
         // 2.41 coefficient this reproduces the tabulated Kz at 15 ft: 0.57 / 0.85 / 1.03).
@@ -157,7 +172,9 @@ namespace ASCE7WindLoadCalculator
             switch (b.RoofType)
             {
                 case RoofTypes.ROOF_TYPE_FLAT: return new FlatRoofAreaCalculator_CC(b);
-                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new GableRoofAreaCalculator_CC_ASCE7_22(b);
+                case RoofTypes.ROOF_TYPE_GABLE: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b)
+                    : b.RoofPitch > 27 ? new GableRoof2DAreaCalculator_CC_ASCE7_22(b)   // Fig. 30.3-2D layout (27° to 45°)
+                    : new GableRoofAreaCalculator_CC_ASCE7_22(b);
                 case RoofTypes.ROOF_TYPE_HIP: return b.RoofPitch <= 7 ? (AreaCalculator_Base)new FlatRoofAreaCalculator_CC(b) : new HipRoofAreaCalculator_CC_ASCE7_22(b);
                 default: throw new NotSupportedException("Unsupported roof type: " + b.RoofType);
             }

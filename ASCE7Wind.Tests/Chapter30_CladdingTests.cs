@@ -117,7 +117,7 @@ namespace ASCE7Wind.Tests
         /// </summary>
         private static readonly string[] KnownForReview =
         {
-            "ASCE 7-16 Figure 30-3-2E and 2F - Hip Roofs Overhang[Zone1]: |GCp| increases", // low h/B set: -1.8 -> -2.0
+            "ASCE 7-16 Figure 30.3-2E and 2F - Hip Roofs Overhang[Zone1]: |GCp| increases", // low h/B set: -1.8 -> -2.0, as printed (7-16 Fig. 30.3-2F p. 341, h/B <= 0.5 chart: Zone 1 rises from -1.8 at 10 sq ft to -2.0)
         };
 
         [TestMethod]

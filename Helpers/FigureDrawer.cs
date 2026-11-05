@@ -10,6 +10,17 @@ namespace ASCE7WindLoadCalculator
 {
     public static class FigureDrawer
     {
+        /// <summary>The bottom of the GCp axis: -4, or the lowest curve value rounded down to the next 0.5 when it goes below -4.</summary>
+        public static double AxisMin(Chapter27and30_GCpCurveBase figure)
+        {
+            double min = -4;
+            if (figure != null)
+                foreach (var c in figure.RoofCurves_Neg.Values.Concat(figure.RoofCurves_Pos.Values)
+                                        .Concat(figure.WallCurves_Neg.Values).Concat(figure.WallCurves_Pos.Values))
+                    foreach (var p in c.GetPoints()) min = Math.Min(min, Math.Floor(p.Y * 2) / 2);
+            return min;
+        }
+
         public static void DrawCurvesOnCanvas(Canvas canvas, Chapter27and30_GCpCurveBase figure)
         {
             if (canvas == null || figure == null) return; // nothing to draw (e.g. building outside the method limits)
@@ -19,7 +30,7 @@ namespace ASCE7WindLoadCalculator
 
             double xMin = 1;
             double xMax = 1000;
-            double yMinNeg = -4;
+            double yMinNeg = AxisMin(figure); // -4, or lower when a curve goes below it (7-16 overhangs reach -4.7)
             double yMaxPos = 1;
 
             canvas.Children.Clear();
@@ -228,7 +239,7 @@ namespace ASCE7WindLoadCalculator
                 canvas.Children.Add(yLabel);
             }
 
-            double[] dashedYVals = new double[] { -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1 };
+            double[] dashedYVals = new double[] { -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1 };
             foreach (double y in dashedYVals)
             {
                 if (y < yMin || y > yMax) continue;

@@ -72,7 +72,12 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(14.54, One(all, $"Case 1, from {from}, roof Case B, −GCpi").UpliftKips, 0.01 * 14.54 + 0.2, "Case IV");
             Assert.AreEqual(94.37, One(all, $"Case 1, from {from}, roof Case A, +GCpi").UpliftKips, 0.01 * 94.37, "Case I at -0.74");
             double s = from == "S" ? 1 : -1;
-            Assert.AreEqual(s * 58.29, One(all, $"Case 1, from {from}, roof Case A, +GCpi").Vy, 0.01 * 58.29, "Quimby Cases I/III");
+            // Quimby Cases I/III sum the walls and a roof force against the wind: 58.29 k. Fig. 27.3-1 note 7 (7-16; 7-22 alike)
+            // keeps the shear at no less than the walls alone, so the roof is set aside (the zones stay, for uplift)
+            var a1 = One(all, $"Case 1, from {from}, roof Case A, +GCpi");
+            Assert.IsTrue(a1.RoofNeglected, "roof force against the wind");
+            Assert.AreEqual(s * 58.29, a1.Vy + RoofFy(a1), 0.01 * 58.29, "Quimby Cases I/III: walls + roof");
+            Assert.IsTrue(s * RoofFy(a1) < 0 && Math.Abs(a1.Vy) > 58.29, "the walls alone are more");
             Assert.AreEqual(s * 65.66, One(all, $"Case 1, from {from}, roof Case B, +GCpi").Vy, 0.01 * 65.66, "Quimby Cases II/IV");
         }
 
@@ -115,7 +120,7 @@ namespace ASCE7Wind.Tests
             // 0.75 × (83.34 - 24.03) + 0.75 × (94.37 - 24.03) + 24.03 = 121.3 k
             Assert.AreEqual(121.3, c.UpliftKips, 1.2);
             Assert.AreEqual(0.75 * 34.01, c.Vx, 0.3);
-            Assert.AreEqual(0.75 * 58.29, c.Vy, 0.5);
+            Assert.AreEqual(0.75 * One(all, "Case 1, from S, roof Case A, +GCpi").Vy, c.Vy, 1e-9, "75% of the S wind, its roof set aside (Fig. 27.3-1 note 7)");
             Assert.AreEqual(0, c.Mt, 1e-9);
         }
 
@@ -268,9 +273,10 @@ namespace ASCE7Wind.Tests
                     }
                     if (larger)
                     {
-                        // walls and parapets at the factor, roof as resolved
-                        Assert.AreEqual(f * (w.Vx - RoofFx(w)) + RoofFx(c), c.Vx, 1e-6, $"{v} {c.Name} Vx");
-                        Assert.AreEqual(f * (s.Vy - RoofFy(s)) + RoofFy(c), c.Vy, 1e-6, $"{v} {c.Name} Vy");
+                        // walls and parapets at the factor, roof as resolved; a roof force against its wind left out (Fig. 27.3-1 note 7)
+                        double wallsX = w.Vx - (w.RoofNeglected ? 0 : RoofFx(w)), wallsY = s.Vy - (s.RoofNeglected ? 0 : RoofFy(s));
+                        Assert.AreEqual(f * wallsX + Math.Max(0, RoofFx(c)), c.Vx, 1e-6, $"{v} {c.Name} Vx");
+                        Assert.AreEqual(f * wallsY + Math.Max(0, RoofFy(c)), c.Vy, 1e-6, $"{v} {c.Name} Vy");
                     }
                     else
                     {

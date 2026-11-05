@@ -1,17 +1,17 @@
 ﻿namespace ASCE7WindLoadCalculator
 {
     /// <summary>
-    /// ASCE7-22 Figure 30-3-2E
+    /// ASCE7-22 Figure 30.3-2E
     /// Hip Roofs
     /// h <= 60ft
     /// 7deg < slope <= 20deg
     /// </summary>
     public class Figure30_3_2E_ASCE7_22:Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-22 Figure 30-3-2E - Hip Roofs";
+        public override string ChartTitle { get; set; } = "ASCE 7-22 Figure 30.3-2E - Hip Roofs";
         public override string ChartCriteria { get; set; } = "h <= 60ft, 7deg < slope <= 20deg";
         /// <summary>
-        /// ASCE7-22 Figure 30-3-2E (Roof)
+        /// ASCE7-22 Figure 30.3-2E (Roof)
         /// </summary>
         public Figure30_3_2E_ASCE7_22()
         {

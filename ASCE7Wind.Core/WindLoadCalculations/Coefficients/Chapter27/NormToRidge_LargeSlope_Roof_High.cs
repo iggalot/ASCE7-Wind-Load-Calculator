@@ -1,12 +1,12 @@
 ﻿namespace ASCE7WindLoadCalculator
 {
     /// <summary>
-    /// Contains the values of the Cp curves for ASCE 7-22 Figure 27.3-1
+    /// Contains the values of the Cp curves for ASCE 7-16 / 7-22 Figure 27.3-1 (identical in both)
     /// -- h/L >= 1.0
     /// </summary>
     public class NormToRidge_LargeSlope_Roof_High : Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
+        public override string ChartTitle { get; set; } = "ASCE 7-16 and 7-22 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Normal to Ridge for slope >= 10deg  -- h/L = 1.0";
         /// <param name="reductionFactor">Fig. 27.3-1 note b factor on the −1.3 value (1.0 = unreduced).</param>
         public NormToRidge_LargeSlope_Roof_High(double slope, double reductionFactor = 1.0)

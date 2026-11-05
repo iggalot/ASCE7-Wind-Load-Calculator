@@ -5,7 +5,7 @@
     /// </summary>
     public class ParallelToRidge_LowSlope_Roof_High : Chapter27and30_GCpCurveBase
     {
-        public override string ChartTitle { get; set; } = "ASCE 7-16 Figure 27.3-1";
+        public override string ChartTitle { get; set; } = "ASCE 7-16 and 7-22 Figure 27.3-1";
         public override string ChartCriteria { get; set; } = "Parallel to Ridge for slope or slope <= 10deg  -- h/L >= 1.0";
         /// <param name="reductionFactor">Fig. 27.3-1 note b factor on the −1.3 value (1.0 = unreduced).</param>
         public ParallelToRidge_LowSlope_Roof_High(double reductionFactor = 1.0)

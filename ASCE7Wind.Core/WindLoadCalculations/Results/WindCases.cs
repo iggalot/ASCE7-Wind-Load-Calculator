@@ -102,8 +102,8 @@ namespace ASCE7WindLoadCalculator
         /// "applied as a separate load case in addition to the normal load cases" (C27.1.5). It does not raise the other cases.</summary>
         public bool IsMinimumCase => FigureCase == WindLateralLoads.MinimumCaseNumber;
 
-        /// <summary>Chapter 28: true when the roof was left out of Vx, Vy and Mt because its horizontal force is against the
-        /// wind (the shear may not be less than with the roof neglected). The roof zones are still in the case, for uplift.</summary>
+        /// <summary>True when the roof was left out of Vx, Vy and Mt because its horizontal force is against the
+        /// wind (the shear may not be less than with the roof neglected: Fig. 27.3-1 last note for Chapter 27, Fig. 28.3-1 note 6 / 28.3.3 for Chapter 28; for a quartering Case 3 or 4, either wind's roof). The roof zones are still in the case, for uplift.</summary>
         public bool RoofNeglected { get; internal set; }
 
         /// <summary>
@@ -180,6 +180,7 @@ namespace ASCE7WindLoadCalculator
             public BuildingFace WindwardFace;
             public Dictionary<RoofValue, List<Piece>> Pieces = new Dictionary<RoofValue, List<Piece>>();
             public Dictionary<RoofValue, double> Design = new Dictionary<RoofValue, double>();
+            public Dictionary<RoofValue, bool> RoofNeglected = new Dictionary<RoofValue, bool>();  // its roof force was against the wind (Fig. 27.3-1 last note)
             public double WallsAndParapets;  // kips along the wind
             public double Walls;             // the walls alone (kips along the wind)
             public double MinimumKips;       // 27.1.5
@@ -247,15 +248,19 @@ namespace ASCE7WindLoadCalculator
                         double V = w.Design[v];
                         RoofValue? rx = w.AlongLength ? v : (RoofValue?)null, ry = w.AlongLength ? (RoofValue?)null : v;
                         double vx = w.AlongLength ? w.Sign * V : 0, vy = w.AlongLength ? 0 : w.Sign * V;
-                        Make(1, $"Case 1, from {w.From}, roof {Roof(v)}, {Gcpi(s)}", w.From, rx, ry,
-                             w.AlongLength ? 1 : 0, w.AlongLength ? 0 : 1, s, w.Pieces[v], vx, vy, 0)
-                            .Parts.AddRange(Along(w, 1, w.Walls, V - w.Walls, 0));
+                        var c1 = Make(1, $"Case 1, from {w.From}, roof {Roof(v)}, {Gcpi(s)}", w.From, rx, ry,
+                                      w.AlongLength ? 1 : 0, w.AlongLength ? 0 : 1, s, w.Pieces[v], vx, vy, 0);
+                        c1.RoofNeglected = w.RoofNeglected[v];
+                        c1.Parts.AddRange(Along(w, 1, w.Walls, V - w.Walls, 0));
                         if (onlyCases1And3) continue;
                         double e = w.AlongLength ? ex : ey, f = Case2Factor;
                         foreach (int t in new[] { +1, -1 })
-                            Make(2, $"Case 2, from {w.From}, roof {Roof(v)}, {Gcpi(s)}, torsion {T(t)}", w.From, rx, ry,
-                                 w.AlongLength ? f : 0, w.AlongLength ? 0 : f, s, Scaled(w.Pieces[v], f), f * vx, f * vy, t * f * V * e)
-                                .Parts.AddRange(Along(w, f, w.Walls, V - w.Walls, t * f * e));
+                        {
+                            var c2 = Make(2, $"Case 2, from {w.From}, roof {Roof(v)}, {Gcpi(s)}, torsion {T(t)}", w.From, rx, ry,
+                                          w.AlongLength ? f : 0, w.AlongLength ? 0 : f, s, Scaled(w.Pieces[v], f), f * vx, f * vy, t * f * V * e);
+                            c2.RoofNeglected = w.RoofNeglected[v];
+                            c2.Parts.AddRange(Along(w, f, w.Walls, V - w.Walls, t * f * e));
+                        }
                     }
 
             // Cases 3 and 4: the quartering winds, resolved area by area from their two winds
@@ -267,6 +272,7 @@ namespace ASCE7WindLoadCalculator
                     foreach (var ry in values)
                     {
                         double Vx = wx.Design[rx], Vy = wy.Design[ry];
+                        bool neglected = wx.RoofNeglected[rx] || wy.RoofNeglected[ry];
                         // the two zone maps overlaid once (geometry only); Cases 3 and 4 each put their own values on it
                         var overlap = Overlap(wx.Pieces[rx], wy.Pieces[ry]);
                         var p3 = Resolve(overlap, Case3Factor, Case3Factor, larger ? 1.0 : (double?)null);
@@ -277,6 +283,9 @@ namespace ASCE7WindLoadCalculator
                         {
                             if (!larger) return (f * wx.Sign * Vx, f * wy.Sign * Vy);
                             var (rfx, rfy) = RoofForce(pieces);
+                            // Fig. 27.3-1 last note: a roof force against its wind is left out of that wind's shear
+                            if (rfx * wx.Sign < 0) rfx = 0;
+                            if (rfy * wy.Sign < 0) rfy = 0;
                             return (f * wx.Sign * wx.WallsAndParapets + rfx, f * wy.Sign * wy.WallsAndParapets + rfy);
                         }
                         var (v3x, v3y) = Forces(p3, Case3Factor);
@@ -294,6 +303,7 @@ namespace ASCE7WindLoadCalculator
                         {
                             string roofs = $"roof {xs} {Roof(rx)} / {ys} {Roof(ry)}";
                             var c3 = Make(3, $"Case 3, from {from}, {roofs}, {Gcpi(s)}", from, rx, ry, Case3Factor, Case3Factor, s, p3, v3x, v3y, 0);
+                            c3.RoofNeglected = neglected;
                             c3.Parts.AddRange(Quarter(wx, Case3Factor, Vx, v3x, 0));
                             c3.Parts.AddRange(Quarter(wy, Case3Factor, Vy, v3y, 0));
                             if (onlyCases1And3) continue;
@@ -303,6 +313,7 @@ namespace ASCE7WindLoadCalculator
                                 {
                                     var c4 = Make(4, $"Case 4, from {from}, {roofs}, {Gcpi(s)}, torsion {T(t1)}{T(t2)}", from, rx, ry,
                                                   Case4Factor, Case4Factor, s, p4, v4x, v4y, Case4Factor * (t1 * Vx * ex + t2 * Vy * ey));
+                                    c4.RoofNeglected = neglected;
                                     c4.Parts.AddRange(Quarter(wx, Case4Factor, Vx, v4x, Case4Factor * t1 * ex));
                                     c4.Parts.AddRange(Quarter(wy, Case4Factor, Vy, v4y, Case4Factor * t2 * ey));
                                 }
@@ -352,7 +363,7 @@ namespace ASCE7WindLoadCalculator
         /// (<see cref="BuildEnvelope"/>) when chosen and it applies (otherwise Chapter 27, as <see cref="WindLateralLoads.Compute(WindAnalysisResult, bool)"/>).
         /// The one list of wind for every app: the shear walls and the load path take these cases, by name.
         /// </summary>
-        /// <param name="onlyCases1And3">Fig. 27.3-8 exception (Cases 1 and 3 only); for Chapter 28 no torsional cases (28.3.2.1).</param>
+        /// <param name="onlyCases1And3">Fig. 27.3-8 exception (Cases 1 and 3 only); for Chapter 28 no torsional cases (28.3.2 in 7-22, Fig. 28.3-1 note 5 in 7-16).</param>
         public static List<WindCase> For(WindAnalysisResult analysis, bool onlyCases1And3 = false) =>
             ProcedureOf(analysis) == LateralProcedure.Envelope ? BuildEnvelope(analysis, onlyCases1And3) : Build(analysis, onlyCases1And3);
 
@@ -406,8 +417,12 @@ namespace ASCE7WindLoadCalculator
                 var pieces = RoofPieces(calc, g, set, toPlan, from);
                 pieces.AddRange(walls);
                 w.Pieces[v] = pieces;
-                // the calculated force; the 27.1.5 minimum is its own case (C27.1.5) and does not raise this one
-                w.Design[v] = force.WallsKips + WindLateralLoads.RoofHorizontalKips(calc, model, set) + force.ParapetKips;
+                // the calculated force; the 27.1.5 minimum is its own case (C27.1.5) and does not raise this one. Fig. 27.3-1
+                // last note (7-16 note 7, 7-22 alike): the total horizontal shear is not less than with the roof neglected, so a
+                // roof force against the wind is left out of the shear (the roof zones stay in the case, for uplift)
+                double roof = WindLateralLoads.RoofHorizontalKips(calc, model, set);
+                w.RoofNeglected[v] = roof < 0;
+                w.Design[v] = force.WallsKips + Math.Max(0, roof) + force.ParapetKips;
             }
             return w;
         }

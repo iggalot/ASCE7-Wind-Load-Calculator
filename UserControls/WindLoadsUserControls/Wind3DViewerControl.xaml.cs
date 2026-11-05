@@ -1373,7 +1373,7 @@ namespace ASCE7WindLoadCalculator
                 AddCaseGroups(dir, d.Where(c => c.IsMinimumCase));
                 tvCases.Items.Add(dir);
             }
-            // Ch. 28: the quartering directions are the windward (reference) corners of 28.3.2.1 (each corner in turn the
+            // Ch. 28: the quartering directions are the windward (reference) corners of 28.3.2.1 in 7-22, Fig. 28.3-1 note 3 in 7-16 (each corner in turn the
             // windward corner, Figs. 28.3-1 and 28.3-2): under SW the load cases with the SW corner windward, Load Cases 1 to
             // 4, each as the standard gives it (the wind along one axis, the end zones at that corner). Not a sum of an S and
             // a W case: the same cases as under their wind direction, listed again by corner.
@@ -1383,7 +1383,7 @@ namespace ASCE7WindLoadCalculator
                 var node = new TreeViewItem
                 {
                     Header = Header(DirectionName(k.Key), k.Count(), true), IsExpanded = filtering, Tag = new DirectionNode(k.Key),
-                    ToolTip = $"The {WindSceneBuilder.DirectionWord(k.Key)} corner as the windward (reference) corner (28.3.2.1): Load Cases 1 to 4 " +
+                    ToolTip = $"The {WindSceneBuilder.DirectionWord(k.Key)} corner as the windward (reference) corner (28.3.2.1 in 7-22, Fig. 28.3-1 note 3 in 7-16): Load Cases 1 to 4 " +
                               "with the end zones at that corner. The same cases are listed under their wind direction.",
                 };
                 if (!filtering)
