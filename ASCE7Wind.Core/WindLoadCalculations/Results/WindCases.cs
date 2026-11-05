@@ -267,8 +267,10 @@ namespace ASCE7WindLoadCalculator
                     foreach (var ry in values)
                     {
                         double Vx = wx.Design[rx], Vy = wy.Design[ry];
-                        var p3 = Overlay(wx.Pieces[rx], Case3Factor, wy.Pieces[ry], Case3Factor, larger ? 1.0 : (double?)null);
-                        var p4 = onlyCases1And3 ? null : Overlay(wx.Pieces[rx], Case4Factor, wy.Pieces[ry], Case4Factor, larger ? Case2Factor : (double?)null);
+                        // the two zone maps overlaid once (geometry only); Cases 3 and 4 each put their own values on it
+                        var overlap = Overlap(wx.Pieces[rx], wy.Pieces[ry]);
+                        var p3 = Resolve(overlap, Case3Factor, Case3Factor, larger ? 1.0 : (double?)null);
+                        var p4 = onlyCases1And3 ? null : Resolve(overlap, Case4Factor, Case4Factor, larger ? Case2Factor : (double?)null);
                         // forces: 7-16 the Fig. 27.3-8 factor on each wind's force; 7-22 the walls and parapets at that factor
                         // and the roof as resolved (the horizontal force of its zones)
                         (double x, double y) Forces(List<Piece> pieces, double f)
@@ -496,28 +498,43 @@ namespace ASCE7WindLoadCalculator
             pieces.Select(p => new Piece { Surface = p.Surface, Poly = p.Poly, Ext = f * p.Ext, Label = p.Label });
 
         /// <summary>
-        /// The two winds of a quartering direction at once: every overlap of a piece of each wind on the same surface, with
-        /// fa × the first wind's pressure + fb × the second's. With <paramref name="roofLarger"/> (ASCE 7-22 Fig. 27.3-8 note 2)
-        /// a roof piece instead takes roofLarger × the larger (in size) of the two winds' roof pressures there.
+        /// The geometry of a quartering direction's two zone maps laid over each other: every overlap of a piece of each wind on
+        /// the same surface, with the two pieces it comes from. Geometry only, no pressure: Cases 3 and 4 share it
+        /// (<see cref="Resolve"/> puts each case's values on it).
         /// </summary>
-        private static List<Piece> Overlay(List<Piece> a, double fa, List<Piece> b, double fb, double? roofLarger = null)
+        private static List<(Piece a, Piece b, List<Vec2> poly)> Overlap(List<Piece> a, List<Piece> b)
         {
-            var list = new List<Piece>();
+            var list = new List<(Piece, Piece, List<Vec2>)>();
             foreach (var pa in a)
                 foreach (var pb in b.Where(q => q.Surface == pa.Surface))
                     foreach (var convex in ConvexParts(pb.Poly))
                     {
                         var piece = PolygonOps.ClipToConvex(pa.Poly, convex);
                         if (piece.Count < 3 || Math.Abs(PolygonOps.SignedArea(piece)) < 1e-6) continue;
-                        if (roofLarger.HasValue && pa.Surface.Kind == SurfaceKind.Roof)
-                        {
-                            var big = Math.Abs(pa.Ext) >= Math.Abs(pb.Ext) ? pa : pb;
-                            list.Add(new Piece { Surface = pa.Surface, Poly = piece, Ext = roofLarger.Value * big.Ext,
-                                                 Label = $"{big.Label} (larger of {pa.Label.Split(' ')[0]} / {pb.Label.Split(' ')[0]}, 27.3-8 note 2)" });
-                        }
-                        else
-                            list.Add(new Piece { Surface = pa.Surface, Poly = piece, Ext = fa * pa.Ext + fb * pb.Ext, Label = pa.Label + " + " + pb.Label });
+                        list.Add((pa, pb, piece));
                     }
+            return list;
+        }
+
+        /// <summary>
+        /// One case's pressures on an overlap: fa × the first wind's pressure + fb × the second's. With <paramref name="roofLarger"/>
+        /// (ASCE 7-22 Fig. 27.3-8 note 2) a roof piece instead takes roofLarger × the larger (in size) of the two winds' roof
+        /// pressures there.
+        /// </summary>
+        private static List<Piece> Resolve(List<(Piece a, Piece b, List<Vec2> poly)> overlap, double fa, double fb, double? roofLarger)
+        {
+            var list = new List<Piece>(overlap.Count);
+            foreach (var (pa, pb, piece) in overlap)
+            {
+                if (roofLarger.HasValue && pa.Surface.Kind == SurfaceKind.Roof)
+                {
+                    var big = Math.Abs(pa.Ext) >= Math.Abs(pb.Ext) ? pa : pb;
+                    list.Add(new Piece { Surface = pa.Surface, Poly = piece, Ext = roofLarger.Value * big.Ext,
+                                         Label = $"{big.Label} (larger of {pa.Label.Split(' ')[0]} / {pb.Label.Split(' ')[0]}, 27.3-8 note 2)" });
+                }
+                else
+                    list.Add(new Piece { Surface = pa.Surface, Poly = piece, Ext = fa * pa.Ext + fb * pb.Ext, Label = pa.Label + " + " + pb.Label });
+            }
             return list;
         }
 

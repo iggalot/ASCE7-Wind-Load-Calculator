@@ -267,26 +267,41 @@ namespace ASCE7WindLoadCalculator
         /// <summary>
         /// Areas projected on a vertical plane normal to +x: the windward wall (up to its top edge, which is
         /// the rake on a gable end) and the roof silhouette above it.
+        /// <para>Exact: across the width both heights are straight lines between break points (the ends, the middle, and for a
+        /// hip L/2 in from each end, where the hips meet the ridge), so the trapezoid rule on those points and 64 more between
+        /// them integrates them without error. (It replaced a 2,000-point midpoint sum, which was ~32 ms a call.)</para>
         /// </summary>
-        public static (double wall, double roof) ProjectedAreas(WindGeometry model, int samples = 2000)
+        public static (double wall, double roof) ProjectedAreas(WindGeometry model)
         {
-            double L = model.L, B = model.B, wall = 0, roof = 0, dy = B / samples;
-            for (int i = 0; i < samples; i++)
+            double L = model.L, B = model.B;
+            var ys = new List<double> { 0, B, B / 2, L / 2, B - L / 2 };
+            for (int i = 1; i < 64; i++) ys.Add(B * i / 64.0);
+            var at = ys.Where(y => y >= 0 && y <= B).Distinct().OrderBy(y => y).ToList();
+            double wall = 0, roof = 0;
+            double prevWall = 0, prevRoof = 0;
+            for (int i = 0; i < at.Count; i++)
             {
-                double y = (i + 0.5) * dy;
+                double y = at[i];
                 double wallTop = model.RoofHeightAt(0, y);
                 double roofTop = Math.Max(wallTop, RoofTopAlongX(model, y, L));
-                wall += wallTop * dy;
-                roof += (roofTop - wallTop) * dy;
+                if (i > 0)
+                {
+                    double dy = y - at[i - 1];
+                    wall += 0.5 * (prevWall + wallTop) * dy;
+                    roof += 0.5 * (prevRoof + roofTop - wallTop) * dy;
+                }
+                prevWall = wallTop; prevRoof = roofTop - wallTop;
             }
             return (wall, roof);
         }
 
+        /// <summary>The roof's highest point along the wind at <paramref name="y"/>: the ends, the middle, the hips' lines, and 65 points between.</summary>
         private static double RoofTopAlongX(WindGeometry model, double y, double L)
         {
-            double best = double.MinValue;
-            foreach (double x in new[] { 0.0, L / 2, L, Math.Min(y, L), Math.Max(0, L - y) }.Concat(Enumerable.Range(0, 65).Select(i => L * i / 64.0)))
-                best = Math.Max(best, model.RoofHeightAt(Math.Min(Math.Max(x, 0), L), y));
+            double Clamp(double x) => Math.Min(Math.Max(x, 0), L);
+            double best = Math.Max(Math.Max(model.RoofHeightAt(0, y), model.RoofHeightAt(L / 2, y)), model.RoofHeightAt(L, y));
+            best = Math.Max(best, Math.Max(model.RoofHeightAt(Clamp(y), y), model.RoofHeightAt(Clamp(L - y), y)));
+            for (int i = 0; i <= 64; i++) best = Math.Max(best, model.RoofHeightAt(L * i / 64.0, y));
             return best;
         }
     }
