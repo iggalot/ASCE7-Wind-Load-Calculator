@@ -261,6 +261,7 @@ namespace ASCE7WindLoadCalculator
 
         /// <summary>MWFRS procedure for the shear-wall loads (also kept in <see cref="WindParameters_Base.LateralProcedure"/>).</summary>
         public LateralProcedure Procedure => rbProc28.IsChecked == true ? LateralProcedure.Envelope : LateralProcedure.Directional;
+        private LateralProcedure? viewerProcedure;   // the procedure last given to the 3D view
 
         // ---------------------------------------------------------------- geometry from a building model
 
@@ -587,6 +588,9 @@ namespace ASCE7WindLoadCalculator
             ShowBuildingNumbers();
             ShowResults(calcError);
 
+            // the 3D view's MWFRS cases follow the procedure chosen here when that choice changes (the view can still show
+            // the other procedure's cases in the meantime)
+            if (viewerProcedure != Procedure) { viewerProcedure = Procedure; Viewer.CaseProcedure = Procedure; }
             if (Analysis != null)
                 Viewer.SetResults(Building, Analysis.Cladding, Analysis.MwfrsAlongLength, Analysis.MwfrsAlongWidth, keepCamera: true);
             else
@@ -776,10 +780,19 @@ namespace ASCE7WindLoadCalculator
             tbOnlyCasesHint.Text = envelope
                 ? "28.3.2 exception: allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."
                 : "27.3.5 exception (Appendix D): allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms.";
-            tbCase1b.Text = envelope ? "Basic: full wind, end zones at one corner, then the other" : "Full wind, each direction alone";
-            tbCase2b.Text = envelope ? (s?.Lateral?.EnvelopeAlongLength?.PrintedTorsional == true ? "Torsional: far half at the printed T values (twists the building)" : "Torsional: far half at 25% (twists the building)") : "75%, 15% off-center (twists the building)";
-            tbCase3b.Text = envelope ? "Minimum: 16 psf walls, 8 psf roof, a separate case" : "75% from both directions at once";
-            tbCase4a.Visibility = tbCase4b.Visibility = envelope ? Visibility.Collapsed : Visibility.Visible;
+            // Ch. 27: Fig. 27.3-8 Cases 1 to 4; Ch. 28: Load Cases 1 and 2 (basic, Fig. 28.3-1) and 3 and 4 (torsional, Fig.
+            // 28.3-2); each with its separate minimum (27.1.5 / 28.3.6). The skipped cases fade.
+            tbCase1a.Text = envelope ? "LC 1, 2" : "Case 1";
+            tbCase1b.Text = envelope ? "Basic (Fig. 28.3-1): LC 1 wind across the ridge, LC 2 along it, each corner as the windward corner"
+                                     : "Full wind, each direction alone";
+            tbCase2a.Text = envelope ? "LC 3, 4" : "Case 2";
+            tbCase2b.Text = envelope ? (s?.Lateral?.EnvelopeAlongLength?.PrintedTorsional == true
+                                           ? "Torsional (Fig. 28.3-2): far half at the printed T values (twists the building)"
+                                           : "Torsional (Fig. 28.3-2): far half at 25% (twists the building)")
+                                     : "75%, 15% off-center (twists the building)";
+            tbCase3a.Visibility = tbCase3b.Visibility = tbCase4a.Visibility = tbCase4b.Visibility = envelope ? Visibility.Collapsed : Visibility.Visible;
+            string minSection = envelope ? Analysis?.MwfrsAlongLength?.Edition?.EnvelopeMinimumSection : "27.1.5";
+            tbCaseMinB.Text = "16 psf walls + 8 psf roof, separate" + (minSection != null ? $" ({minSection})" : "");
             double faded = OnlyCases1And3 ? 0.35 : 1.0;
             tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
         }
@@ -806,7 +819,7 @@ namespace ASCE7WindLoadCalculator
         {
             value.Text = psf.HasValue ? psf.Value.ToString("0.0") : "-";
             unit.Visibility = psf.HasValue ? Visibility.Visible : Visibility.Hidden;
-            sub.Text = psf.HasValue ? where + Environment.NewLine + usedFor : "Not available for these inputs";
+            sub.Text = psf.HasValue ? where + Environment.NewLine + usedFor + Environment.NewLine + "Click: show the cladding negative pressures" : "Not available for these inputs";
         }
 
         /// <summary>Shear-wall card: number, unit, then how it is made up and the minimum.</summary>
@@ -816,7 +829,34 @@ namespace ASCE7WindLoadCalculator
             if (f == null) { value.Text = "-"; sub.Text = "Not available for these inputs"; return; }
             value.Text = f.DesignKips.ToString("0.0");
             sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0} kips" + Environment.NewLine +
-                       $"Minimum {f.MinimumKips:0.0} kips (own case" + (f.MinimumGoverns ? ", larger)" : ")");
+                       $"Minimum {f.MinimumKips:0.0} kips (own case" + (f.MinimumGoverns ? ", larger)" : ")") + Environment.NewLine +
+                       "Click: show the wind case that gives the largest shear";
+        }
+
+        // ---------------------------------------------------------------- the summary cards, clicked
+
+        private void Chip_Click(object sender, System.Windows.Input.MouseButtonEventArgs e) =>
+            ShowSourceOf(sender == chipRoof ? "roof" : sender == chipWall ? "wall" : sender == chipWest ? "W" : "S");
+
+        /// <summary>
+        /// Shows in the 3D view where a summary card's number comes from: the roof uplift and the wall suction (cladding) the
+        /// cladding negative pressures; a base shear ("W", "S") the wind case of the procedure in use, from that direction,
+        /// with the largest shear along it (the minimum case when it governs). Returns the case drawn (null for cladding).
+        /// </summary>
+        public WindCase ShowSourceOf(string card)
+        {
+            if (Analysis == null) return null;
+            if (card == "roof" || card == "wall")
+            {
+                Viewer.Mode = WindViewMode.CladdingSuction;
+                return null;
+            }
+            bool alongLength = card == "W";
+            Viewer.CaseProcedure = Summary?.Lateral?.Procedure ?? Procedure;
+            var worst = Viewer.WindCases.Where(c => c.From == card)
+                              .OrderByDescending(c => Math.Abs(alongLength ? c.Vx : c.Vy)).FirstOrDefault();
+            if (worst != null) Viewer.SelectedCase = worst;
+            return worst;
         }
 
         // ---------------------------------------------------------------- the RESULTS flyout

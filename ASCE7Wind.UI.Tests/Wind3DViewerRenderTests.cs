@@ -146,12 +146,63 @@ namespace ASCE7Wind.UI.Tests
         }
 
         [STATestMethod]
-        public void OpensOnWholeBuildingWindFromWest()
+        public void OpensOnTheWindCasesEnvelope()
         {
             var r = Results(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
             var v = new Wind3DViewerControl(r.b, r.cc, r.mL, r.mW);
-            Assert.AreEqual(WindViewMode.MwfrsAlongLength, v.Mode);
+            // the MWFRS wind cases of Ch. 27, the envelope of all of them drawn, the tree listed
+            Assert.AreEqual(WindViewMode.WindCases, v.Mode);
+            Assert.AreEqual(LateralProcedure.Directional, v.CaseProcedure);
+            Assert.IsNotNull(v.SelectedEnvelope);
+            Assert.IsNull(v.SelectedEnvelope.From, "the envelope of every case");
             Assert.IsTrue(v.Scene.Zones.Any(z => z.HasPressure && z.Kind == SurfaceKind.Wall));
+        }
+
+        /// <summary>
+        /// The VIEW panel: cladding (negative / positive) and the two MWFRS procedures (Directional, Ch. 27; Envelope, Ch. 28)
+        /// in one group; the case tree always listed, and a case picked from it in a cladding view draws that case.
+        /// </summary>
+        [STATestMethod]
+        public void ViewPanel_ProceduresAndTreeInEveryView()
+        {
+            var r = Results(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
+            var v = new Wind3DViewerControl(r.b, r.cc, r.mL, r.mW) { Width = W, Height = H };
+            v.Measure(new Size(W, H)); v.Arrange(new Rect(0, 0, W, H));
+            Assert.AreEqual("Directional (Ch. 27)", ((System.Windows.Controls.RadioButton)v.FindName("rbProc27")).Content);
+            Assert.AreEqual("Envelope (Ch. 28)", ((System.Windows.Controls.RadioButton)v.FindName("rbProc28")).Content);
+            Assert.AreEqual(Visibility.Collapsed, ((FrameworkElement)v.FindName("rbWindWest")).IsVisible ? Visibility.Visible : Visibility.Collapsed, "no From W button");
+
+            v.Mode = WindViewMode.CladdingSuction;
+            Assert.AreEqual(Visibility.Visible, ((FrameworkElement)v.FindName("bdCases")).Visibility, "the tree in a cladding view");
+            Assert.IsFalse(((System.Windows.Controls.RadioButton)v.FindName("rbProc27")).IsChecked == true, "one view at a time");
+            Assert.IsTrue(v.WindCases.Count > 0);
+
+            // the procedure changed in a cladding view: the view stays, the list is the other procedure's
+            v.CaseProcedure = LateralProcedure.Envelope;
+            Assert.AreEqual(WindViewMode.CladdingSuction, v.Mode);
+            Assert.IsTrue(v.WindCases.All(c => c.Procedure == LateralProcedure.Envelope));
+
+            // a wind direction's row picked: its envelope drawn, with the wind arrow from that direction
+            v.CaseProcedure = LateralProcedure.Directional;
+            v.PickDirection("W");
+            Assert.AreEqual(WindViewMode.WindCases, v.Mode);
+            Assert.AreEqual("W", v.SelectedEnvelope?.From, "the west envelope");
+            Assert.AreEqual(1.0, v.Scene.WindDirection.Value.X, 1e-9, "the arrow from the west");
+            v.PickDirection("SW");
+            Assert.AreEqual("SW", v.SelectedEnvelope?.From);
+            Assert.AreEqual(Math.Sqrt(0.5), v.Scene.WindDirection.Value.X, 1e-9, "the arrow from the southwest");
+            Assert.AreEqual(Math.Sqrt(0.5), v.Scene.WindDirection.Value.Y, 1e-9);
+            v.CaseProcedure = LateralProcedure.Envelope;
+            v.PickDirection("NE");
+            Assert.AreEqual("NE", v.SelectedEnvelope?.From, "Ch. 28: the NE corner's envelope");
+            Assert.AreEqual(-Math.Sqrt(0.5), v.Scene.WindDirection.Value.Y, 1e-9, "the arrow from the northeast");
+
+            // a case picked from the tree: drawn, its procedure's button checked
+            var c1 = v.WindCases.First(c => c.FigureCase == 1);
+            v.SelectedCase = c1;
+            Assert.AreEqual(WindViewMode.WindCases, v.Mode);
+            Assert.AreEqual(true, ((System.Windows.Controls.RadioButton)v.FindName("rbProc28")).IsChecked);
+            Assert.AreEqual(c1.Name, v.Scene.Title);
         }
 
         /// <summary>A cladding view with no valid pressures must not leave the designer looking at a gray building.</summary>
@@ -163,7 +214,7 @@ namespace ASCE7Wind.UI.Tests
             v.Mode = WindViewMode.CladdingSuction;
             v.Measure(new Size(W, H)); v.Arrange(new Rect(0, 0, W, H));
             Render(v, "auto_switch_70ft");
-            Assert.AreEqual(WindViewMode.MwfrsAlongLength, v.Mode);
+            Assert.AreEqual(WindViewMode.WindCases, v.Mode, "the MWFRS wind cases (their envelope)");
             Assert.IsTrue(v.Scene.Zones.Any(z => z.HasPressure), "whole-building pressures shown");
             StringAssert.Contains(v.Scene.Messages[0], "do not apply");
         }
@@ -242,6 +293,26 @@ namespace ASCE7Wind.UI.Tests
             Assert.IsNull(v.SelectedCase);
             Assert.IsTrue(v.Scene.Subtitle.Contains("36 wind cases"));
 
+            // the four windward corners (28.3.2.1) listed after the four wind directions, each with its envelope and its
+            // Load Cases 1 to 4 (one wind each: LC 1 and 3 across the ridge, LC 2 and 4 along it) x the two signs of GCpi
+            var groups = v.CaseGroups;
+            CollectionAssert.AreEqual(new[] { "Envelope of all 36 cases", "From the west (W)", "From the east (E)", "From the south (S)", "From the north (N)",
+                                              "From the southwest (SW)", "From the southeast (SE)", "From the northwest (NW)", "From the northeast (NE)" },
+                                      groups.Where(g => !g.Contains("|")).ToList());
+            foreach (var k in new[] { "SW", "SE", "NW", "NE" })
+            {
+                var mine = v.WindCases.Where(c => c.ReferenceCorner == k).ToList();
+                Assert.AreEqual(8, mine.Count, k);
+                CollectionAssert.AreEquivalent(new[] { 1, 2, 3, 4 }, mine.Select(c => c.FigureCase).Distinct().ToList(), k + ": LC 1 to 4");
+                CollectionAssert.AreEquivalent(new[] { k.Substring(0, 1), k.Substring(1) }, mine.Select(c => c.From).Distinct().ToList(), k + ": its two winds");
+            }
+            Assert.IsTrue(groups.Contains("From the southwest (SW)|Envelope"));
+            v.SelectedEnvelope = new Wind3DViewerControl.EnvelopeChoice("SW", true);
+            StringAssert.Contains(v.Scene.Subtitle, "8 wind cases", "the SW corner's envelope: its 8 cases");
+            Assert.AreEqual(32 + 4, v.ShownCaseCount, "each case once (a corner lists the cases again)");
+            v.SelectedEnvelope = null;
+            v.EnvelopeMax = true;
+
             var lc3 = v.WindCases.First(c => c.FigureCase == 3);
             v.SelectedCase = lc3;
             Assert.AreEqual(lc3.Name, v.Scene.Title);
@@ -278,6 +349,8 @@ namespace ASCE7Wind.UI.Tests
                         .First(i => ((System.Windows.Controls.TextBlock)i.Header).Inlines.OfType<System.Windows.Documents.Run>().First().Text == "From the west (W)");
             Assert.AreEqual((13 + 2 * 40).ToString(), ((System.Windows.Controls.TextBlock)west.Header).Inlines.OfType<System.Windows.Documents.Run>().Last().Text.Trim(),
                             "W: its own 13 and the 40 of SW and of NW");
+            // the load cases 1 to 4 together, the minimum case last
+            Assert.IsTrue(((System.Windows.Controls.TreeViewItem)west.Items[west.Items.Count - 1]).Tag is WindCase last && last.IsMinimumCase, "W ends with its minimum case");
             foreach (var d in new[] { "W", "E", "S", "N" })
             {
                 Assert.AreEqual(4, v.WindCases.Count(c => c.From == d && c.FigureCase == 1));
@@ -341,7 +414,8 @@ namespace ASCE7Wind.UI.Tests
             var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
             var v = Viewer(b, WindViewMode.WindCases);
             Assert.IsNull(v.SelectedCase);
-            Assert.IsTrue(v.SelectedEnvelope.From == null && v.SelectedEnvelope.Max, "the envelope of every case, Max +, first");
+            Assert.IsTrue(v.SelectedEnvelope.From == null && !v.SelectedEnvelope.Max, "the envelope of every case, Max − (the suction) first");
+            v.EnvelopeMax = true;
             double allMax = v.Scene.MaxPsf;
             v.EnvelopeMax = false;
             double allMin = v.Scene.MinPsf;

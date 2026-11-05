@@ -388,7 +388,8 @@ namespace ASCE7Wind.UI.Tests
             {
                 Assert.IsTrue(double.TryParse(Find<TextBlock>(c, "val" + n).Text, out _), n + " shows just the number");
                 Assert.AreEqual(Visibility.Visible, Find<UIElement>(c, "unit" + n).Visibility);
-                Assert.AreEqual(2, Find<TextBlock>(c, "sub" + n).Text.Split('\n').Length, n + " has two detail lines");
+                Assert.AreEqual(3, Find<TextBlock>(c, "sub" + n).Text.Split('\n').Length, n + " has two detail lines and what a click shows");
+                StringAssert.Contains(Find<TextBlock>(c, "sub" + n).Text, "Click: show");
             }
         }
 
@@ -495,6 +496,26 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(Visibility.Visible, Find<Border>(c, "secSize").Visibility, "typed here again");
             Assert.IsFalse(Find<TextBox>(c, "tbL").IsReadOnly);
             Assert.IsTrue(Find<ComboBox>(c, "cbStories").IsEnabled);
+        }
+
+        /// <summary>A summary card clicked: the base shears draw the wind case that gives them; the cladding cards the cladding negative pressures.</summary>
+        [STATestMethod]
+        public void SummaryCards_ShowWhereTheirNumbersComeFrom()
+        {
+            var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });
+            c.GoToStep(WindSetupControl.ResultsStep);
+            Layout(c);
+            foreach (var (card, design, along) in new[] { ("W", c.Summary.FromWest.DesignKips, true), ("S", c.Summary.FromSouth.DesignKips, false) })
+            {
+                var shown = c.ShowSourceOf(card);
+                Assert.IsNotNull(shown, card);
+                Assert.AreEqual(card, shown.From);
+                Assert.AreEqual(WindViewMode.WindCases, c.Viewer.Mode);
+                Assert.AreSame(shown, c.Viewer.SelectedCase, card + ": that case drawn");
+                Assert.AreEqual(design, Math.Abs(along ? shown.Vx : shown.Vy), 0.01 * design, card + ": the case gives the card's shear");
+            }
+            Assert.IsNull(c.ShowSourceOf("roof"));
+            Assert.AreEqual(WindViewMode.CladdingSuction, c.Viewer.Mode, "the roof uplift: the cladding negative pressures");
         }
 
         /// <summary>

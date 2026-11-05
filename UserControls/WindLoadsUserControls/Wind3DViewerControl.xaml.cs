@@ -88,6 +88,7 @@ namespace ASCE7WindLoadCalculator
                 cbBlocks.Visibility = v;
                 cbOutlines.Visibility = v;
                 cbPsfLabels.Visibility = v;
+                UpdateRoofCaseAvailability();
                 ApplyViewPanel();
                 Rebuild(resetCamera: false);
             }
@@ -104,21 +105,25 @@ namespace ASCE7WindLoadCalculator
                 if (rbCladPressure.IsChecked == true) return WindViewMode.CladdingPressure;
                 if (rbWindWest.IsChecked == true) return WindViewMode.MwfrsAlongLength;
                 if (rbWindSouth.IsChecked == true) return WindViewMode.MwfrsAlongWidth;
-                if (rbCases.IsChecked == true) return WindViewMode.WindCases;
+                if (rbProc27.IsChecked == true || rbProc28.IsChecked == true) return WindViewMode.WindCases;
                 return WindViewMode.CladdingSuction;
             }
             set
             {
-                suppressModeEvents = true;
-                rbCladSuction.IsChecked = value == WindViewMode.CladdingSuction;
-                rbCladPressure.IsChecked = value == WindViewMode.CladdingPressure;
-                rbWindWest.IsChecked = value == WindViewMode.MwfrsAlongLength;
-                rbWindSouth.IsChecked = value == WindViewMode.MwfrsAlongWidth;
-                rbCases.IsChecked = value == WindViewMode.WindCases;
-                suppressModeEvents = false;
-                UpdateRoofCaseAvailability();
+                SetModeSilently(value);
                 Rebuild(resetCamera: false);
             }
+        }
+
+        /// <summary>Checks the mode's button (the wind cases: the button of <see cref="CaseProcedure"/>), no events.</summary>
+        private void CheckModeButtons(WindViewMode m)
+        {
+            rbCladSuction.IsChecked = m == WindViewMode.CladdingSuction;
+            rbCladPressure.IsChecked = m == WindViewMode.CladdingPressure;
+            rbWindWest.IsChecked = m == WindViewMode.MwfrsAlongLength;
+            rbWindSouth.IsChecked = m == WindViewMode.MwfrsAlongWidth;
+            rbProc27.IsChecked = m == WindViewMode.WindCases && procedure == LateralProcedure.Directional;
+            rbProc28.IsChecked = m == WindViewMode.WindCases && procedure == LateralProcedure.Envelope;
         }
 
         public MwfrsRoofCase RoofCase => rbCaseB.IsChecked == true ? MwfrsRoofCase.CaseB : MwfrsRoofCase.CaseA;
@@ -192,8 +197,8 @@ namespace ASCE7WindLoadCalculator
                 if (!geometryOnly && !scene.Zones.Any(z => z.HasPressure) && !IsWholeBuilding(Mode) && mwfrsLength != null)
                 {
                     var reasons = scene.Messages.ToList();
-                    SetModeSilently(WindViewMode.MwfrsAlongLength);
-                    scene = WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
+                    SetModeSilently(WindViewMode.WindCases);
+                    scene = CaseScene();
                     scene.Messages.Insert(0, "Roofing & siding (cladding) pressures do not apply to this building, so the whole-building view is shown."
                         + (reasons.Count > 0 ? " " + string.Join(" ", reasons) : ""));
                 }
@@ -206,6 +211,7 @@ namespace ASCE7WindLoadCalculator
                 tbSubtitle.Text = "Cannot draw this building yet: " + ex.Message;
                 return;
             }
+            ShowCaseList();   // the wind case tree is listed in every view
             scale = new PressureColorScale(scene.MaxAbsPsf);
             var model = scene.Model;
             double size = Math.Max(Math.Max(model.L, model.B), model.RidgeHeight);
@@ -1004,11 +1010,7 @@ namespace ASCE7WindLoadCalculator
         private void SetModeSilently(WindViewMode m)
         {
             suppressModeEvents = true;
-            rbCladSuction.IsChecked = m == WindViewMode.CladdingSuction;
-            rbCladPressure.IsChecked = m == WindViewMode.CladdingPressure;
-            rbWindWest.IsChecked = m == WindViewMode.MwfrsAlongLength;
-            rbWindSouth.IsChecked = m == WindViewMode.MwfrsAlongWidth;
-            rbCases.IsChecked = m == WindViewMode.WindCases;
+            CheckModeButtons(m);
             suppressModeEvents = false;
             UpdateRoofCaseAvailability();
         }
@@ -1017,10 +1019,11 @@ namespace ASCE7WindLoadCalculator
         {
             if (spRoofCase == null) return;
             var m = Mode;
-            // The roof Cp choice only applies to the whole-building views; hide it (not just grey it) otherwise.
-            // (each wind case carries its own roof value, so the wind cases have no roof choice)
+            // The roof Cp choice only applies to the single-direction whole-building views; hide it (not just grey it)
+            // otherwise (each wind case carries its own roof value, so the wind cases have no roof choice)
             spRoofCase.Visibility = IsWholeBuilding(m) && m != WindViewMode.WindCases ? Visibility.Visible : Visibility.Collapsed;
-            if (bdCases != null) bdCases.Visibility = m == WindViewMode.WindCases && !geometryOnly ? Visibility.Visible : Visibility.Collapsed;
+            // the wind case tree is always there with results (a case picked from it draws it, from the cladding views too)
+            if (bdCases != null) bdCases.Visibility = !geometryOnly ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // ---------------------------------------------------------------------------------------
@@ -1034,10 +1037,29 @@ namespace ASCE7WindLoadCalculator
         private bool suppressCaseEvents;
 
         /// <summary>Which procedure's cases the list shows: Chapter 27 (directional) or Chapter 28 (envelope, low-rise).</summary>
+        /// Setting it does not change the view: the cladding views stay; the wind cases switch to the other procedure's list.
         public LateralProcedure CaseProcedure
         {
-            get => rbProc28.IsChecked == true ? LateralProcedure.Envelope : LateralProcedure.Directional;
-            set { rbProc27.IsChecked = value == LateralProcedure.Directional; rbProc28.IsChecked = value == LateralProcedure.Envelope; }
+            get => procedure;
+            set
+            {
+                if (procedure == value) return;
+                bool cases = Mode == WindViewMode.WindCases;
+                procedure = value;
+                windCases = null;
+                picked = new EnvelopeChoice(null, EnvelopeMax);   // a new list: start at its envelope of every case
+                if (cases) SetModeSilently(WindViewMode.WindCases);   // its button
+                if (!IsInitialized || sceneRoot == null) return;
+                if (cases) Rebuild(resetCamera: false);
+                else ShowCaseList();
+            }
+        }
+        private LateralProcedure procedure = LateralProcedure.Directional;
+
+        /// <summary>Fills the case list when it is shown and not filled for these results and this procedure.</summary>
+        private void ShowCaseList()
+        {
+            if (windCases == null && !geometryOnly && bdCases.Visibility == Visibility.Visible) { var _ = WindCases; }
         }
 
         /// <summary>Reasons Chapter 28 does not apply to this building (empty when it does).</summary>
@@ -1109,8 +1131,22 @@ namespace ASCE7WindLoadCalculator
         }
 
         // what is drawn: a WindCase or an EnvelopeChoice; selecting a group header keeps the drawing
-        private object picked = new EnvelopeChoice(null, true);
+        private object picked = new EnvelopeChoice(null, false);   // the largest suction first: it usually governs
         private TreeViewItem selected;
+
+        /// <summary>The tag of a wind direction's row in the list (W ... NE; for Ch. 28 SW ... NE are the windward corners).</summary>
+        private sealed class DirectionNode
+        {
+            public DirectionNode(string from) { From = from; }
+            public string From { get; }
+        }
+
+        /// <summary>Picks a wind direction's row as the user would: its envelope is drawn (for tests).</summary>
+        public void PickDirection(string from)
+        {
+            var row = tvCases.Items.OfType<TreeViewItem>().FirstOrDefault(i => i.Tag is DirectionNode d && d.From == from);
+            if (row != null) row.IsSelected = true;
+        }
 
         private TreeViewItem EnvelopeItem(string from, bool max) =>
             Leaves().FirstOrDefault(i => i.Tag is EnvelopeChoice e && e.From == from && e.Max == max);
@@ -1153,7 +1189,11 @@ namespace ASCE7WindLoadCalculator
             bool changed = !Same(picked, item.Tag);
             picked = item.Tag;
             item.BringIntoView();
-            if (draw && changed && IsInitialized && sceneRoot != null && Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
+            if (!draw || !IsInitialized || sceneRoot == null) return;
+            // drawn from a cladding view too: the wind cases are shown (the procedure's button checked)
+            bool other = Mode != WindViewMode.WindCases;
+            if (other) SetModeSilently(WindViewMode.WindCases);
+            if (changed || other) Rebuild(resetCamera: false);
         }
 
         private static bool Same(object a, object b) =>
@@ -1177,9 +1217,10 @@ namespace ASCE7WindLoadCalculator
         {
             var all = WindCases;
             if (picked is WindCase chosen) return WindSceneBuilder.FromCase(building, chosen);
-            var env = picked as EnvelopeChoice ?? new EnvelopeChoice(null, true);
+            var env = picked as EnvelopeChoice ?? new EnvelopeChoice(null, false);
             var proc = CaseProcedure;
-            var cases = env.From == null ? all : all.Where(c => c.From == env.From).ToList();
+            // a direction's cases; for Ch. 28 a quartering direction is a windward corner: the cases with that reference corner
+            var cases = env.From == null ? all : all.Where(c => c.From == env.From || c.ReferenceCorner == env.From).ToList();
             var key = (proc, env.From ?? "");
             if (!envelopeBy.TryGetValue(key, out var cells)) envelopeBy[key] = cells = WindCaseEnvelope.Build(cases);
             var s = WindSceneBuilder.FromEnvelope(building, cells, env.Max, cases.Count, env.From);
@@ -1193,10 +1234,17 @@ namespace ASCE7WindLoadCalculator
 
         private void Procedure_Checked(object sender, RoutedEventArgs e)
         {
-            if (!IsInitialized || sceneRoot == null) return;
-            windCases = null;
-            picked = new EnvelopeChoice(null, EnvelopeMax);   // a new list: start at its envelope of every case
-            if (Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
+            // a procedure button: the wind cases of that procedure (from any view)
+            if (!IsInitialized || suppressModeEvents || sceneRoot == null) return;
+            var proc = sender == rbProc28 ? LateralProcedure.Envelope : LateralProcedure.Directional;
+            if (proc != procedure)
+            {
+                procedure = proc;
+                windCases = null;
+                picked = new EnvelopeChoice(null, EnvelopeMax);   // a new list: start at its envelope of every case
+            }
+            UpdateRoofCaseAvailability();
+            Rebuild(resetCamera: false);
         }
 
         // the wind directions in the order listed: the two principal axes, then the quartering winds
@@ -1234,8 +1282,9 @@ namespace ASCE7WindLoadCalculator
         {
             var g = new TreeViewItem { Header = Header(title, count, strong), IsExpanded = open,
                                        ToolTip = $"Each piece of the building with its largest pressure (Max +) or suction (Max −) of {(from == null ? "all the" : "these")} {count} cases, and the case that gives it" };
-            g.Items.Add(new TreeViewItem { Header = new TextBlock { Text = "Max + (pressure, toward the surface)" }, Tag = new EnvelopeChoice(from, true) });
+            // the suction first: it usually governs (uplift, wall pull-off)
             g.Items.Add(new TreeViewItem { Header = new TextBlock { Text = "Max − (suction, away from the surface)" }, Tag = new EnvelopeChoice(from, false) });
+            g.Items.Add(new TreeViewItem { Header = new TextBlock { Text = "Max + (pressure, toward the surface)" }, Tag = new EnvelopeChoice(from, true) });
             return g;
         }
 
@@ -1261,8 +1310,10 @@ namespace ASCE7WindLoadCalculator
             var byDirection = shown.GroupBy(c => c.From ?? "")
                                    .OrderBy(g => { int k = Array.IndexOf(DirectionOrder, g.Key); return k < 0 ? DirectionOrder.Length : k; });
             // a group per load case ("Case 1" ... "Minimum") under parent, each case in it
-            void AddCaseGroups(ItemsControl into, IEnumerable<WindCase> list)
+            void AddCaseGroups(ItemsControl into, IEnumerable<WindCase> list, string corner = null)
             {
+                // under a windward corner (Ch. 28) an item says its wind instead of the corner: "wind from S, +GCpi"
+                string Text(WindCase c, string t) => corner == null ? t : t.Replace($"ref. corner {corner}", $"wind from {c.From}");
                 foreach (var g in list.GroupBy(c => SplitName(c).Group))
                 {
                     var cases = g.ToList();
@@ -1276,6 +1327,7 @@ namespace ASCE7WindLoadCalculator
                     foreach (var c in cases)
                     {
                         var (group, text) = SplitName(c);
+                        text = Text(c, text);
                         var item = new TreeViewItem
                         {
                             Header = new TextBlock { Text = cases.Count > 1 ? text : text == group ? group : group + ": " + text, TextWrapping = TextWrapping.Wrap, MaxWidth = 200 },
@@ -1295,7 +1347,7 @@ namespace ASCE7WindLoadCalculator
                            .OrderBy(g => Array.IndexOf(DirectionOrder, g.Key)).ToList()
                     : new List<IGrouping<string, WindCase>>();
                 int listed = d.Count() + quartering.Sum(q => q.Count());
-                var dir = new TreeViewItem { Header = Header(DirectionName(d.Key), listed, true), IsExpanded = filtering };
+                var dir = new TreeViewItem { Header = Header(DirectionName(d.Key), listed, true), IsExpanded = filtering, Tag = d.Key.Length > 0 ? new DirectionNode(d.Key) : null };
                 if (!filtering && d.Key.Length > 0)
                 {
                     var env = EnvelopeGroup("Envelope", d.Key, d.Count(), false, open: false);
@@ -1304,7 +1356,8 @@ namespace ASCE7WindLoadCalculator
                     dir.Items.Add(env);
                     foreach (TreeViewItem e in env.Items) if (((EnvelopeChoice)e.Tag).Key == keep) select = e;
                 }
-                AddCaseGroups(dir, d);
+                // the load cases (1 to 4) together, then the separate minimum case last
+                AddCaseGroups(dir, d.Where(c => !c.IsMinimumCase));
                 foreach (var q in quartering)
                 {
                     string other = q.Key.Replace(d.Key, "");
@@ -1317,7 +1370,31 @@ namespace ASCE7WindLoadCalculator
                     dir.Items.Add(with);
                     AddCaseGroups(with, q);
                 }
+                AddCaseGroups(dir, d.Where(c => c.IsMinimumCase));
                 tvCases.Items.Add(dir);
+            }
+            // Ch. 28: the quartering directions are the windward (reference) corners of 28.3.2.1 (each corner in turn the
+            // windward corner, Figs. 28.3-1 and 28.3-2): under SW the load cases with the SW corner windward, Load Cases 1 to
+            // 4, each as the standard gives it (the wind along one axis, the end zones at that corner). Not a sum of an S and
+            // a W case: the same cases as under their wind direction, listed again by corner.
+            foreach (var k in shown.Where(c => c.ReferenceCorner != null).GroupBy(c => c.ReferenceCorner)
+                                   .OrderBy(g => { int i = Array.IndexOf(DirectionOrder, g.Key); return i < 0 ? DirectionOrder.Length : i; }))
+            {
+                var node = new TreeViewItem
+                {
+                    Header = Header(DirectionName(k.Key), k.Count(), true), IsExpanded = filtering, Tag = new DirectionNode(k.Key),
+                    ToolTip = $"The {WindSceneBuilder.DirectionWord(k.Key)} corner as the windward (reference) corner (28.3.2.1): Load Cases 1 to 4 " +
+                              "with the end zones at that corner. The same cases are listed under their wind direction.",
+                };
+                if (!filtering)
+                {
+                    var env = EnvelopeGroup("Envelope", k.Key, k.Count(), false, open: false);
+                    env.ToolTip = $"Each piece of the building with its largest pressure (Max +) or suction (Max −) of the {k.Count()} cases with the {WindSceneBuilder.DirectionWord(k.Key)} corner windward";
+                    node.Items.Add(env);
+                    foreach (TreeViewItem e in env.Items) if (((EnvelopeChoice)e.Tag).Key == keep) select = e;
+                }
+                AddCaseGroups(node, k, corner: k.Key);
+                tvCases.Items.Add(node);
             }
             Select(select);
             tbCaseCount.Text = filtering ? $"{shown.Count} of {windCases.Count} cases" : $"{windCases.Count} cases by wind direction, each with its envelope";
@@ -1330,13 +1407,23 @@ namespace ASCE7WindLoadCalculator
         private void Cases_SelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             if (suppressCaseEvents) return;
-            // a group header: open or close it and keep drawing what was drawn
-            if (!(e.NewValue is TreeViewItem item) || item.Items.Count > 0) return;
+            if (!(e.NewValue is TreeViewItem item)) return;
+            object draw = item.Tag;
+            if (item.Items.Count > 0)
+            {
+                // a wind direction's own row: its envelope (with its wind arrow), Max − (the suction usually governs); any other
+                // group header: open or close it and keep drawing what was drawn
+                if (!(item.Tag is DirectionNode d)) return;
+                draw = new EnvelopeChoice(d.From, false);
+            }
             selected = item;
-            bool changed = !Same(picked, item.Tag);
-            picked = item.Tag;
-            if (!changed || !IsInitialized || sceneRoot == null || Mode != WindViewMode.WindCases) return;
-            Rebuild(resetCamera: false);
+            bool changed = !Same(picked, draw);
+            picked = draw;
+            if (!IsInitialized || sceneRoot == null) return;
+            // picked from a cladding view: the wind cases are shown (the procedure's button checked)
+            bool other = Mode != WindViewMode.WindCases;
+            if (other) SetModeSilently(WindViewMode.WindCases);
+            if (changed || other) Rebuild(resetCamera: false);
         }
 
         private void CaseFilter_Changed(object sender, TextChangedEventArgs e)

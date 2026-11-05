@@ -266,6 +266,13 @@
             <Setter Property="Padding" Value="9,3"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="ToolTipService.ShowDuration" Value="30000"/>
+            <!-- a card shows where its number comes from when clicked -->
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#898781"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="ChipLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
@@ -808,7 +815,7 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="True">
-                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                    <Border x:Name="chipRoof" DockPanel.Dock="Left" Style="{StaticResource StatChip}" MouseLeftButtonUp="Chip_Click">
                         <Border.ToolTip><TextBlock x:Name="subRoof"/></Border.ToolTip>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ChipLabel}" Text="Roof uplift"/>
@@ -816,7 +823,7 @@
                             <TextBlock x:Name="unitRoof" Style="{StaticResource ChipUnit}" Text="psf"/>
                         </StackPanel>
                     </Border>
-                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                    <Border x:Name="chipWall" DockPanel.Dock="Left" Style="{StaticResource StatChip}" MouseLeftButtonUp="Chip_Click">
                         <Border.ToolTip><TextBlock x:Name="subWall"/></Border.ToolTip>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ChipLabel}" Text="Wall suction"/>
@@ -824,15 +831,15 @@
                             <TextBlock x:Name="unitWall" Style="{StaticResource ChipUnit}" Text="psf"/>
                         </StackPanel>
                     </Border>
-                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                    <Border x:Name="chipWest" DockPanel.Dock="Left" Style="{StaticResource StatChip}" MouseLeftButtonUp="Chip_Click">
                         <Border.ToolTip><TextBlock x:Name="subWest"/></Border.ToolTip>
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Style="{StaticResource ChipLabel}" Text="Shear walls, from W"/>
+                            <TextBlock Style="{StaticResource ChipLabel}" Text="MWFRS base shear, from W"/>
                             <TextBlock x:Name="valWest" Style="{StaticResource ChipValue}"/>
                             <TextBlock x:Name="unitWest" Style="{StaticResource ChipUnit}" Text="kips"/>
                         </StackPanel>
                     </Border>
-                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                    <Border x:Name="chipSouth" DockPanel.Dock="Left" Style="{StaticResource StatChip}" MouseLeftButtonUp="Chip_Click">
                         <Border.ToolTip><TextBlock x:Name="subSouth"/></Border.ToolTip>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ChipLabel}" Text="from S"/>
@@ -873,17 +880,16 @@
                             </Border>
                             <Border Style="{StaticResource Section}">
                                 <StackPanel>
-                                    <!-- title, then the MWFRS procedure for the shear-wall loads on the same row -->
-                                    <DockPanel Margin="0,0,0,6">
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
-                                                    ToolTip="Chapter 27 (directional) works for any building. Chapter 28 Part 1 (envelope) is for low-rise buildings (h ≤ 60 ft and h ≤ least plan dimension) with flat or gable roofs, and often gives lower forces.">
-                                            <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Chip}" Content="Ch. 27" IsChecked="True" Checked="Input_Changed"
-                                                         AutomationProperties.Name="Chapter 27 directional procedure"/>
-                                            <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Chip}" Margin="0" Content="Ch. 28 low-rise" Checked="Input_Changed"
-                                                         AutomationProperties.Name="Chapter 28 envelope procedure"/>
-                                        </StackPanel>
-                                        <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" Text="Shear walls"/>
-                                    </DockPanel>
+                                    <!-- the MWFRS (whole-building) procedure for the wind cases, spelled out, then whether the shear
+                                         walls take these loads -->
+                                    <TextBlock Style="{StaticResource SectionTitle}" Margin="0,0,0,4" Text="Main wind force resisting system (MWFRS)"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                                ToolTip="Chapter 27 (directional) works for any building. Chapter 28 Part 1 (envelope) is for low-rise buildings (h ≤ 60 ft and h ≤ least plan dimension) with flat or gable roofs, and often gives lower forces.">
+                                        <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Chip}" Content="Directional (Ch. 27)" IsChecked="True" Checked="Input_Changed"
+                                                     AutomationProperties.Name="Chapter 27 directional procedure"/>
+                                        <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Chip}" Margin="0" Content="Envelope (Ch. 28, low-rise)" Checked="Input_Changed"
+                                                     AutomationProperties.Name="Chapter 28 envelope procedure"/>
+                                    </StackPanel>
                                     <!-- Whether the shear walls use these loads: green = yes (automatic), amber = no -->
                                     <Border x:Name="bdLinked" Margin="0,0,0,10" Padding="10,8" CornerRadius="6" Background="#EAF4EA" BorderBrush="#7FB77F" BorderThickness="1" Visibility="Collapsed">
                                         <DockPanel>
@@ -904,16 +910,18 @@
                                     <TextBlock x:Name="tbCaseCount" Style="{StaticResource Hint}" Margin="0,8,0,4"/>
                                     <!-- Fig. 27.3-8 load cases in plain words; cases 2 and 4 fade when only 1 and 3 are used -->
                                     <Grid x:Name="gridCases" TextElement.FontSize="12">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                                        <TextBlock FontWeight="SemiBold" Text="Case 1"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="62"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                        <TextBlock x:Name="tbCase1a" FontWeight="SemiBold" Text="Case 1"/>
                                         <TextBlock x:Name="tbCase1b" Grid.Column="1" TextWrapping="Wrap" Text="Full wind, each direction alone"/>
                                         <TextBlock x:Name="tbCase2a" Grid.Row="1" FontWeight="SemiBold" Text="Case 2"/>
                                         <TextBlock x:Name="tbCase2b" Grid.Row="1" Grid.Column="1" TextWrapping="Wrap" Text="75%, 15% off-center (twists the building)"/>
-                                        <TextBlock Grid.Row="2" FontWeight="SemiBold" Text="Case 3"/>
+                                        <TextBlock x:Name="tbCase3a" Grid.Row="2" FontWeight="SemiBold" Text="Case 3"/>
                                         <TextBlock x:Name="tbCase3b" Grid.Row="2" Grid.Column="1" TextWrapping="Wrap" Text="75% from both directions at once"/>
                                         <TextBlock x:Name="tbCase4a" Grid.Row="3" FontWeight="SemiBold" Text="Case 4"/>
                                         <TextBlock x:Name="tbCase4b" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" Text="56% from both at once, 15% off-center"/>
+                                        <TextBlock Grid.Row="4" FontWeight="SemiBold" Text="Minimum"/>
+                                        <TextBlock x:Name="tbCaseMinB" Grid.Row="4" Grid.Column="1" TextWrapping="Wrap" Text="16 psf walls, 8 psf roof (projected), a separate case"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>
