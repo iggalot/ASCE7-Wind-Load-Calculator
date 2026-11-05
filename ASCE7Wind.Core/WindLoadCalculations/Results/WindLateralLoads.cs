@@ -28,9 +28,12 @@ namespace ASCE7WindLoadCalculator
         /// <summary>27.1.5 minimum: 16 psf on the wall area and 8 psf on the roof area projected normal to the wind.</summary>
         public double MinimumKips { get; internal set; }
 
-        /// <summary>Force used for design: the larger of the calculated total and the 27.1.5 minimum.</summary>
+        /// <summary>The larger along-wind shear of Case 1 (<see cref="TotalKips"/>) and the separate minimum load case
+        /// (<see cref="MinimumKips"/>): what controls where one number is wanted. The Fig. 27.3-8 cases are built on TotalKips; the
+        /// minimum is a load case of its own, "applied as a separate load case in addition to the normal load cases" (C27.1.5).</summary>
         public double DesignKips => Math.Max(TotalKips, MinimumKips);
 
+        /// <summary>True when the separate minimum load case (27.1.5) has the larger along-wind shear.</summary>
         public bool MinimumGoverns => MinimumKips > TotalKips;
 
         /// <summary>Wall area projected normal to the wind (ft²), including any gable triangle and the parapet (it counts as wall area for the 27.1.5 minimum).</summary>
@@ -46,7 +49,7 @@ namespace ASCE7WindLoadCalculator
     /// <summary>One Fig. 27.3-8 design wind load case, as forces at the building's plan center.</summary>
     public sealed class WindLoadCase
     {
-        /// <summary>1 to 4 per Fig. 27.3-8.</summary>
+        /// <summary>1 to 4 per Fig. 27.3-8; 0 (<see cref="WindLateralLoads.MinimumCaseNumber"/>) for the separate minimum load case.</summary>
         public int CaseNumber { get; internal set; }
         public string Name { get; internal set; }
 
@@ -75,6 +78,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Chapter 28 details per direction; null for the directional procedure.</summary>
         public EnvelopeDirection EnvelopeAlongLength { get; internal set; }
         public EnvelopeDirection EnvelopeAlongWidth { get; internal set; }
+
+        /// <summary>Chapter 28: every direction and coefficient set run (a flat roof: Case A and Case B each way); empty otherwise.</summary>
+        public List<EnvelopeDirection> EnvelopeDirections { get; } = new List<EnvelopeDirection>();
 
         /// <summary>Why the requested procedure was not used (Chapter 28 asked for a building it does not cover); null otherwise.</summary>
         public string ProcedureNote { get; internal set; }
@@ -128,8 +134,11 @@ namespace ASCE7WindLoadCalculator
                 OnlyCases1And3 = onlyCases1And3,
             };
 
-            AddDirectionalCases(r.LoadCases, r.AlongLength.DesignKips, r.AlongWidth.DesignKips,
+            // Fig. 27.3-8 Cases 1-4 on the calculated forces; the 27.1.5 minimum is a separate load case in addition to them
+            // (C27.1.5, ASCE 7-16 and 7-22), along each axis from either side, without torsion.
+            AddDirectionalCases(r.LoadCases, r.AlongLength.TotalKips, r.AlongWidth.TotalKips,
                 r.AlongLength.WidthNormalToWind, r.AlongWidth.WidthNormalToWind, onlyCases1And3);
+            AddMinimumCases(r.LoadCases, r.AlongLength.MinimumKips, r.AlongWidth.MinimumKips);
             return r;
         }
 
@@ -182,6 +191,22 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
+        /// <summary>Case number given to the separate minimum load cases (27.1.5, or 28.3.4 / 28.3.6 for Chapter 28).</summary>
+        public const int MinimumCaseNumber = 0;
+
+        /// <summary>
+        /// The minimum design wind load as its own load cases, "applied as a separate load case in addition to the normal load
+        /// cases" (C27.1.5; C28.3.4 in 7-16, C28.3.6 in 7-22): the minimum force along each axis from either side, without
+        /// torsion. It does not raise the Fig. 27.3-8 / Fig. 28.3-1 cases.
+        /// </summary>
+        internal static void AddMinimumCases(List<WindLoadCase> list, double minX, double minY, string section = "27.1.5")
+        {
+            foreach (int s in new[] { 1, -1 })
+                list.Add(new WindLoadCase { CaseNumber = MinimumCaseNumber, Name = $"Minimum ({section}), along length, {Sign(s)} wind", Vx = s * minX + 0.0, Vy = 0, Mt = 0 });
+            foreach (int s in new[] { 1, -1 })
+                list.Add(new WindLoadCase { CaseNumber = MinimumCaseNumber, Name = $"Minimum ({section}), along width, {Sign(s)} wind", Vx = 0, Vy = s * minY + 0.0, Mt = 0 });
+        }
+
         private static string Sign(int s) => s > 0 ? "+" : "-";
 
         /// <summary>Directional force from one MWFRS calculator (wind along +x in that calculator's frame).</summary>
@@ -206,7 +231,7 @@ namespace ASCE7WindLoadCalculator
                 WallsKips = walls,
                 RoofKips = roofA >= roofB ? roofA : roofB,
                 ParapetKips = mwfrs.ParapetKips,
-                GoverningRoofCase = roofA >= roofB ? MwfrsRoofCase.MaxSuction : MwfrsRoofCase.Alternate,
+                GoverningRoofCase = roofA >= roofB ? MwfrsRoofCase.CaseA : MwfrsRoofCase.CaseB,
                 ProjectedWallArea = wallArea,
                 ProjectedRoofArea = roofArea,
                 MinimumKips = (MinimumWallPressure * wallArea + MinimumRoofPressure * roofArea) / 1000.0,

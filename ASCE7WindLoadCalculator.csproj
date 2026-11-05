@@ -92,6 +92,10 @@
     <ProjectReference Include="ASCE7Wind.Core\ASCE7Wind.Core.csproj">
       <Name>ASCE7Wind.Core</Name>
     </ProjectReference>
+    <!-- the building model: its north arrow, the one every view draws -->
+    <ProjectReference Include="..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj">
+      <Name>BuildingModel.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Page Include="UserControls\BuildingData\BuildingDataInputControl.xaml">

@@ -34,6 +34,28 @@ namespace ASCE7WindLoadCalculator
         /// </summary>
         public abstract bool KdInVelocityPressure { get; }
 
+        /// <summary>
+        /// Fig. 27.3-8 note 2 (new in ASCE 7-22, C27.3.5 and Fig. C27.3-4): in Cases 3 and 4 each roof area takes 100% of the larger
+        /// of the two principal-axis roof pressures of Case 1 (Case 3) or Case 2 (Case 4). False for 7-16, where Case 3 is "Case 1
+        /// acting simultaneously at 75%" on every surface, roof included.
+        /// </summary>
+        public abstract bool QuarteringRoofTakesLarger { get; }
+
+        /// <summary>
+        /// Chapter 28 torsional load cases: true when the T zones take the printed Fig. 28.3-2 coefficients (ASCE 7-22), false when
+        /// they are 25% of the full design pressures (ASCE 7-16 Fig. 28.3-1 note 5).
+        /// </summary>
+        public abstract bool PrintedTorsionalTable { get; }
+
+        /// <summary>Section of the Chapter 28 minimum design wind loads: 28.3.4 (7-16), 28.3.6 (7-22).</summary>
+        public abstract string EnvelopeMinimumSection { get; }
+
+        /// <summary>Section of the Chapter 28 parapet loads: 28.3.2 (7-16), 28.3.4 (7-22).</summary>
+        public abstract string EnvelopeParapetSection { get; }
+
+        /// <summary>Commentary figure for hip roofs under Chapter 28: Fig. C28.3-2 (7-16), Fig. C28.3-3 (7-22).</summary>
+        public abstract string EnvelopeHipFigure { get; }
+
         /// <summary>Leading coefficient of the Kz power law, Kz = c (z/zg)^(2/alpha).</summary>
         public abstract double KzCoefficient { get; }
 
@@ -61,6 +83,11 @@ namespace ASCE7WindLoadCalculator
         public override string Name => "ASCE 7-16";
         public override bool KdInVelocityPressure => true;
         public override double KzCoefficient => 2.01;
+        public override bool QuarteringRoofTakesLarger => false;
+        public override bool PrintedTorsionalTable => false;
+        public override string EnvelopeMinimumSection => "28.3.4";
+        public override string EnvelopeParapetSection => "28.3.2";
+        public override string EnvelopeHipFigure => "Fig. C28.3-2";
 
         // ASCE 7-16 Table 26.11-1
         public override (double alpha, double zg) TerrainConstants(WindExposureCategories exposure)
@@ -102,6 +129,11 @@ namespace ASCE7WindLoadCalculator
         public override string Name => "ASCE 7-22";
         public override bool KdInVelocityPressure => false;
         public override double KzCoefficient => 2.41;
+        public override bool QuarteringRoofTakesLarger => true;
+        public override bool PrintedTorsionalTable => true;
+        public override string EnvelopeMinimumSection => "28.3.6";
+        public override string EnvelopeParapetSection => "28.3.4";
+        public override string EnvelopeHipFigure => "Fig. C28.3-3";
 
         // ASCE 7-22 Table 26.11-1 (revised from 7-16: gradient heights and alpha re-derived; with the
         // 2.41 coefficient this reproduces the tabulated Kz at 15 ft: 0.57 / 0.85 / 1.03).

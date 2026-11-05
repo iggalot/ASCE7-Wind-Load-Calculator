@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ASCE7WindLoadCalculator
 {
@@ -40,7 +41,35 @@ namespace ASCE7WindLoadCalculator
         {
             extGCpCurve_Roof = Edition.CreateCCRoofFigure(buildingData);
             extGCpCurve_Wall = Edition.CreateCCWallFigure();
-            ApplyParapetRoofZoneNote();
+            ApplyParapetRoofZoneNote();     // before the wall reduction: the roof zones take the figure's own wall values
+            ApplyLowSlopeWallReduction();
+        }
+
+        /// <summary>Roof angle (deg) at or below which Fig. 30.3-1 note 5 reduces the wall GCp.</summary>
+        public const double WallReductionMaxRoofAngle = 10.0;
+
+        /// <summary>Fig. 30.3-1 note 5 factor on wall GCp for low-slope roofs.</summary>
+        public const double LowSlopeWallFactor = 0.9;
+
+        /// <summary>True when the wall curves were reduced by Fig. 30.3-1 note 5 (roof angle 10 deg or less).</summary>
+        public bool WallReductionApplied { get; private set; }
+
+        /// <summary>
+        /// Fig. 30.3-1 note 5 (7-16 and 7-22): values of (GCp) for walls are reduced by 10% when θ ≤ 10°; a flat roof is 0°.
+        /// The wall curves, positive and negative, are replaced by scaled copies (the figure objects belong to this calculator),
+        /// so the walls, the parapet faces taken from the wall figure and the reports all use the reduced values.
+        /// </summary>
+        private void ApplyLowSlopeWallReduction()
+        {
+            double theta = buildingData.RoofTypeIsSloped() ? buildingData.RoofPitch : 0;
+            WallReductionApplied = theta <= WallReductionMaxRoofAngle;
+            if (!WallReductionApplied) return;
+            foreach (var set in new[] { extGCpCurve_Wall.WallCurves_Pos, extGCpCurve_Wall.WallCurves_Neg })
+                foreach (var key in set.Keys.ToList())
+                {
+                    var c = set[key];
+                    set[key] = new ExternalGCpCurve(c.Points.Select(p => (p.X, p.Y * LowSlopeWallFactor)).ToArray(), c.LogX);
+                }
         }
 
         /// <summary>Smallest parapet height (ft) for the Fig. 30.3-2A note 5 roof-zone adjustment (3 ft, 0.9 m).</summary>

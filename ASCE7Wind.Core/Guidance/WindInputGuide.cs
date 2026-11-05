@@ -171,10 +171,11 @@ namespace ASCE7WindLoadCalculator
             foreach (var f in new[] { s.FromWest, s.FromSouth }.Where(f => f != null))
             {
                 string from = f == s.FromWest ? "west" : "south";
-                string sec = s.Lateral?.Procedure == LateralProcedure.Envelope ? "28.3.4" : "27.1.5";
+                string sec = s.Lateral?.Procedure == LateralProcedure.Envelope ? analysis?.MwfrsAlongLength?.Edition.EnvelopeMinimumSection ?? "28.3" : "27.1.5";
+                // the minimum is a separate load case in addition to the others (C27.1.5, C28); it does not raise them
                 s.Checks.Add(f.MinimumGoverns
-                    ? new SummaryCheck(false, $"Wind from the {from}: the 16/8 psf minimum ({sec}) governs over the calculated wind.")
-                    : new SummaryCheck(true, $"Wind from the {from}: calculated wind governs over the 16/8 psf minimum ({sec})."));
+                    ? new SummaryCheck(false, $"Wind from the {from}: the 16/8 psf minimum case ({sec}) exceeds the calculated wind.")
+                    : new SummaryCheck(true, $"Wind from the {from}: calculated wind exceeds the 16/8 psf minimum case ({sec})."));
             }
             return s;
         }

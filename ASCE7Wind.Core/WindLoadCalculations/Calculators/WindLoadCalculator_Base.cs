@@ -155,6 +155,26 @@ namespace ASCE7WindLoadCalculator
             return 0.00256 * Kz * Kzt * V * V;
         }
 
+        /// <summary>The least Kz in Exposure B below 30 ft for Chapter 28 (Table 26.10-1 footnote, ASCE 7-16 and 7-22).</summary>
+        public const double EnvelopeMinimumKzExposureB = 0.70;
+
+        /// <summary>Kz for Chapter 28 (envelope procedure): as <see cref="GetKz"/>, except that in Exposure B, for z below
+        /// 30 ft, Kz is taken as 0.70 (Table 26.10-1 footnote, ASCE 7-16 and 7-22).</summary>
+        public double GetKzEnvelope(double z, WindExposureCategories exposure)
+        {
+            // footnote a: "Use 0.70 in Chapter 28, Exposure B, when z < 30 ft"
+            return exposure == WindExposureCategories.WIND_EXP_CAT_B && z < 30 ? EnvelopeMinimumKzExposureB : GetKz(z, exposure);
+        }
+
+        /// <summary>Velocity pressure (psf) for Chapter 28 at height z: <see cref="CalculateDynamicWindPressure"/> with
+        /// <see cref="GetKzEnvelope"/> in place of Kz.</summary>
+        public double CalculateDynamicWindPressureEnvelope(double z)
+        {
+            double kz = GetKz(z, Parameters.ExposureCategory);
+            double q = CalculateDynamicWindPressure(z);
+            return kz > 0 ? q * GetKzEnvelope(z, Parameters.ExposureCategory) / kz : q;
+        }
+
         /// <summary>Velocity pressure exposure coefficient Kz (power-law form, z not less than 15 ft).</summary>
         public double GetKz(double z, WindExposureCategories exposure)
         {

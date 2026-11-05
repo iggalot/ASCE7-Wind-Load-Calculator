@@ -15,15 +15,17 @@ namespace ASCE7WindLoadCalculator
         MwfrsAlongLength,
         /// <summary>Whole-building (MWFRS) pressures, wind blowing along the BuildingWidth (from the south).</summary>
         MwfrsAlongWidth,
+        /// <summary>One wind case of Fig. 27.3-8 (or the envelope of all of them), with its own wall and roof zones.</summary>
+        WindCases,
     }
 
     /// <summary>The two MWFRS roof coefficient cases of Fig. 27.3-1.</summary>
     public enum MwfrsRoofCase
     {
-        /// <summary>Larger roof suction (the negative Cp values).</summary>
-        MaxSuction,
-        /// <summary>Alternate case (the positive / less negative Cp values).</summary>
-        Alternate,
+        /// <summary>Case A: the first Fig. 27.3-1 roof value listed (the larger suction).</summary>
+        CaseA,
+        /// <summary>Case B: the second Fig. 27.3-1 roof value listed (smaller suction, or a push on steeper roofs).</summary>
+        CaseB,
     }
 
     /// <summary>One wind zone placed on the 3D building.</summary>
@@ -134,9 +136,17 @@ namespace ASCE7WindLoadCalculator
             WindLoadCalculator_Base mwfrsAlongLength,
             WindLoadCalculator_Base mwfrsAlongWidth,
             WindViewMode mode,
-            MwfrsRoofCase roofCase = MwfrsRoofCase.MaxSuction)
+            MwfrsRoofCase roofCase = MwfrsRoofCase.CaseA)
         {
             if (building == null) throw new ArgumentNullException(nameof(building));
+            if (mode == WindViewMode.WindCases)
+            {
+                // without a chosen case: the envelope of all of them, largest pressure (FromCase / FromEnvelope pick)
+                var all = mwfrsAlongLength is WindLoadCalculator_MWFRS && mwfrsAlongWidth is WindLoadCalculator_MWFRS
+                    ? WindCases.Build(new WindAnalysisResult(cladding, mwfrsAlongLength, mwfrsAlongWidth))
+                    : new List<WindCase>();
+                return FromEnvelope(building, WindCaseEnvelope.Build(all), max: true, all.Count);
+            }
             var model = new WindGeometry(building);
             var scene = new WindScene { Model = model, Mode = mode, RoofCase = roofCase };
 
@@ -154,6 +164,91 @@ namespace ASCE7WindLoadCalculator
                     break;
             }
             return scene;
+        }
+
+        // ---- Wind cases (Fig. 27.3-8) -----------------------------------------------------------
+
+        /// <summary>
+        /// One wind case drawn as it is: every zone with the net pressure this case puts on it (external with this
+        /// case's internal pressure), nothing taken from another case.
+        /// </summary>
+        public static WindScene FromCase(BuildingData building, WindCase windCase)
+        {
+            if (building == null) throw new ArgumentNullException(nameof(building));
+            var scene = new WindScene { Model = new WindGeometry(building), Mode = WindViewMode.WindCases };
+            if (windCase == null) { scene.Title = "Wind cases"; scene.Messages.Add("No wind cases yet - enter the wind inputs."); return scene; }
+
+            scene.Title = windCase.Name;
+            string figure = windCase.IsMinimumCase
+                ? (windCase.Procedure == LateralProcedure.Envelope ? "Chapter 28 minimum, a separate load case: " : "27.1.5 minimum, a separate load case (C27.1.5): ")
+                : windCase.Procedure == LateralProcedure.Envelope ? $"Figs. 28.3-1 / 28.3-2 Load Case {windCase.FigureCase} (Case {windCase.CoefficientCase}), reference corner {windCase.ReferenceCorner}: "
+                : $"Fig. 27.3-8 Case {windCase.FigureCase}: ";
+            scene.Subtitle = figure + $"Vx {windCase.Vx:0.0} k, Vy {windCase.Vy:0.0} k, Mt {windCase.Mt:0} ft·k, roof uplift {windCase.UpliftKips:0.0} k"
+                             + (windCase.IsMinimumCase ? " (the 8 psf roof part acts on the roof projected normal to the wind: in the force, not drawn)" : "")
+                             + (windCase.RoofNeglected ? " (roof left out of the shear, its force is against the wind)" : "");
+            scene.WindDirection = Toward(windCase.From);
+
+            int id = 0;
+            foreach (var z in windCase.Zones)
+                scene.Zones.Add(Piece(z.Surface, z.Outline, z.Area, id++, z.Label,
+                    $"{(windCase.Procedure == LateralProcedure.Envelope ? $"Fig. 28.3-1 zone {z.Label.Substring(4)} on the {z.SurfaceName.ToLowerInvariant()}" : ZoneDescriptions.Describe(FirstLabel(z.Label), z.Kind, WindLoadCalculationTypes.MWFRS))}: {z.Label}, external {z.ExternalPsf:+0.0;−0.0} − internal {z.InternalPsf:+0.0;−0.0} psf",
+                    z.NetPsf));
+            return scene;
+        }
+
+        /// <summary>
+        /// The envelope of all the wind cases: each cell with its largest (<paramref name="max"/>) or smallest net
+        /// pressure, and the case that puts it there. Max and min are separate views.
+        /// </summary>
+        public static WindScene FromEnvelope(BuildingData building, IReadOnlyList<WindEnvelopeCell> cells, bool max, int caseCount)
+        {
+            if (building == null) throw new ArgumentNullException(nameof(building));
+            var scene = new WindScene { Model = new WindGeometry(building), Mode = WindViewMode.WindCases };
+            scene.Title = max ? "Envelope: largest pressure (toward the surface)" : "Envelope: largest suction (away from the surface)";
+            scene.Subtitle = $"Each piece shows the {(max ? "most positive" : "most negative")} net pressure of all {caseCount} wind cases, and the case that gives it";
+            if (cells == null || cells.Count == 0) { scene.Messages.Add("No wind cases yet - enter the wind inputs."); return scene; }
+
+            int id = 0;
+            foreach (var c in cells)
+            {
+                double p = max ? c.MaxNetPsf : c.MinNetPsf;
+                var by = max ? c.MaxBy : c.MinBy;
+                string zone = max ? c.MaxZone : c.MinZone;
+                if (by == null) p = double.NaN;
+                scene.Zones.Add(Piece(c.Surface, c.Outline, c.Area, id++, zone,
+                    by == null ? "No case loads this piece" : $"{zone}, from {by.Name}", p));
+            }
+            return scene;
+        }
+
+        /// <summary>The way a wind from <paramref name="from"/> (W, SW, S ... ) blows: from the W toward +x, from the S toward +y.</summary>
+        public static Vec3? Toward(string from)
+        {
+            if (string.IsNullOrEmpty(from)) return null;
+            double x = from.Contains("W") ? 1 : from.Contains("E") ? -1 : 0;
+            double y = from.Contains("S") ? 1 : from.Contains("N") ? -1 : 0;
+            double h = Math.Sqrt(x * x + y * y);
+            return h > 0 ? new Vec3(x / h, y / h, 0) : (Vec3?)null;
+        }
+
+        private static string FirstLabel(string label)
+        {
+            if (string.IsNullOrEmpty(label)) return label;
+            int i = label.IndexOf(' ');
+            return i > 0 ? label.Substring(0, i) : label;
+        }
+
+        private static SceneZone Piece(BuildingSurface s, IReadOnlyList<Vec2> outline, double area, int id, string label, string description, double psf)
+        {
+            Func<Vec2, Vec3> to3 = s.Kind == SurfaceKind.Roof ? (Func<Vec2, Vec3>)s.LiftToRoof : s.FromWallFrame;
+            var sz = new SceneZone
+            {
+                ZoneId = id, Label = label, Description = description, Face = s.Face, Kind = s.Kind, SurfaceName = s.Name,
+                AreaFt2 = area, Normal = s.Normal, PressurePsf = psf,
+            };
+            foreach (var p in PolygonOps.Triangulate(outline.ToList())) sz.Triangles.Add(to3(p));
+            for (int i = 0, n = outline.Count; i < n; i++) sz.Edges.Add((to3(outline[i]), to3(outline[(i + 1) % n])));
+            return sz;
         }
 
         // ---- Components & cladding --------------------------------------------------------------
@@ -182,12 +277,12 @@ namespace ASCE7WindLoadCalculator
             var edition = calc?.Edition?.Name ?? "ASCE 7";
             scene.Title = alongWidth ? "Whole-building wind, from the south" : "Whole-building wind, from the west";
             scene.Subtitle = $"{edition} main wind force resisting system (Chapter 27) - " +
-                             (roofCase == MwfrsRoofCase.MaxSuction ? "roof Cp giving larger uplift" : "other required roof Cp");
+                             (roofCase == MwfrsRoofCase.CaseA ? "roof Cp Case A (first value of Fig. 27.3-1)" : "roof Cp Case B (second value of Fig. 27.3-1)");
             scene.WindDirection = alongWidth ? Vec3.UnitY : Vec3.UnitX;
             if (calc == null) { scene.Messages.Add("No whole-building results yet - enter the wind inputs."); return; }
             scene.Messages.AddRange(calc.ValidationMessages);
 
-            var roofP = roofCase == MwfrsRoofCase.MaxSuction ? calc.windPressureRoof_Neg_External : calc.windPressureRoof_Pos_External;
+            var roofP = roofCase == MwfrsRoofCase.CaseA ? calc.windPressureRoof_Neg_External : calc.windPressureRoof_Pos_External;
             AddRoofZones(scene, calc.RoofAreaCalculator, roofP, swapXY: alongWidth, WindLoadCalculationTypes.MWFRS);
 
             // The width-direction calculator analyses the building turned 90 degrees, so its windward wall

@@ -28,7 +28,7 @@ namespace ASCE7WindLoadCalculator
         public override void ComputeEffectiveWindAreas()
         {
             var model = new WindGeometry(buildingData);
-            double h = buildingData.MeanRoofHeight;
+            double h = buildingData.MwfrsFigureHeight;   // Fig. 27.3-1: eave height for θ ≤ 10°
             double L = buildingData.BuildingLength;
             bool steep = buildingData.RoofPitch >= NormalToRidgeMinSlope;
 

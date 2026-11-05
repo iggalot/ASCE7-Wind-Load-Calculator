@@ -250,7 +250,7 @@ namespace ASCE7WindLoadCalculator
                 var forceRows = new List<string[]>
                 {
                     new[] { "Walls (windward + leeward)", $"{force.WallsKips:0.00} kips", $"projected wall area {force.ProjectedWallArea:0} sq ft" },
-                    new[] { "Roof (horizontal part)", $"{force.RoofKips:0.00} kips", $"projected roof area {force.ProjectedRoofArea:0} sq ft, roof Cp: {(force.GoverningRoofCase == MwfrsRoofCase.Alternate ? "other value" : "larger uplift")} governs" },
+                    new[] { "Roof (horizontal part)", $"{force.RoofKips:0.00} kips", $"projected roof area {force.ProjectedRoofArea:0} sq ft, roof Cp: {(force.GoverningRoofCase == MwfrsRoofCase.CaseB ? "Case B" : "Case A")} governs" },
                 };
                 if (force.ParapetKips > 0 && m is WindLoadCalculator_MWFRS mp)
                     forceRows.Add(new[] { "Parapets (windward + leeward)", $"{force.ParapetKips:0.00} kips",
@@ -259,8 +259,8 @@ namespace ASCE7WindLoadCalculator
                 forceRows.AddRange(new List<string[]>
                 {
                     new[] { "Calculated total", $"{force.TotalKips:0.00} kips", "" },
-                    new[] { "Minimum (27.1.5)", $"{force.MinimumKips:0.00} kips", $"{WindLateralLoads.MinimumWallPressure:0} psf walls + {WindLateralLoads.MinimumRoofPressure:0} psf roof" },
-                    new[] { "Design force", $"{force.DesignKips:0.00} kips", force.MinimumGoverns ? "the minimum governs" : "the calculated wind governs" },
+                    new[] { "Minimum (27.1.5), a separate load case", $"{force.MinimumKips:0.00} kips", $"{WindLateralLoads.MinimumWallPressure:0} psf walls + {WindLateralLoads.MinimumRoofPressure:0} psf roof, applied in addition to the Fig. 27.3-8 cases (C27.1.5)" },
+                    new[] { "Larger of the two", $"{force.DesignKips:0.00} kips", force.MinimumGoverns ? "the minimum case is larger" : "the calculated wind is larger; the Fig. 27.3-8 cases use the calculated wind" },
                 });
                 page.Children.Add(Card(KeyValueTable(forceRows)));
                 if (force.ParapetKips > 0 && m is WindLoadCalculator_MWFRS md)
@@ -381,8 +381,8 @@ namespace ASCE7WindLoadCalculator
             if (lateral.ProcedureNote != null) page.Children.Add(Note(lateral.ProcedureNote));
             if (envelope)
                 page.Children.Add(Para("Chapter 28 envelope procedure (details on the Chapter 28 page). Per direction: the basic case with the end zones at " +
-                                       "one corner and then the other (torsion of either sign), the torsional case (zones beyond the center at 25%), and the " +
-                                       "28.3.4 minimum (16 psf walls, 8 psf roof) as its own case. Each shear wall is designed for its worst case. " +
+                                       "one corner and then the other (torsion of either sign), the torsional case (T zones beyond the center), and the " +
+                                       $"minimum ({analysis.MwfrsAlongLength?.Edition.EnvelopeMinimumSection}: 16 psf walls, 8 psf roof) as a separate load case. Each shear wall is designed for its worst case. " +
                                        "The torsional cases may be skipped under the 28.3.2.1 exceptions (one story with h ≤ 30 ft, or one- and two-story " +
                                        "light-frame, or one- and two-story with flexible diaphragms)."));
             else
@@ -429,12 +429,14 @@ namespace ASCE7WindLoadCalculator
                 "Each building corner is the reference corner in turn (Fig. 28.3-1): from the corner at (0, 0) with the wind along +x, " +
                 "the corner at (0, W) mirrors y (Vx, −Vy, −Mz); the corner at (D, W) is the building turned 180° with the wind along −x (−Vx, −Vy, Mz); " +
                 "the corner at (D, 0) is turned and mirrored (−Vx, Vy, −Mz)."));
-            page.Children.Add(Para($"p = qh Kd (GCpf) (Eq. 28.3-1), qh = {x.Qh:0.00} psf at h = {building.MeanRoofHeight:0.#} ft, Kd = {x.Kd:0.00}" +
+            page.Children.Add(Para($"p = qh Kd (GCpf) (Eq. 28.3-1), qh = {x.Qh:0.00} psf at h = {x.H:0.#} ft (Kz {x.Kz:0.00}), Kd = {x.Kd:0.00}" +
                                    (x.Kd == 1.0 ? " (inside qh for this edition)" : "") +
                                    ". The internal pressure acts equally on opposite faces and cancels in the horizontal force. " +
-                                   $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft). " +
+                                   $"Zone width a = {x.A:0.##} ft (10% of the least plan dimension or 0.4h, whichever is smaller, but at least 4% or 3 ft; at most 0.8h for θ 0 to 7° with a least dimension over 300 ft). " +
                                    "End zones: 2a for 1E/4E and 2E/3E, a for 5E/6E. Across a gable ridge, Zones 2 and 3 run from the eave to the ridge. " +
-                                   "Torsional case: the zones beyond the plan center (y > W/2) at 25% (1T–4T, or 5T/6T along the ridge). " +
+                                   (mx.Edition.PrintedTorsionalTable
+                                       ? "Torsional case: the zones beyond the plan center (y > W/2) take the printed Fig. 28.3-2 T coefficients (1T–4T, or 5T/6T along the ridge). "
+                                       : "Torsional case: the zones beyond the plan center (y > W/2) at 25% of the full pressures (Fig. 28.3-1 note 5; 1T–4T, or 5T/6T along the ridge). ") +
                                    "A case leaves the roof out when the roof's ΣFx is negative (the shear may not be less than with the roof neglected)."));
 
             foreach (var (e, m, from, alongLength) in new[] { (x, mx, "west", true), (y, my, "south", false) })
@@ -442,6 +444,7 @@ namespace ASCE7WindLoadCalculator
                 page.Children.Add(Section($"Wind from the {from}: Load Case {e.LoadCase}" + (e.Transverse ? $" (normal to the ridge, roof angle {e.Theta:0.#}°)" : e.LoadCase == "B" ? " (along the ridge, zones 5 and 6)" : "")));
                 page.Children.Add(Para($"D = {e.DepthAlongWind:0.##} ft along the wind, W = {e.WidthNormalToWind:0.##} ft across it; center of mass at x = {e.ComX:0.##}, y = {e.ComY:0.##} ft; " +
                                        $"q = qh Kd = {e.Qh * e.Kd:0.00} psf; a = {e.A:0.##} ft."));
+                foreach (var note in e.Notes) page.Children.Add(Note(note));
                 page.Children.Add(FigureRow(Drawing($"Plan, wind from the {from} (zones and GCpf)", c => EnvelopeDiagram.Draw(c, e), width: 560)));
                 var g = NewGrid(new[]
                 {
@@ -464,7 +467,7 @@ namespace ASCE7WindLoadCalculator
                 {
                     new { Case = "Basic (rows × 1)", Vx = e.BasicKips, Vy = e.BasicCrossKips, Mz = e.BasicTorsion, Roof = roof(e.RoofNeglected) },
                     new { Case = "Torsional (rows × factor)", Vx = e.TorsionalKips, Vy = e.TorsionalCrossKips, Mz = e.TorsionalTorsion, Roof = roof(e.TorsionalRoofNeglected) },
-                    new { Case = "Minimum (28.3.4)", Vx = e.MinimumKips, Vy = 0.0, Mz = 0.0, Roof = $"16 psf × {e.ProjectedWallArea:0} + 8 psf × {e.ProjectedRoofArea:0} sq ft" },
+                    new { Case = $"Minimum ({m.Edition.EnvelopeMinimumSection}), a separate load case", Vx = e.MinimumKips, Vy = 0.0, Mz = 0.0, Roof = $"16 psf × {e.ProjectedWallArea:0} + 8 psf × {e.ProjectedRoofArea:0} sq ft" },
                 };
                 page.Children.Add(Section($"Totals, calculation axes (wind from the {from})"));
                 page.Children.Add(Card(totals));
@@ -570,7 +573,9 @@ namespace ASCE7WindLoadCalculator
                 ("Zone", "Zone", (string)null), ("Areas", "Count", "0"), ("Area (sq ft)", "Area", "0"), ("qh (psf)", "Qh", "0.00"),
                 ("Cp, first value", "CpA", "0.00"), ("External (psf)", "PressA", "0.0"), ("Net (psf)", "NetA", "0.0"),
                 ("Cp, second value", "CpB", "0.00"), ("External (psf) ", "PressB", "0.0"), ("Net (psf) ", "NetB", "0.0"),
+                ("Cp unreduced", "CpUnreduced", "0.000"), ("External unreduced (psf)", "PressUnreduced", "0.0"), ("Note", "Note", (string)null),
             }, swatch: true);
+            // Fig. 27.3-1 note b: the −1.3 value reduced with area; the unreduced value is shown beside it
             g.ItemsSource = m.RoofAreaCalculator.effWindAreas
                 .GroupBy(a => (a.Value.Label_Short, Math.Round(a.Value.Area, 1)))
                 .Select(grp => (a: grp.First(), count: grp.Count()))
@@ -585,6 +590,8 @@ namespace ASCE7WindLoadCalculator
                     Qh = (p ?? n)?.qh ?? 0,
                     CpA = p?.GCp ?? 0, PressA = p?.ExternalPressure ?? 0, NetA = p?.NetPressure ?? 0,
                     CpB = n?.GCp ?? 0, PressB = n?.ExternalPressure ?? 0, NetB = n?.NetPressure ?? 0,
+                    CpUnreduced = n?.GCpUnreduced, PressUnreduced = n?.GCpUnreduced != null ? n.UnreducedExternalPressure : (double?)null,
+                    Note = n?.ReductionNote ?? string.Empty,
                 };
             }).ToList();
             return g;

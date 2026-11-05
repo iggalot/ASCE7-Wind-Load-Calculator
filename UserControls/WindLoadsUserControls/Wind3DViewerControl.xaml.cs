@@ -82,6 +82,7 @@ namespace ASCE7WindLoadCalculator
                 cbBlocks.Visibility = v;
                 cbOutlines.Visibility = v;
                 cbPsfLabels.Visibility = v;
+                if (value) bdCases.Visibility = Visibility.Collapsed;
                 Rebuild(resetCamera: false);
             }
         }
@@ -97,6 +98,7 @@ namespace ASCE7WindLoadCalculator
                 if (rbCladPressure.IsChecked == true) return WindViewMode.CladdingPressure;
                 if (rbWindWest.IsChecked == true) return WindViewMode.MwfrsAlongLength;
                 if (rbWindSouth.IsChecked == true) return WindViewMode.MwfrsAlongWidth;
+                if (rbCases.IsChecked == true) return WindViewMode.WindCases;
                 return WindViewMode.CladdingSuction;
             }
             set
@@ -106,13 +108,14 @@ namespace ASCE7WindLoadCalculator
                 rbCladPressure.IsChecked = value == WindViewMode.CladdingPressure;
                 rbWindWest.IsChecked = value == WindViewMode.MwfrsAlongLength;
                 rbWindSouth.IsChecked = value == WindViewMode.MwfrsAlongWidth;
+                rbCases.IsChecked = value == WindViewMode.WindCases;
                 suppressModeEvents = false;
                 UpdateRoofCaseAvailability();
                 Rebuild(resetCamera: false);
             }
         }
 
-        public MwfrsRoofCase RoofCase => rbCaseB.IsChecked == true ? MwfrsRoofCase.Alternate : MwfrsRoofCase.MaxSuction;
+        public MwfrsRoofCase RoofCase => rbCaseB.IsChecked == true ? MwfrsRoofCase.CaseB : MwfrsRoofCase.CaseA;
 
         /// <summary>Supplies (or replaces) the results to show.</summary>
         public void SetResults(BuildingData building, WindLoadCalculator_Base cladding,
@@ -131,6 +134,7 @@ namespace ASCE7WindLoadCalculator
             this.cladding = cladding;
             mwfrsLength = mwfrsAlongLength;
             mwfrsWidth = mwfrsAlongWidth;
+            windCases = null; casesBy.Clear(); envelopeBy.Clear(); // built again when the wind cases are shown
             Rebuild(resetCamera: !(keepCamera && hadScene));
             if (keepCamera && hadScene)
             {
@@ -175,7 +179,7 @@ namespace ASCE7WindLoadCalculator
                     scene.Messages.Clear();
                 }
                 else
-                scene = WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
+                scene = Mode == WindViewMode.WindCases ? CaseScene() : WindSceneBuilder.Build(building, cladding, mwfrsLength, mwfrsWidth, Mode, RoofCase);
 
                 // Never leave the designer looking at a building with no pressures (e.g. cladding above the
                 // 60 ft limit): fall back to whole-building wind, which always applies, and say why.
@@ -248,14 +252,19 @@ namespace ASCE7WindLoadCalculator
                 AddFlatStrip(lines, new Vec3(x0, y, z + 0.001), new Vec3(x1, y, z + 0.001), Vec3.UnitZ, w);
             sceneRoot.Children.Add(Model(lines, Color.FromRgb(0xE1, 0xE0, 0xD9)));
 
-            // North arrow on the ground off the north-west corner, labeled N.
-            double a = 0.12 * size;
-            var cx = -0.3 * size; var cy = m.B + 0.12 * size; var zg = z + 0.002;
+            // the north arrow: the building model's one (BuildingModel.Model.NorthArrow, as in every view of every app), on the
+            // ground off the north-west corner, labelled N; plan x east, y north as here
+            var na = BuildingModel.Model.NorthArrow.For(new BuildingModel.Geometry.Rect2(0, 0, m.L, m.B), m.RidgeHeight);
+            var zg = z + 0.002;
+            Vec3 At(BuildingModel.Geometry.Point2 p) => new Vec3(p.X, p.Y, zg);
             var north = new List<Vec3>();
-            AddFlatStrip(north, new Vec3(cx, cy, zg), new Vec3(cx, cy + 0.6 * a, zg), Vec3.UnitZ, 0.12 * a);
-            north.Add(new Vec3(cx - 0.3 * a, cy + 0.6 * a, zg)); north.Add(new Vec3(cx + 0.3 * a, cy + 0.6 * a, zg)); north.Add(new Vec3(cx, cy + a, zg));
-            sceneRoot.Children.Add(Model(north, Color.FromRgb(0x89, 0x87, 0x81)));
-            northLabelAt = new Vec3(cx, cy + 1.25 * a, zg);
+            foreach (var poly in new[] { na.Shaft, na.Head })
+                for (int i = 1; i + 1 < poly.Count; i++) { north.Add(At(poly[0])); north.Add(At(poly[i])); north.Add(At(poly[i + 1])); }
+            sceneRoot.Children.Add(Model(north, (Color)ColorConverter.ConvertFromString(BuildingModel.Model.NorthArrow.Color)));
+            northLabelAt = At(na.LabelAt);
+            lblNorth.Text = BuildingModel.Model.NorthArrow.Label;
+            lblNorth.FontSize = BuildingModel.Model.NorthArrow.LabelSize;
+            lblNorth.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString(BuildingModel.Model.NorthArrow.LabelColor));
         }
 
         /// <summary>Neutral envelope drawn slightly inside the zones so surfaces without zones still read as solid.</summary>
@@ -857,7 +866,25 @@ namespace ASCE7WindLoadCalculator
 
             bdSummary.Visibility = Visibility.Visible;
             bool mwfrs = scene.Mode == WindViewMode.MwfrsAlongLength || scene.Mode == WindViewMode.MwfrsAlongWidth;
-            if (mwfrs)
+            if (scene.Mode == WindViewMode.WindCases)
+            {
+                var c = SelectedCase;
+                bool max = c == null && EnvelopeMax;
+                foreach (var kind in new[] { SurfaceKind.Roof, SurfaceKind.Wall })
+                {
+                    var z = scene.Zones.Where(q => q.Kind == kind && q.HasPressure).OrderBy(q => max ? -q.PressurePsf : q.PressurePsf).FirstOrDefault();
+                    if (z != null)
+                        AddSummary($"{(kind == SurfaceKind.Roof ? "Roof" : "Walls")}, {(max ? "largest pressure" : "largest suction")}",
+                            $"{FormatPsf(z.PressurePsf)}  {z.Label} on the {z.SurfaceName.ToLowerInvariant()}" + (c == null ? EnvelopeSource(z.Description) : ""));
+                }
+                if (c != null)
+                {
+                    AddSummary("Base shear", $"Vx {c.Vx:0.0} k, Vy {c.Vy:0.0} k" + (c.IsMinimumCase ? " (separate minimum load case)" : ""));
+                    if (c.Mt != 0) AddSummary("Torsion", $"{c.Mt:0} ft·k");
+                    AddSummary("Roof uplift", $"{c.UpliftKips:0.0} k");
+                }
+            }
+            else if (mwfrs)
             {
                 var wwBands = scene.Zones.Where(z => z.Label == "ZoneWW" && z.HasPressure).ToList();
                 var lw = scene.Zones.FirstOrDefault(z => z.Label == "ZoneLW");
@@ -873,7 +900,7 @@ namespace ASCE7WindLoadCalculator
                 var f = scene.LateralForce;
                 if (f != null)
                     AddSummary("Wind force on the building",
-                        $"{f.DesignKips:0.0} kips  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0}; 16/8 psf minimum {f.MinimumKips:0.0}" + (f.MinimumGoverns ? " governs)" : ")"));
+                        $"{f.DesignKips:0.0} kips  (walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0}; separate 16/8 psf minimum case {f.MinimumKips:0.0}" + (f.MinimumGoverns ? ", the larger)" : ")"));
             }
             else
             {
@@ -926,6 +953,13 @@ namespace ASCE7WindLoadCalculator
             }
         }
 
+        /// <summary>", by Case …" from an envelope piece's description ("ZoneX, from Case …"), or "".</summary>
+        private static string EnvelopeSource(string description)
+        {
+            int i = description?.IndexOf(", from ", StringComparison.Ordinal) ?? -1;
+            return i < 0 ? "" : ", by " + description.Substring(i + 7);
+        }
+
         private static string FormatPsf(double psf) =>
             double.IsNaN(psf) ? "n/a" : psf.ToString("+0.0;−0.0", CultureInfo.CurrentCulture) + " psf";
 
@@ -958,7 +992,7 @@ namespace ASCE7WindLoadCalculator
         }
 
         private static bool IsWholeBuilding(WindViewMode m) =>
-            m == WindViewMode.MwfrsAlongLength || m == WindViewMode.MwfrsAlongWidth;
+            m == WindViewMode.MwfrsAlongLength || m == WindViewMode.MwfrsAlongWidth || m == WindViewMode.WindCases;
 
         /// <summary>Changes the selected view without triggering another rebuild.</summary>
         private void SetModeSilently(WindViewMode m)
@@ -968,6 +1002,7 @@ namespace ASCE7WindLoadCalculator
             rbCladPressure.IsChecked = m == WindViewMode.CladdingPressure;
             rbWindWest.IsChecked = m == WindViewMode.MwfrsAlongLength;
             rbWindSouth.IsChecked = m == WindViewMode.MwfrsAlongWidth;
+            rbCases.IsChecked = m == WindViewMode.WindCases;
             suppressModeEvents = false;
             UpdateRoofCaseAvailability();
         }
@@ -977,7 +1012,149 @@ namespace ASCE7WindLoadCalculator
             if (spRoofCase == null) return;
             var m = Mode;
             // The roof Cp choice only applies to the whole-building views; hide it (not just grey it) otherwise.
-            spRoofCase.Visibility = IsWholeBuilding(m) ? Visibility.Visible : Visibility.Collapsed;
+            // (each wind case carries its own roof value, so the wind cases have no roof choice)
+            spRoofCase.Visibility = IsWholeBuilding(m) && m != WindViewMode.WindCases ? Visibility.Visible : Visibility.Collapsed;
+            if (bdCases != null) bdCases.Visibility = m == WindViewMode.WindCases && !geometryOnly ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ---------------------------------------------------------------------------------------
+        // Wind cases
+        // ---------------------------------------------------------------------------------------
+
+        // per procedure (Ch. 27, Ch. 28): the cases and their envelope, built when first shown for a set of results
+        private readonly Dictionary<LateralProcedure, List<WindCase>> casesBy = new Dictionary<LateralProcedure, List<WindCase>>();
+        private readonly Dictionary<LateralProcedure, List<WindEnvelopeCell>> envelopeBy = new Dictionary<LateralProcedure, List<WindEnvelopeCell>>();
+        private List<WindCase> windCases;
+        private bool suppressCaseEvents;
+
+        /// <summary>Which procedure's cases the list shows: Chapter 27 (directional) or Chapter 28 (envelope, low-rise).</summary>
+        public LateralProcedure CaseProcedure
+        {
+            get => rbProc28.IsChecked == true ? LateralProcedure.Envelope : LateralProcedure.Directional;
+            set { rbProc27.IsChecked = value == LateralProcedure.Directional; rbProc28.IsChecked = value == LateralProcedure.Envelope; }
+        }
+
+        /// <summary>Reasons Chapter 28 does not apply to this building (empty when it does).</summary>
+        private List<string> Chapter28NotApplicable =>
+            building == null ? new List<string>() : EnvelopeLateralLoads.Applicability(building);
+
+        /// <summary>The wind cases of the current results and procedure (built once per set of results), or empty when there are none.</summary>
+        public IReadOnlyList<WindCase> WindCases
+        {
+            get
+            {
+                if (windCases == null)
+                {
+                    var proc = CaseProcedure;
+                    if (!casesBy.TryGetValue(proc, out var list))
+                    {
+                        try
+                        {
+                            bool ok = mwfrsLength is WindLoadCalculator_MWFRS && mwfrsWidth is WindLoadCalculator_MWFRS
+                                      && (proc == LateralProcedure.Directional || Chapter28NotApplicable.Count == 0);
+                            var a = ok ? new WindAnalysisResult(cladding, mwfrsLength, mwfrsWidth) : null;
+                            list = !ok ? new List<WindCase>()
+                                 : proc == LateralProcedure.Envelope ? ASCE7WindLoadCalculator.WindCases.BuildEnvelope(a)
+                                 : ASCE7WindLoadCalculator.WindCases.Build(a);
+                        }
+                        catch (ArgumentException) { list = new List<WindCase>(); }
+                        casesBy[proc] = list;
+                    }
+                    windCases = list;
+                    FillCaseList();
+                }
+                return windCases;
+            }
+        }
+
+        /// <summary>The case drawn, or null when the envelope is drawn.</summary>
+        public WindCase SelectedCase
+        {
+            get => (lbCases.SelectedItem as ListBoxItem)?.Tag as WindCase;
+            set
+            {
+                var _ = WindCases;
+                foreach (ListBoxItem item in lbCases.Items)
+                    if (item.Tag == value) { lbCases.SelectedItem = item; lbCases.ScrollIntoView(item); return; }
+            }
+        }
+
+        /// <summary>True: the envelope shows the largest pressure of all the cases; false: the largest suction.</summary>
+        public bool EnvelopeMax
+        {
+            get => rbEnvMin.IsChecked != true;
+            set { rbEnvMax.IsChecked = value; rbEnvMin.IsChecked = !value; }
+        }
+
+        private WindScene CaseScene()
+        {
+            var all = WindCases;
+            var picked = SelectedCase;
+            if (picked != null) return WindSceneBuilder.FromCase(building, picked);
+            var proc = CaseProcedure;
+            if (!envelopeBy.TryGetValue(proc, out var cells)) envelopeBy[proc] = cells = WindCaseEnvelope.Build(all);
+            var s = WindSceneBuilder.FromEnvelope(building, cells, EnvelopeMax, all.Count);
+            if (proc == LateralProcedure.Envelope && all.Count == 0 && Chapter28NotApplicable.Count > 0)
+            {
+                s.Messages.Clear();
+                s.Messages.Add("Chapter 28 does not apply to this building: " + string.Join("; ", Chapter28NotApplicable) + ".");
+            }
+            return s;
+        }
+
+        private void Procedure_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!IsInitialized || sceneRoot == null) return;
+            windCases = null;
+            suppressCaseEvents = true;
+            lbCases.SelectedIndex = -1;          // a new list: start at its envelope
+            suppressCaseEvents = false;
+            if (Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
+        }
+
+        private void FillCaseList()
+        {
+            suppressCaseEvents = true;
+            var keep = SelectedCase?.Name;
+            lbCases.Items.Clear();
+            string filter = tbCaseFilter.Text?.Trim() ?? "";
+            var shown = windCases.Where(c => filter.Length == 0 || c.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+            lbCases.Items.Add(new ListBoxItem { Content = $"Envelope of all {windCases.Count} cases", FontWeight = FontWeights.SemiBold, Tag = null });
+            ListBoxItem select = (ListBoxItem)lbCases.Items[0];
+            foreach (var c in shown)
+            {
+                var item = new ListBoxItem { Content = new TextBlock { Text = c.Name, TextWrapping = TextWrapping.Wrap }, Tag = c, ToolTip = CaseTip(c) };
+                lbCases.Items.Add(item);
+                if (c.Name == keep) select = item;
+            }
+            lbCases.SelectedItem = select;
+            tbCaseCount.Text = filter.Length == 0 ? $"{windCases.Count} cases" : $"{shown.Count} of {windCases.Count} cases";
+            suppressCaseEvents = false;
+        }
+
+        private static string CaseTip(WindCase c) =>
+            $"Vx {c.Vx:0.0} k, Vy {c.Vy:0.0} k, Mt {c.Mt:0} ft·k, roof uplift {c.UpliftKips:0.0} k" + (c.IsMinimumCase ? " (separate minimum load case)" : "");
+
+        private void Cases_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsInitialized || suppressCaseEvents || sceneRoot == null || Mode != WindViewMode.WindCases) return;
+            Rebuild(resetCamera: false);
+        }
+
+        private void Envelope_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!IsInitialized || sceneRoot == null || Mode != WindViewMode.WindCases) return;
+            // the toggle shows the envelope: go back to it if a case was selected
+            if (SelectedCase != null) { lbCases.SelectedIndex = 0; return; }
+            Rebuild(resetCamera: false);
+        }
+
+        private void CaseFilter_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (!IsInitialized || windCases == null) return;
+            var before = SelectedCase;
+            FillCaseList();
+            if (SelectedCase != before && Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
         }
 
         private void Display_Changed(object sender, RoutedEventArgs e)

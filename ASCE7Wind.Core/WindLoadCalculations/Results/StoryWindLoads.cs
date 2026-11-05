@@ -22,12 +22,13 @@ namespace ASCE7WindLoadCalculator
         public double AlongLengthKips { get; internal set; }
         public double AlongWidthKips { get; internal set; }
 
-        /// <summary>The 27.1.5 / 28.3.4 minimum on the strip (16 psf walls, 8 psf roof at the top level).</summary>
+        /// <summary>The 27.1.5 / Chapter 28 minimum (28.3.4 in 7-16, 28.3.6 in 7-22) on the strip (16 psf walls, 8 psf roof at the top level).</summary>
         public double AlongLengthMinimumKips { get; internal set; }
         public double AlongWidthMinimumKips { get; internal set; }
 
-        /// <summary>Force used for design: the calculated force, or the minimum when the minimum governs the whole building
-        /// in that direction (so the floors add up to the building's design force).</summary>
+        /// <summary>The calculated force, or the minimum when the separate minimum case has the larger shear for the whole
+        /// building in that direction (so the floors add up to the building's <see cref="DirectionalWindForce.DesignKips"/>). The floor's
+        /// load cases are built on the calculated force, with the minimum as its own cases.</summary>
         public double AlongLengthDesignKips { get; internal set; }
         public double AlongWidthDesignKips { get; internal set; }
 
@@ -44,6 +45,22 @@ namespace ASCE7WindLoadCalculator
         public List<StoryForce> Levels { get; } = new List<StoryForce>();
 
         public double StoryHeight { get; internal set; }
+    }
+
+    /// <summary>The wind calculator's wind cases on each floor (<see cref="StoryWindLoads.ComputeCases"/>).</summary>
+    public sealed class StoryWindCaseResult
+    {
+        /// <summary>The cases for the whole building, each with its zones (the one list of wind for every app).</summary>
+        public List<WindCase> Cases { get; internal set; }
+
+        /// <summary>The procedure the cases come from (Chapter 28 only when chosen and it applies).</summary>
+        public LateralProcedure Procedure { get; internal set; }
+
+        /// <summary>Bottom to top: each floor's share of every case, the same names and order as <see cref="Cases"/>.</summary>
+        public List<List<WindLoadCase>> Levels { get; } = new List<List<WindLoadCase>>();
+
+        /// <summary>The floors' strips and direction forces (for the summary lines).</summary>
+        public StoryWindResult Strips { get; internal set; }
     }
 
     /// <summary>
@@ -116,9 +133,63 @@ namespace ASCE7WindLoadCalculator
             if (whole.Procedure == LateralProcedure.Envelope)
                 SplitEnvelopeCases(whole, r, b.BuildingHeight);
             else
+                // Fig. 27.3-8 Cases 1-4 on each floor's calculated force, and the 27.1.5 minimum as its own cases (C27.1.5)
                 foreach (var f in r.Levels)
-                    WindLateralLoads.AddDirectionalCases(f.LoadCases, f.AlongLengthDesignKips, f.AlongWidthDesignKips,
+                {
+                    WindLateralLoads.AddDirectionalCases(f.LoadCases, f.AlongLengthKips, f.AlongWidthKips,
                         dx.WidthNormalToWind, dy.WidthNormalToWind, onlyCases1And3);
+                    WindLateralLoads.AddMinimumCases(f.LoadCases, f.AlongLengthMinimumKips, f.AlongWidthMinimumKips);
+                }
+            return r;
+        }
+
+        /// <summary>
+        /// The wind calculator's own wind cases (<see cref="WindCases.For"/>: each wind with its walls, its roof value and its sign
+        /// of GCpi, and the separate minimum cases), with each case's forces shared out over the floors: the walls' part by the
+        /// wall force on each floor's strip (Chapter 27: qz up the windward wall; the minimum: by wall area), the roof and parapet
+        /// part on the roof, Chapter 28 in the proportion of that direction's forces. Every floor has every case, under the same
+        /// name, and the floors add up to the building's case.
+        /// </summary>
+        public static StoryWindCaseResult ComputeCases(WindAnalysisResult analysis, bool onlyCases1And3, int stories)
+        {
+            if (!(analysis?.MwfrsAlongLength is WindLoadCalculator_MWFRS mx) || !(analysis.MwfrsAlongWidth is WindLoadCalculator_MWFRS my))
+                throw new ArgumentException("Both MWFRS directions are needed.", nameof(analysis));
+            var forces = Compute(analysis, onlyCases1And3, stories);   // the floors' strips and the direction forces
+            var cases = WindCases.For(analysis, onlyCases1And3);
+            var r = new StoryWindCaseResult { Cases = cases, Procedure = WindCases.ProcedureOf(analysis), Strips = forces };
+            var b = mx.buildingData;
+            int n = forces.Levels.Count;
+
+            // each kind of share, per floor (bottom first); each adds up to 1 over the floors
+            double[] Norm(IEnumerable<double> v) { var a = v.ToArray(); double s = a.Sum(); return a.Select(x => Math.Abs(s) > 1e-12 ? x / s : 0).ToArray(); }
+            double[] top = Enumerable.Range(0, n).Select(i => i == n - 1 ? 1.0 : 0.0).ToArray();
+            double[] Walls(WindLoadCalculator_MWFRS c) => Norm(forces.Levels.Select(l => MwfrsLateralLoad.WallShearKipsBetween(c, l.StripBottom, l.StripTop)));
+            double[] Area(DirectionalWindForce d) => Norm(forces.Levels.Select((l, i) => WallShare(d, b.BuildingHeight, l.StripBottom, l.StripTop, i == n - 1)));
+            var share = new Dictionary<(PartShare, bool), double[]>
+            {
+                [(PartShare.Walls, true)] = Walls(mx), [(PartShare.Walls, false)] = Walls(my),
+                [(PartShare.WallArea, true)] = Area(forces.Building.AlongLength), [(PartShare.WallArea, false)] = Area(forces.Building.AlongWidth),
+                [(PartShare.Top, true)] = top, [(PartShare.Top, false)] = top,
+                [(PartShare.Direction, true)] = Norm(forces.Levels.Select(l => l.AlongLengthKips)),
+                [(PartShare.Direction, false)] = Norm(forces.Levels.Select(l => l.AlongWidthKips)),
+            };
+
+            for (int i = 0; i < n; i++) r.Levels.Add(new List<WindLoadCase>());
+            foreach (var c in cases)
+            {
+                // a case without parts (none expected): all on the roof
+                var parts = c.Parts.Count > 0 ? c.Parts : new List<ForcePart> { new ForcePart { Share = PartShare.Top, Vx = c.Vx, Vy = c.Vy, Mt = c.Mt } };
+                for (int i = 0; i < n; i++)
+                {
+                    double vx = 0, vy = 0, mt = 0;
+                    foreach (var p in parts)
+                    {
+                        double s = share[(p.Share, p.AlongLength)][i];
+                        vx += p.Vx * s; vy += p.Vy * s; mt += p.Mt * s;
+                    }
+                    r.Levels[i].Add(new WindLoadCase { CaseNumber = c.FigureCase, Name = c.Name, Vx = vx + 0.0, Vy = vy + 0.0, Mt = mt + 0.0 });
+                }
+            }
             return r;
         }
 
@@ -145,7 +216,7 @@ namespace ASCE7WindLoadCalculator
             double wall = WallShare(d, eave, bottom, top, roof) * d.ProjectedWallArea;
             double wallPsf = WindLateralLoads.MinimumWallPressure, roofPsf = WindLateralLoads.MinimumRoofPressure;
             double min = (wallPsf * wall + (roof ? roofPsf * d.ProjectedRoofArea : 0)) / 1000.0;
-            // Chapter 28's minimum (28.3.4) is formed by the envelope code; split it the same way as its areas.
+            // Chapter 28's minimum is formed by the envelope code; split it the same way as its areas.
             if (procedure == LateralProcedure.Envelope && d.MinimumKips > 0)
             {
                 double total = (wallPsf * d.ProjectedWallArea + roofPsf * d.ProjectedRoofArea) / 1000.0;
@@ -162,7 +233,7 @@ namespace ASCE7WindLoadCalculator
             foreach (var c in whole.LoadCases)
             {
                 bool x = c.Name.Contains("along length");
-                bool minimum = c.Name.Contains("minimum");
+                bool minimum = c.CaseNumber == WindLateralLoads.MinimumCaseNumber;
                 foreach (var l in r.Levels)
                 {
                     double share = minimum

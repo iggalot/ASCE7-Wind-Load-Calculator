@@ -116,7 +116,8 @@ namespace ASCE7Wind.Tests
         {
             var b = Bldg.Make(60, 40, 15);
             var r = WindLateralLoads.Compute(Analysis(b));
-            double vx = r.AlongLength.DesignKips, vy = r.AlongWidth.DesignKips;
+            // Cases 1-4 are built on the calculated force (the minimum is a separate case, C27.1.5)
+            double vx = r.AlongLength.TotalKips, vy = r.AlongWidth.TotalKips;
             Assert.AreEqual(40, r.AlongLength.WidthNormalToWind, 1e-12, "B for wind along x is the width");
             Assert.AreEqual(60, r.AlongWidth.WidthNormalToWind, 1e-12, "B for wind along y is the length");
 
@@ -164,8 +165,38 @@ namespace ASCE7Wind.Tests
         public void LoadCases_Exception_OnlyCases1And3()
         {
             var r = WindLateralLoads.Compute(Analysis(Bldg.Make(60, 40, 15)), onlyCases1And3: true);
-            CollectionAssert.AreEquivalent(new[] { 1, 3 }, r.LoadCases.Select(c => c.CaseNumber).Distinct().ToArray());
+            CollectionAssert.AreEquivalent(new[] { 1, 3, WindLateralLoads.MinimumCaseNumber }, r.LoadCases.Select(c => c.CaseNumber).Distinct().ToArray());
             Assert.IsTrue(r.LoadCases.All(c => c.Mt == 0));
+        }
+
+        [TestMethod]
+        public void Minimum_IsASeparateLoadCase_C27_1_5()
+        {
+            // C27.1.5 (ASCE 7-16 and 7-22): the minimum is "applied as a separate load case in addition to the normal load
+            // cases". 85 mph, Exp. B: the minimum is larger than the calculated wind, yet Cases 1-4 keep the calculated force.
+            var low = WindAnalysis.Run(ASCE7_Versions.ASCE_VER_7_22,
+                new WindParameters_Base { WindSpeed = 85, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_B }, Bldg.Make(60, 40, 15));
+            var r = WindLateralLoads.Compute(low);
+            Assert.IsTrue(r.AlongLength.MinimumGoverns && r.AlongWidth.MinimumGoverns);
+            double tx = r.AlongLength.TotalKips, ty = r.AlongWidth.TotalKips, ex = 0.15 * 40, ey = 0.15 * 60;
+            double mx = r.AlongLength.MinimumKips, my = r.AlongWidth.MinimumKips;
+
+            Assert.IsTrue(r.LoadCases.Any(c => c.CaseNumber == 1 && Math.Abs(c.Vx - tx) < 1e-12 && c.Vy == 0));
+            Assert.IsTrue(r.LoadCases.Any(c => c.CaseNumber == 2 && Math.Abs(c.Vx - 0.75 * tx) < 1e-12 && Math.Abs(c.Mt - 0.75 * tx * ex) < 1e-9));
+            Assert.IsTrue(r.LoadCases.Any(c => c.CaseNumber == 4 && Math.Abs(c.Mt - 0.563 * (tx * ex + ty * ey)) < 1e-9));
+
+            // the minimum: 16 psf × 40 × 15 = 9.6 k along the length, 16 × 60 × 15 = 14.4 k along the width, either side, no torsion
+            Assert.AreEqual(9.6, mx, 1e-9);
+            Assert.AreEqual(14.4, my, 1e-9);
+            var min = r.LoadCases.Where(c => c.CaseNumber == WindLateralLoads.MinimumCaseNumber).ToList();
+            Assert.AreEqual(4, min.Count);
+            foreach (int s in new[] { 1, -1 })
+            {
+                Assert.IsTrue(min.Any(c => c.Vx == s * mx && c.Vy == 0 && c.Mt == 0));
+                Assert.IsTrue(min.Any(c => c.Vx == 0 && c.Vy == s * my && c.Mt == 0));
+            }
+            Assert.AreEqual(32 + 4, r.LoadCases.Count, "Cases 1-4 and the four minimum cases");
+            Assert.AreEqual(mx, r.AlongLength.DesignKips, 1e-12, "DesignKips reports the larger of the two");
         }
     }
 }

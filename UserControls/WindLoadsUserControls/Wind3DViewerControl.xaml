@@ -70,9 +70,13 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
 
         <!-- Toolbar: one compact row. Explanations are in the tooltips. -->
-        <Border x:Name="bdModes" Grid.Row="0" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
+        <Border x:Name="bdModes" Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
             <WrapPanel VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
                     <TextBlock Text="Cladding" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
@@ -93,13 +97,16 @@
                     <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
                                  Content="From S" Checked="Mode_Checked"
                                  ToolTip="Whole-building pressures with wind blowing from the south (along the building width)."/>
+                    <RadioButton x:Name="rbCases" GroupName="mode" Style="{StaticResource Segment}" Margin="4,0,0,0"
+                                 Content="Wind cases" Checked="Mode_Checked"
+                                 ToolTip="Every Fig. 27.3-8 wind case, one at a time: each wind (W, E, S, N and the quartering winds), each roof value, each sign of GCpi and each torsion, with its own wall and roof zones. The envelope shows the largest pressure or the largest suction of all the cases, each with the case that gives it."/>
                 </StackPanel>
                 <StackPanel x:Name="spRoofCase" Orientation="Horizontal">
                     <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Larger uplift" Checked="Mode_Checked"
-                                 ToolTip="Fig. 27.3-1 gives two Cp values for many roof zones (e.g. -0.3 and +0.2). This uses the more negative one (larger uplift)."/>
-                    <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Margin="0" Content="Other" Checked="Mode_Checked"
-                                 ToolTip="The second Fig. 27.3-1 roof Cp (positive or less negative). ASCE 7 requires checking both."/>
+                    <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Case A" Checked="Mode_Checked"
+                                 ToolTip="Fig. 27.3-1 gives two roof Cp values for many zones. Case A is the first value listed (on a flat roof: -0.9 / -0.5 / -0.3 by distance from the windward edge). Both values are cases of their own."/>
+                    <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Margin="0" Content="Case B" Checked="Mode_Checked"
+                                 ToolTip="Case B is the second Fig. 27.3-1 roof value (on a flat roof: -0.18 over the whole roof). Both values are cases of their own."/>
                 </StackPanel>
             </WrapPanel>
         </Border>
@@ -203,5 +210,31 @@
                 </StackPanel>
             </Border>
         </Grid>
+
+        <!-- Wind cases: the envelope first, then every case. Select one to draw it; the arrow keys step through the list. -->
+        <Border x:Name="bdCases" Grid.Row="1" Grid.Column="1" Width="300" Visibility="Collapsed"
+                BorderBrush="{StaticResource Hairline}" BorderThickness="1,0,0,0" Padding="8,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="Procedure" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Segment}" IsChecked="True" Content="Ch. 27" Checked="Procedure_Checked"
+                                 ToolTip="Directional procedure: Fig. 27.3-8 Cases 1 to 4, quartering winds resolved area by area."/>
+                    <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Segment}" Margin="0" Content="Ch. 28" Checked="Procedure_Checked"
+                                 ToolTip="Envelope procedure (low-rise): Figs. 28.3-1 and 28.3-2, Load Cases 1 to 4 with each building corner as the reference corner. The two procedures are alternatives: each has its own envelope."/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="Envelope" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <RadioButton x:Name="rbEnvMax" GroupName="env" Style="{StaticResource Segment}" IsChecked="True" Content="Max" Checked="Envelope_Checked"
+                                 ToolTip="Each piece of the building with the most positive net pressure (toward the surface) of all the cases, and the case that gives it."/>
+                    <RadioButton x:Name="rbEnvMin" GroupName="env" Style="{StaticResource Segment}" Margin="0" Content="Min" Checked="Envelope_Checked"
+                                 ToolTip="Each piece of the building with the most negative net pressure (suction) of all the cases, and the case that gives it."/>
+                </StackPanel>
+                <TextBox x:Name="tbCaseFilter" DockPanel.Dock="Top" Margin="0,0,0,6" TextChanged="CaseFilter_Changed"
+                         ToolTip="Show only the cases whose name holds this text (e.g. &quot;Case 3&quot;, &quot;from SW&quot;, &quot;−GCpi&quot;)"/>
+                <TextBlock x:Name="tbCaseCount" DockPanel.Dock="Top" Foreground="{StaticResource InkMuted}" FontSize="11" Margin="0,0,0,4"/>
+                <ListBox x:Name="lbCases" SelectionChanged="Cases_SelectionChanged" BorderBrush="{StaticResource Hairline}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+            </DockPanel>
+        </Border>
     </Grid>
 </UserControl>

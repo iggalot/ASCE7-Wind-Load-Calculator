@@ -202,7 +202,7 @@ namespace ASCE7Wind.Tests
         }
 
         /// <summary>
-        /// ASCE 7-22 gable-end wall zoning includes the gable triangle, with the apex at mid-span.
+        /// Gable-end wall zoning includes the gable triangle, with the apex at mid-span, in both editions.
         /// Ridge parallel to the length means the width walls are the gable ends.
         /// </summary>
         [DataTestMethod]
@@ -212,7 +212,7 @@ namespace ASCE7Wind.Tests
         {
             double L = 60, W = 40, H = 15, slope = 20;
             var b = Bldg.Make(L, W, H, RoofTypes.ROOF_TYPE_GABLE, slope, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH);
-            var c = Bldg.Run(ASCE7_Versions.ASCE_VER_7_22, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, b);
+            var c = Bldg.Run(v, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, b);
             double rise = Math.Tan(slope * Math.PI / 180) * W / 2;
 
             var gableWall = c.WallAreaCalculator_BldgWidth;

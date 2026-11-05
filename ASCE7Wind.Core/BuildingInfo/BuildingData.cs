@@ -158,10 +158,18 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Mean roof height h (ft): average of eave and ridge heights (26.2).</summary>
         public double MeanRoofHeight => 0.5 * (BuildingHeight + RidgeHeight);
 
+        /// <summary>
+        /// h of the MWFRS figures (ft): the mean roof height, except that the eave height is used for θ ≤ 10° (notation of
+        /// Fig. 27.3-1 and Fig. 28.3-1, ASCE 7-16 and 7-22 alike). Used for qh, h/L, the Fig. 27.3-1 roof distance bands and
+        /// the Fig. 28.3-1 dimension a. For a flat roof both are the eave height.
+        /// </summary>
+        public double MwfrsFigureHeight => RoofType == RoofTypes.ROOF_TYPE_FLAT || RoofPitch <= 10 ? BuildingHeight : MeanRoofHeight;
+
         /// <summary>Height of the highest point of the roof (ft).</summary>
         public double RidgeHeight => ComputeRidgeHeight();
 
-        public double h_Over_L => MeanRoofHeight / BuildingLength;
+        /// <summary>h/L of Fig. 27.3-1, with h the figure height (<see cref="MwfrsFigureHeight"/>) and L the dimension along the wind.</summary>
+        public double h_Over_L => MwfrsFigureHeight / BuildingLength;
         public double h_Over_B => MeanRoofHeight / BuildingWidth;
         public double L_Over_B => BuildingLength / BuildingWidth;
 

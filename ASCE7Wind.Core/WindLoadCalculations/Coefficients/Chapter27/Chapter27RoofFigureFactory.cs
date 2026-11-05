@@ -8,20 +8,33 @@
     /// </summary>
     public static class Chapter27RoofFigureFactory
     {
-        public static Chapter27and30_GCpCurveBase CreateRoofFigure(BuildingData buildingData)
+        /// <summary>
+        /// Fig. 27.3-1 note b: the −1.3 value "can be reduced linearly with area over which it is applicable": 1.0 at 100 sq ft
+        /// or less, 0.9 at 250, 0.8 at 1,000 or more (ASCE 7-16 and 7-22 alike).
+        /// </summary>
+        public static double AreaReductionFactor(double area)
+        {
+            if (area <= 100) return 1.0;
+            if (area >= 1000) return 0.8;
+            if (area <= 250) return 1.0 - 0.1 * (area - 100) / 150.0;
+            return 0.9 - 0.1 * (area - 250) / 750.0;
+        }
+
+        /// <param name="reductionFactor">Fig. 27.3-1 note b factor on the −1.3 value (h/L ≥ 1.0, 0 to h/2 or θ = 10°); 1.0 = unreduced.</param>
+        public static Chapter27and30_GCpCurveBase CreateRoofFigure(BuildingData buildingData, double reductionFactor = 1.0)
         {
             double slope = buildingData.RoofPitch;
             double hOverL = buildingData.h_Over_L;
 
             if (buildingData.RoofType == RoofTypes.ROOF_TYPE_HIP)
-                return HipRoof(hOverL, slope);
+                return HipRoof(hOverL, slope, reductionFactor);
 
             bool normalToRidge = buildingData.RidgeDirection == RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH;
 
             if (normalToRidge && slope >= 10)
-                return NormalToRidge(hOverL, slope);
+                return NormalToRidge(hOverL, slope, reductionFactor);
 
-            return ParallelToRidge(hOverL, slope);
+            return ParallelToRidge(hOverL, slope, reductionFactor);
         }
 
         /// <summary>
@@ -31,16 +44,16 @@
         /// combined. Below 10 deg the code uses the distance table for every roof plane (the zoning then has
         /// no windward/leeward roof zones).
         /// </summary>
-        private static Chapter27and30_GCpCurveBase HipRoof(double hOverL, double slope)
+        private static Chapter27and30_GCpCurveBase HipRoof(double hOverL, double slope, double f)
         {
-            var along = ParallelToRidge(hOverL, slope);
+            var along = ParallelToRidge(hOverL, slope, f);
             var combined = new CombinedCpFigure("Figure 27.3-1 (hip roof)", along);
 
             // Below 10 deg every plane is zoned by distance (RoofAreaCalculator_MWFRS), so only the
             // distance table is needed.
             if (slope >= 10)
             {
-                var facing = NormalToRidge(hOverL, slope);
+                var facing = NormalToRidge(hOverL, slope, f);
                 foreach (var key in new[] { "ZoneWWR", "ZoneLWR" })
                 {
                     combined.RoofCurves_Pos[key] = facing.RoofCurves_Pos[key];
@@ -65,18 +78,18 @@
         }
 
         /// <summary>Wind parallel to ridge (or flat / low-slope roofs): distance-based zones from the windward edge.</summary>
-        private static Chapter27and30_GCpCurveBase ParallelToRidge(double hOverL, double slope)
+        private static Chapter27and30_GCpCurveBase ParallelToRidge(double hOverL, double slope, double f)
         {
             if (hOverL <= 0.5)
                 return new ParallelToRidge_LowSlope_Roof_Low();
             if (hOverL >= 1.0)
-                return new ParallelToRidge_LowSlope_Roof_High();
+                return new ParallelToRidge_LowSlope_Roof_High(f);
             return new InterpolatedCpCurve(hOverL, slope, 0.5, 1.0,
-                new ParallelToRidge_LowSlope_Roof_Low(), new ParallelToRidge_LowSlope_Roof_High());
+                new ParallelToRidge_LowSlope_Roof_Low(), new ParallelToRidge_LowSlope_Roof_High(f));
         }
 
         /// <summary>Wind normal to ridge, theta >= 10 deg: windward and leeward roof faces, Cp vs slope.</summary>
-        private static Chapter27and30_GCpCurveBase NormalToRidge(double hOverL, double slope)
+        private static Chapter27and30_GCpCurveBase NormalToRidge(double hOverL, double slope, double f)
         {
             if (hOverL <= 0.25)
                 return new NormToRidge_LargeSlope_Roof_Low(slope);
@@ -85,8 +98,8 @@
                     new NormToRidge_LargeSlope_Roof_Low(slope), new NormToRidge_LargeSlope_Roof_Mid(slope));
             if (hOverL < 1.0)
                 return new InterpolatedCpCurve(hOverL, slope, 0.5, 1.0,
-                    new NormToRidge_LargeSlope_Roof_Mid(slope), new NormToRidge_LargeSlope_Roof_High(slope));
-            return new NormToRidge_LargeSlope_Roof_High(slope);
+                    new NormToRidge_LargeSlope_Roof_Mid(slope), new NormToRidge_LargeSlope_Roof_High(slope, f));
+            return new NormToRidge_LargeSlope_Roof_High(slope, f);
         }
     }
 }

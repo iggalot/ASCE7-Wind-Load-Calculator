@@ -152,7 +152,7 @@ namespace ASCE7Wind.Tests
     [TestClass]
     public class WindSceneTests
     {
-        private static WindScene Scene(ASCE7_Versions v, BuildingData b, WindViewMode mode, MwfrsRoofCase rc = MwfrsRoofCase.MaxSuction)
+        private static WindScene Scene(ASCE7_Versions v, BuildingData b, WindViewMode mode, MwfrsRoofCase rc = MwfrsRoofCase.CaseA)
         {
             var cc = Bldg.Run(v, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, b);
             var mL = Bldg.Run(v, WindLoadCalculationTypes.MWFRS, b);

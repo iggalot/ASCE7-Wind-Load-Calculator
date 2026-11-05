@@ -29,37 +29,38 @@ namespace ASCE7Wind.Tests
         public void HandCalculation_7_22_Enclosed_10sqft()
         {
             // qp at 18 ft = 29.91 psf (7-22, Kd outside q); qp Kd = 25.42 psf; GCpi = +/-0.18; A = 10 sq ft.
-            // Wall Fig. 30.3-1: Zones 4 and 5 +1.0; Zone 4 -1.1, Zone 5 -1.4. Roof Fig. 30.3-2A: Zone 2 -2.3, Zone 3 -3.2 (-2.3 with a parapet of 3 ft or more, note 5).
+            // Wall Fig. 30.3-1: Zones 4 and 5 +1.0; Zone 4 -1.1, Zone 5 -1.4, all x 0.9 by note 5 (flat roof, 10 deg or less):
+            // +0.9, -0.99, -1.26. Roof Fig. 30.3-2A: Zone 2 -2.3, Zone 3 -3.2 (-2.3 with a parapet of 3 ft or more, note 5).
             var c = Cc(ASCE7_Versions.ASCE_VER_7_22, 3);
             double qk = 29.91 * 0.85;
 
             var aCorner = Get(c, "A", "corner");
             Assert.AreEqual(29.91, aCorner.Qp, 0.01);
-            Assert.AreEqual(1.0, aCorner.GCpFront, 1e-9);
+            Assert.AreEqual(0.9, aCorner.GCpFront, 1e-9);
             Assert.AreEqual(-2.3, aCorner.GCpBack, 1e-9);              // Zone 3 = Zone 2 by Fig. 30.3-2A note 5 (parapet >= 3 ft)
-            Assert.AreEqual(qk * 1.18, aCorner.FrontPressure, 0.05);    // 30.0 psf
+            Assert.AreEqual(qk * 1.08, aCorner.FrontPressure, 0.05);    // 27.5 psf
             Assert.AreEqual(-qk * 2.48, aCorner.BackPressure, 0.05);    // -63.0 psf
             // 30.6: both faces under +GCpi and -GCpi
-            Assert.AreEqual(qk * 0.82, aCorner.FrontPressurePosGCpi, 0.05);   // 20.8 psf
-            Assert.AreEqual(qk * 1.18, aCorner.FrontPressureNegGCpi, 0.05);   // 30.0 psf
+            Assert.AreEqual(qk * 0.72, aCorner.FrontPressurePosGCpi, 0.05);   // 18.3 psf
+            Assert.AreEqual(qk * 1.08, aCorner.FrontPressureNegGCpi, 0.05);   // 27.5 psf
             Assert.AreEqual(-qk * 2.48, aCorner.BackPressurePosGCpi, 0.05);   // -63.0 psf
             Assert.AreEqual(-qk * 2.12, aCorner.BackPressureNegGCpi, 0.05);   // -53.9 psf
-            Assert.AreEqual(qk * 3.3, aCorner.NetPressure, 0.05);       // 83.9 psf: internal pressure cancels
+            Assert.AreEqual(qk * 3.2, aCorner.NetPressure, 0.05);       // 81.3 psf: internal pressure cancels
 
             var aEdge = Get(c, "A", "edge");
             Assert.AreEqual(-2.3, aEdge.GCpBack, 1e-9);
-            Assert.AreEqual(qk * 3.3, aEdge.NetPressure, 0.05);         // 83.9 psf
+            Assert.AreEqual(qk * 3.2, aEdge.NetPressure, 0.05);         // 81.3 psf
 
             var bCorner = Get(c, "B", "corner");
-            Assert.AreEqual(-1.4, bCorner.GCpFront, 1e-9);
-            Assert.AreEqual(1.0, bCorner.GCpBack, 1e-9);
-            Assert.AreEqual(-qk * 1.58, bCorner.FrontPressure, 0.05);   // -40.2 psf
-            Assert.AreEqual(-qk * 1.58, bCorner.FrontPressurePosGCpi, 0.05);  // -40.2 psf
-            Assert.AreEqual(-qk * 1.22, bCorner.FrontPressureNegGCpi, 0.05);  // -31.0 psf
-            Assert.AreEqual(qk * 1.18, bCorner.BackPressure, 0.05);
-            Assert.AreEqual(qk * 2.4, bCorner.NetPressure, 0.05);       // 61.0 psf
+            Assert.AreEqual(-1.26, bCorner.GCpFront, 1e-9);
+            Assert.AreEqual(0.9, bCorner.GCpBack, 1e-9);
+            Assert.AreEqual(-qk * 1.44, bCorner.FrontPressure, 0.05);   // -36.6 psf
+            Assert.AreEqual(-qk * 1.44, bCorner.FrontPressurePosGCpi, 0.05);  // -36.6 psf
+            Assert.AreEqual(-qk * 1.08, bCorner.FrontPressureNegGCpi, 0.05);  // -27.5 psf
+            Assert.AreEqual(qk * 1.08, bCorner.BackPressure, 0.05);
+            Assert.AreEqual(qk * 2.16, bCorner.NetPressure, 0.05);      // 54.9 psf
 
-            Assert.AreEqual(qk * 2.1, Get(c, "B", "edge").NetPressure, 0.05); // 53.4 psf
+            Assert.AreEqual(qk * 1.89, Get(c, "B", "edge").NetPressure, 0.05); // 48.0 psf: 0.99 + 0.9
         }
 
         [TestMethod]
@@ -90,9 +91,9 @@ namespace ASCE7Wind.Tests
             var partial = Cc(ASCE7_Versions.ASCE_VER_7_22, 3, parapetEnvelope: BuildingEnclosures.BLDG_PARTIALLY_ENCLOSED);
             double qk = 29.91 * 0.85;
             var a = Get(partial, "A", "corner");
-            Assert.AreEqual(16.0, a.FrontPressurePosGCpi, 1e-9);             // qk * 0.45 = 11.4 psf, raised to the 16 psf minimum
-            Assert.AreEqual(qk * (1.0 + 0.55), a.FrontPressureNegGCpi, 0.05);
-            Assert.AreEqual(qk * 3.3, a.NetPressure, 0.05);                 // net unchanged: internal pressure cancels
+            Assert.AreEqual(16.0, a.FrontPressurePosGCpi, 1e-9);             // qk * (0.9 - 0.55) = 8.9 psf, raised to the 16 psf minimum
+            Assert.AreEqual(qk * (0.9 + 0.55), a.FrontPressureNegGCpi, 0.05);   // wall +1.0 x 0.9 (Fig. 30.3-1 note 5)
+            Assert.AreEqual(qk * 3.2, a.NetPressure, 0.05);                 // net unchanged: internal pressure cancels
         }
 
         [TestMethod]
@@ -122,8 +123,8 @@ namespace ASCE7Wind.Tests
             foreach (double a in new[] { 10.0, 50.0, 200.0 })
             {
                 Assert.AreEqual(roof.RoofCurves_Neg["Zone2"].Evaluate(a), roof.RoofCurves_Neg["Zone3"].Evaluate(a), 1e-9);
-                Assert.AreEqual(wall.WallCurves_Pos["Zone4"].Evaluate(a), roof.RoofCurves_Pos["Zone2"].Evaluate(a), 1e-9);
-                Assert.AreEqual(wall.WallCurves_Pos["Zone5"].Evaluate(a), roof.RoofCurves_Pos["Zone3"].Evaluate(a), 1e-9);
+                Assert.AreEqual(0.9 * roof.RoofCurves_Pos["Zone2"].Evaluate(a), wall.WallCurves_Pos["Zone4"].Evaluate(a), 1e-9);   // the roof takes the figure's wall value; the wall itself is reduced 10% (Fig. 30.3-1 note 5)
+                Assert.AreEqual(0.9 * roof.RoofCurves_Pos["Zone3"].Evaluate(a), wall.WallCurves_Pos["Zone5"].Evaluate(a), 1e-9);
             }
             Assert.AreEqual(-2.3, roof.RoofCurves_Neg["Zone3"].Evaluate(10), 1e-9);
             Assert.AreEqual(1.0, roof.RoofCurves_Pos["Zone2"].Evaluate(10), 1e-9);

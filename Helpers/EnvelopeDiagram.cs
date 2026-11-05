@@ -44,7 +44,16 @@ namespace ASCE7WindLoadCalculator
             Zone(c, lw + "E", g(lw + "E"), x0 + pw + 8, y0 + ph - end / 2 - 8);
             if (e.LoadCase == "A")
             {
-                Zone(c, "2", g("2"), x0 + pw * 0.25 - 26, y0 + (ph - end) / 2 - 8);
+                // zone 2 stops short of the ridge when 2.5 he < D/2 (the rest of the windward slope takes zone 3)
+                bool cut = e.Zones.Any(z => z.IsRoof && z.Zone == "3" && z.Xc < e.DepthAlongWind / 2);
+                double reach = cut ? e.Zone2Reach * s : pw / 2;
+                if (cut)
+                {
+                    c.Children.Add(new Line { X1 = x0 + reach, Y1 = y0, X2 = x0 + reach, Y2 = y0 + ph, Stroke = InkSecondary, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 2, 2 } });
+                    Zone(c, "3", g("3"), x0 + (reach + pw / 2) / 2 - 26, y0 + (ph - end) / 2 - 8);
+                    Label(c, $"2.5 he = {e.Zone2Reach:0.#} ft", x0 + reach + 3, y0 + 3, InkSecondary, 10);
+                }
+                Zone(c, "2", g("2"), x0 + reach / 2 - 26, y0 + (ph - end) / 2 - 8);
                 Zone(c, "3", g("3"), x0 + pw * 0.75 - 26, y0 + (ph - end) / 2 - 8);
             }
             else

@@ -189,5 +189,69 @@ namespace ASCE7Wind.UI.Tests
             var warn = (FrameworkElement)v.FindName("bdWarnings");
             Assert.AreEqual(Visibility.Visible, warn.Visibility);
         }
+
+        /// <summary>
+        /// The wind cases view: the list starts with the envelope, then every case; the Max/Min toggle shows the largest
+        /// pressure or the largest suction; selecting a case draws that case's own zones and hides the roof Cp choice.
+        /// </summary>
+        [STATestMethod]
+        public void WindCases_ListEnvelopeToggleAndOneCase()
+        {
+            var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
+            var v = Viewer(b, WindViewMode.WindCases);
+            Assert.AreEqual(WindViewMode.WindCases, v.Mode);
+            Assert.AreEqual(Visibility.Visible, ((FrameworkElement)v.FindName("bdCases")).Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ((FrameworkElement)v.FindName("spRoofCase")).Visibility, "each case has its own roof value");
+
+            var list = (System.Windows.Controls.ListBox)v.FindName("lbCases");
+            Assert.AreEqual(208 + 4, v.WindCases.Count);   // and the four 27.1.5 minimum cases (C27.1.5)
+            Assert.AreEqual(v.WindCases.Count + 1, list.Items.Count, "the envelope, then every case");
+            Assert.IsNull(v.SelectedCase, "the envelope is drawn first");
+
+            v.EnvelopeMax = true;
+            double maxView = v.Scene.MaxPsf;
+            v.EnvelopeMax = false;
+            Assert.IsTrue(v.Scene.Title.Contains("suction"));
+            Assert.IsTrue(v.Scene.MinPsf < 0 && maxView > 0);
+            Assert.IsTrue(v.Scene.MaxPsf < maxView, "the min view shows each piece's smallest value");
+
+            var quartering = v.WindCases.First(c => c.FigureCase == 3);
+            v.SelectedCase = quartering;
+            Assert.AreEqual(quartering.Name, v.Scene.Title);
+            Assert.AreEqual(quartering.Zones.Count, v.Scene.Zones.Count);
+            Assert.IsTrue(v.Scene.WindDirection.Value.X > 0 && v.Scene.WindDirection.Value.Y > 0, "from the SW: toward +x and +y");
+
+            v.EnvelopeMax = true; // the toggle goes back to the envelope
+            Assert.IsNull(v.SelectedCase);
+            Assert.AreEqual(maxView, v.Scene.MaxPsf, 1e-9);
+
+            var filter = (System.Windows.Controls.TextBox)v.FindName("tbCaseFilter");
+            filter.Text = "Case 3";
+            Assert.AreEqual(32 + 1, list.Items.Count);
+        }
+
+        /// <summary>The Ch. 28 list: its own cases and its own envelope; back to Ch. 27 gives the Ch. 27 list again.</summary>
+        [STATestMethod]
+        public void WindCases_Chapter28_OwnListAndEnvelope()
+        {
+            var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
+            var v = Viewer(b, WindViewMode.WindCases);
+            var list = (System.Windows.Controls.ListBox)v.FindName("lbCases");
+            v.CaseProcedure = LateralProcedure.Envelope;
+            Assert.AreEqual(32 + 4, v.WindCases.Count, "2 axes × 4 corners × LC basic and torsional × ±GCpi, and the four minimum cases");
+            Assert.IsTrue(v.WindCases.All(c => c.Procedure == LateralProcedure.Envelope));
+            Assert.AreEqual(33 + 4, list.Items.Count);
+            Assert.IsNull(v.SelectedCase);
+            Assert.IsTrue(v.Scene.Subtitle.Contains("36 wind cases"));
+
+            var lc3 = v.WindCases.First(c => c.FigureCase == 3);
+            v.SelectedCase = lc3;
+            Assert.AreEqual(lc3.Name, v.Scene.Title);
+            Assert.IsTrue(v.Scene.Subtitle.Contains("reference corner"));
+
+            v.CaseProcedure = LateralProcedure.Directional;
+            Assert.AreEqual(208 + 4, v.WindCases.Count);   // and the four 27.1.5 minimum cases (C27.1.5)
+            Assert.IsNull(v.SelectedCase, "a new list starts at its envelope");
+        }
     }
 }

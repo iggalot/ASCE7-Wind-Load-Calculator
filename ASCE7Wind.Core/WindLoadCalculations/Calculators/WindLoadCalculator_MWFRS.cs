@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ASCE7WindLoadCalculator
 {
@@ -48,19 +49,53 @@ namespace ASCE7WindLoadCalculator
             }
 
             double G = Parameters.GustFactor; // gust-effect factor; 0.85 for rigid buildings (26.11.1)
-            double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+            double qh = CalculateDynamicWindPressure(buildingData.MwfrsFigureHeight);
 
-            // Roof planes facing the wind (windward/leeward roof) read Cp against roof slope; distance
-            // zones 1-4 read against area (the -1.3 area reduction).
+            // Roof planes facing the wind (windward/leeward roof) read Cp against roof slope; the distance bands 1-4 have one
+            // value each (their curves are flat).
             double slope = buildingData.RoofPitch;
             Func<EffectiveWindArea, double> curveX = a =>
                 a.Label_Full == "ZoneWWR" || a.Label_Full == "ZoneLWR" ? slope : a.Area;
 
             AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Pos, curveX, qh, G, windPressureRoof_Pos_External);
             AddPressures(RoofAreaCalculator, extGCpCurve_Roof.RoofCurves_Neg, curveX, qh, G, windPressureRoof_Neg_External);
+            ApplyAreaReduction(curveX, qh, G);
             AddWallPressures(qh, G, windPressureWall_Pos_External_MWFRS);
             AddWallPressures(qh, G, windPressureWall_Neg_External_MWFRS);
             overhangQhGKd = qh * G * PressureKd;
+        }
+
+        /// <summary>
+        /// Fig. 27.3-1 note b: the −1.3 value (h/L ≥ 1.0: the 0 to h/2 band, or the windward roof at θ = 10°) "can be reduced
+        /// linearly with area over which it is applicable" (×1.0 at 100 sq ft, 0.9 at 250, 0.8 at 1,000). The area is the roof
+        /// surface of that zone (all of its pieces). Only the first (Case A) value carries −1.3; values interpolated from it in
+        /// h/L or θ are reduced with it. Each reduced pressure keeps its unreduced coefficient (<see cref="PressureData.GCpUnreduced"/>).
+        /// </summary>
+        private void ApplyAreaReduction(Func<EffectiveWindArea, double> curveX, double qh, double G)
+        {
+            if (RoofAreaCalculator == null) return;
+            double cos = buildingData.RoofTypeIsFlat() ? 1.0 : Math.Cos(buildingData.RoofPitch * Math.PI / 180.0);
+            foreach (var label in new[] { "Zone4", "ZoneWWR" })
+            {
+                var zones = RoofAreaCalculator.effWindAreas.Where(z => z.Value.Label_Full == label && windPressureRoof_Neg_External.ContainsKey(z.Key)).ToList();
+                if (zones.Count == 0) continue;
+                double area = zones.Sum(z => z.Value.Area) / cos;
+                double f = Chapter27RoofFigureFactory.AreaReductionFactor(area);
+                if (f >= 1.0) continue;
+                var reduced = Chapter27RoofFigureFactory.CreateRoofFigure(buildingData, f);
+                if (reduced == null || !reduced.RoofCurves_Neg.TryGetValue(label, out var curve)) continue;
+                foreach (var z in zones)
+                {
+                    var p = windPressureRoof_Neg_External[z.Key];
+                    double gcp = curve.Evaluate(curveX(z.Value));
+                    if (Math.Abs(gcp - p.GCp) < 1e-12) continue;   // no −1.3 in this value
+                    p.GCpUnreduced = p.GCp;
+                    p.GCp = gcp;
+                    p.ExternalPressure = qh * gcp * G * PressureKd;
+                    p.AreaReductionFactor = f;
+                    p.ReductionArea = area;
+                }
+            }
         }
 
         // ---- Parapets, 27.3.4 ----
@@ -154,7 +189,7 @@ namespace ASCE7WindLoadCalculator
         /// </summary>
         public double WindwardWallNetPressureAt(double z)
         {
-            double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+            double qh = CalculateDynamicWindPressure(buildingData.MwfrsFigureHeight);
             return WindwardWallExternalPressureAt(z) + qh * GetGCpi() * PressureKd;
         }
 

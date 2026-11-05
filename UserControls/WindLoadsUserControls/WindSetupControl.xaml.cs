@@ -729,8 +729,8 @@ namespace ASCE7WindLoadCalculator
             // The Building page shows the same numbers, one detail line each, so edits there give feedback at once.
             SetLive(liveRoof, liveRoofUnit, liveRoofSub, s?.RoofUpliftPsf, $"{ComponentName(cbRoofComponent)}, {Parameters.RoofComponentArea:0.#} sq ft");
             SetLive(liveWall, liveWallUnit, liveWallSub, s?.WallSuctionPsf, $"{ComponentName(cbWallComponent)}, {Parameters.WallComponentArea:0.#} sq ft");
-            SetLive(liveWest, liveWestUnit, liveWestSub, s?.FromWest?.DesignKips, s?.FromWest == null ? null : s.FromWest.MinimumGoverns ? "Minimum governs" : "Calculated wind governs");
-            SetLive(liveSouth, liveSouthUnit, liveSouthSub, s?.FromSouth?.DesignKips, s?.FromSouth == null ? null : s.FromSouth.MinimumGoverns ? "Minimum governs" : "Calculated wind governs");
+            SetLive(liveWest, liveWestUnit, liveWestSub, s?.FromWest?.DesignKips, s?.FromWest == null ? null : s.FromWest.MinimumGoverns ? "Minimum case larger" : "Calculated wind larger");
+            SetLive(liveSouth, liveSouthUnit, liveSouthSub, s?.FromSouth?.DesignKips, s?.FromSouth == null ? null : s.FromSouth.MinimumGoverns ? "Minimum case larger" : "Calculated wind larger");
 
             var rows = new List<CheckRow>();
             // Building-level limits (e.g. over 60 ft) are also reported by the engine in s.Checks; show them once.
@@ -763,8 +763,8 @@ namespace ASCE7WindLoadCalculator
                     : $"{cases} load cases ({(envelope ? "Fig. 28.3-1" : "Fig. 27.3-8")}); each wall uses its worst case:";
             tbOnlyCasesTitle.Text = envelope ? "Skip the torsional cases" : "Use load cases 1 and 3 only";
             tbCase1b.Text = envelope ? "Basic: full wind, end zones at one corner, then the other" : "Full wind, each direction alone";
-            tbCase2b.Text = envelope ? "Torsional: far half at 25% (twists the building)" : "75%, 15% off-center (twists the building)";
-            tbCase3b.Text = envelope ? "Minimum: 16 psf walls, 8 psf roof (28.3.4)" : "75% from both directions at once";
+            tbCase2b.Text = envelope ? (s?.Lateral?.EnvelopeAlongLength?.PrintedTorsional == true ? "Torsional: far half at the printed T values (twists the building)" : "Torsional: far half at 25% (twists the building)") : "75%, 15% off-center (twists the building)";
+            tbCase3b.Text = envelope ? "Minimum: 16 psf walls, 8 psf roof, a separate case" : "75% from both directions at once";
             tbCase4a.Visibility = tbCase4b.Visibility = envelope ? Visibility.Collapsed : Visibility.Visible;
             double faded = OnlyCases1And3 ? 0.35 : 1.0;
             tbCase2a.Opacity = tbCase2b.Opacity = tbCase4a.Opacity = tbCase4b.Opacity = faded;
@@ -802,7 +802,7 @@ namespace ASCE7WindLoadCalculator
             if (f == null) { value.Text = "-"; sub.Text = "Not available for these inputs"; return; }
             value.Text = f.DesignKips.ToString("0.0");
             sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0} kips" + Environment.NewLine +
-                       $"Minimum {f.MinimumKips:0.0} kips" + (f.MinimumGoverns ? " governs" : " (does not govern)");
+                       $"Minimum {f.MinimumKips:0.0} kips (own case" + (f.MinimumGoverns ? ", larger)" : ")");
         }
 
         // ---------------------------------------------------------------- helpers

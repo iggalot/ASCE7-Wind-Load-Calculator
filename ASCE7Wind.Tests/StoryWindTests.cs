@@ -88,9 +88,9 @@ namespace ASCE7Wind.Tests
             var whole = r.Building;
             Assert.AreEqual(whole.LoadCases.Count, l1.LoadCases.Count);
             var c1 = l1.LoadCases.First(c => c.Name == "Case 1, along length, + wind");
-            Assert.AreEqual(l1.AlongLengthDesignKips, c1.Vx, 1e-12);
+            Assert.AreEqual(l1.AlongLengthKips, c1.Vx, 1e-12);   // the calculated force (the minimum is its own case)
             var c2 = l2.LoadCases.First(c => c.Name == "Case 2, along length, + wind, + torsion");
-            Assert.AreEqual(0.75 * l2.AlongLengthDesignKips * 0.15 * B, c2.Mt, 1e-9, "0.75 V e, e = 0.15 B of the building");
+            Assert.AreEqual(0.75 * l2.AlongLengthKips * 0.15 * B, c2.Mt, 1e-9, "0.75 V e, e = 0.15 B of the building");
             foreach (var wc in whole.LoadCases)
             {
                 var parts = r.Levels.Select(l => l.LoadCases.Single(c => c.Name == wc.Name)).ToList();
@@ -126,6 +126,11 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(16 * B * 5 / 1000, r.Levels[2].AlongLengthMinimumKips, 1e-9);
             Assert.AreEqual(whole.DesignKips, r.Levels.Sum(l => l.AlongLengthDesignKips), 1e-9);
             Assert.AreEqual(r.Levels[0].AlongLengthMinimumKips, r.Levels[0].AlongLengthDesignKips, 1e-12);
+            // each floor's cases: Case 1 on the calculated strip force, the minimum as its own case (C27.1.5)
+            Assert.AreEqual(r.Levels[0].AlongLengthKips, r.Levels[0].LoadCases.First(c => c.CaseNumber == 1 && c.Name.Contains("along length")).Vx, 1e-12);
+            var min0 = r.Levels[0].LoadCases.First(c => c.CaseNumber == WindLateralLoads.MinimumCaseNumber && c.Name.Contains("along length"));
+            Assert.AreEqual(16 * B * 15 / 1000, min0.Vx, 1e-9);
+            Assert.AreEqual(0, min0.Mt, 1e-12);
         }
 
         [TestMethod]
@@ -142,9 +147,64 @@ namespace ASCE7Wind.Tests
                 Assert.AreEqual(wc.Mt, parts.Sum(p => p.Mt), 1e-9, wc.Name);
             }
             // uniform zone pressures, flat roof: the wall strips are 15, 10 and 5 ft of 30
-            var first = r.Building.LoadCases.First(c => c.Name.Contains("along length") && !c.Name.Contains("minimum"));
+            var first = r.Building.LoadCases.First(c => c.Name.Contains("along length") && c.CaseNumber != WindLateralLoads.MinimumCaseNumber);
             Assert.AreEqual(first.Vx * 0.5, r.Levels[0].LoadCases.Single(c => c.Name == first.Name).Vx, 1e-9);
             Assert.AreEqual(first.Vx / 6, r.Levels[2].LoadCases.Single(c => c.Name == first.Name).Vx, 1e-9);
+        }
+
+        /// <summary>The calculator's own wind cases on each floor: every case on every floor under its own name, and the floors
+        /// add up to the building's case (both chapters, 1 to 3 stories); one story is the building's case itself.</summary>
+        [TestMethod]
+        public void ComputeCases_EveryCalculatorCase_FloorsAddUp_BothChapters()
+        {
+            foreach (var proc in new[] { LateralProcedure.Directional, LateralProcedure.Envelope })
+                foreach (int n in new[] { 1, 2, 3 })
+                {
+                    var a = Analysis(Bldg.Make(60, 40, 30, RoofTypes.ROOF_TYPE_GABLE, 20, RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH), procedure: proc);
+                    var r = StoryWindLoads.ComputeCases(a, false, n);
+                    var all = WindCases.For(a);
+                    Assert.AreEqual(proc, r.Procedure);
+                    Assert.AreEqual(n, r.Levels.Count);
+                    CollectionAssert.AreEqual(all.Select(c => c.Name).ToList(), r.Cases.Select(c => c.Name).ToList());
+                    for (int k = 0; k < all.Count; k++)
+                    {
+                        var c = all[k];
+                        Assert.IsTrue(r.Levels.All(l => l[k].Name == c.Name && l[k].CaseNumber == c.FigureCase), c.Name);
+                        Assert.AreEqual(c.Vx, r.Levels.Sum(l => l[k].Vx), 1e-9, $"{proc} {n}: {c.Name}");
+                        Assert.AreEqual(c.Vy, r.Levels.Sum(l => l[k].Vy), 1e-9, $"{proc} {n}: {c.Name}");
+                        Assert.AreEqual(c.Mt, r.Levels.Sum(l => l[k].Mt), 1e-9, $"{proc} {n}: {c.Name}");
+                    }
+                }
+        }
+
+        /// <summary>
+        /// By hand, a gable 60 × 40 ft, 20 ft walls, two 10 ft stories: level 1 takes the walls from 0 to 15 ft (qz up the windward
+        /// wall), the roof the rest of the walls and all of the roof. Case 1 from W, roof Case A: level 1 Vx = the wall force on
+        /// 0-15 ft. Case 2: 0.75 of that, Mt = 0.75 × 0.15 B × that force. The minimum from W: 16 psf × B × 15 ft on level 1.
+        /// </summary>
+        [TestMethod]
+        public void ComputeCases_TwoStories_ByHand()
+        {
+            double B = 40;
+            var a = Analysis(Bldg.Make(60, B, 20, RoofTypes.ROOF_TYPE_GABLE, 25, RidgeDirections.RIDGE_DIR_PERP_TO_BLDGLENGTH));
+            var r = StoryWindLoads.ComputeCases(a, false, 2);
+            double walls1 = MwfrsLateralLoad.WallShearKipsBetween(a.MwfrsAlongLength, 0, 15);
+            int Of(string name) => r.Cases.FindIndex(c => c.Name == name);
+
+            int c1 = Of("Case 1, from W, roof Case A, +GCpi");
+            Assert.AreEqual(walls1, r.Levels[0][c1].Vx, 1e-9);
+            Assert.AreEqual(r.Cases[c1].Vx - walls1, r.Levels[1][c1].Vx, 1e-9, "the roof level: the rest of the walls and the roof");
+            Assert.AreEqual(0, r.Levels[0][c1].Vy, 1e-12);
+
+            int e1 = Of("Case 1, from E, roof Case A, +GCpi");
+            Assert.AreEqual(-walls1, r.Levels[0][e1].Vx, 1e-9, "from E: the same, toward −x");
+
+            int c2 = Of("Case 2, from W, roof Case A, +GCpi, torsion +");
+            Assert.AreEqual(0.75 * walls1, r.Levels[0][c2].Vx, 1e-9);
+            Assert.AreEqual(0.75 * walls1 * 0.15 * B, r.Levels[0][c2].Mt, 1e-9, "0.75 V e on the floor's own force, e = 0.15 B");
+
+            int m = r.Cases.FindIndex(c => c.IsMinimumCase && c.From == "W");
+            Assert.AreEqual(16 * B * 15 / 1000, r.Levels[0][m].Vx, 1e-9, "16 psf on the 0-15 ft strip");
         }
 
         /// <summary>Plate heights per story: the eave height is their sum, and the floors sit at the running sums.</summary>
