@@ -203,9 +203,8 @@ namespace ASCE7Wind.UI.Tests
             Assert.AreEqual(Visibility.Visible, ((FrameworkElement)v.FindName("bdCases")).Visibility);
             Assert.AreEqual(Visibility.Collapsed, ((FrameworkElement)v.FindName("spRoofCase")).Visibility, "each case has its own roof value");
 
-            var list = (System.Windows.Controls.ListBox)v.FindName("lbCases");
             Assert.AreEqual(208 + 4, v.WindCases.Count);   // and the four 27.1.5 minimum cases (C27.1.5)
-            Assert.AreEqual(v.WindCases.Count + 1, list.Items.Count, "the envelope, then every case");
+            Assert.AreEqual(v.WindCases.Count, v.ShownCaseCount, "the envelope, then every case");
             Assert.IsNull(v.SelectedCase, "the envelope is drawn first");
 
             v.EnvelopeMax = true;
@@ -227,7 +226,7 @@ namespace ASCE7Wind.UI.Tests
 
             var filter = (System.Windows.Controls.TextBox)v.FindName("tbCaseFilter");
             filter.Text = "Case 3";
-            Assert.AreEqual(32 + 1, list.Items.Count);
+            Assert.AreEqual(32, v.ShownCaseCount);
         }
 
         /// <summary>The Ch. 28 list: its own cases and its own envelope; back to Ch. 27 gives the Ch. 27 list again.</summary>
@@ -236,11 +235,10 @@ namespace ASCE7Wind.UI.Tests
         {
             var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
             var v = Viewer(b, WindViewMode.WindCases);
-            var list = (System.Windows.Controls.ListBox)v.FindName("lbCases");
             v.CaseProcedure = LateralProcedure.Envelope;
             Assert.AreEqual(32 + 4, v.WindCases.Count, "2 axes × 4 corners × LC basic and torsional × ±GCpi, and the four minimum cases");
             Assert.IsTrue(v.WindCases.All(c => c.Procedure == LateralProcedure.Envelope));
-            Assert.AreEqual(33 + 4, list.Items.Count);
+            Assert.AreEqual(32 + 4, v.ShownCaseCount);
             Assert.IsNull(v.SelectedCase);
             Assert.IsTrue(v.Scene.Subtitle.Contains("36 wind cases"));
 
@@ -252,6 +250,75 @@ namespace ASCE7Wind.UI.Tests
             v.CaseProcedure = LateralProcedure.Directional;
             Assert.AreEqual(208 + 4, v.WindCases.Count);   // and the four 27.1.5 minimum cases (C27.1.5)
             Assert.IsNull(v.SelectedCase, "a new list starts at its envelope");
+        }
+
+        /// <summary>
+        /// The wind cases grouped: the envelope, then a group per wind direction (W, E, S, N, then the quartering winds), in
+        /// each a group per load case. Ch. 27 here (60 x 40 gable): each principal wind holds Case 1 (2 roof values x 2 GCpi
+        /// signs = 4) and Case 2 (x 2 torsions = 8), and its minimum case alone (no group of one); each quartering wind Case 3
+        /// (32 / 4 = 8) and Case 4 (128 / 4 = 32). 4 x (4 + 8 + 1) + 4 x (8 + 32) = 52 + 160 = 212.
+        /// </summary>
+        [STATestMethod]
+        public void WindCases_GroupedByDirectionThenCase()
+        {
+            var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22, RidgeDirection = RidgeDirections.RIDGE_DIR_PARALLEL_TO_BLDGLENGTH };
+            var v = Viewer(b, WindViewMode.WindCases);
+            var groups = v.CaseGroups;
+            CollectionAssert.AreEqual(new[] { "From the west (W)", "From the east (E)", "From the south (S)", "From the north (N)",
+                                              "From the southwest (SW)", "From the southeast (SE)", "From the northwest (NW)", "From the northeast (NE)" },
+                                      groups.Where(g => !g.Contains("|")).ToList());
+            CollectionAssert.AreEqual(new[] { "From the west (W)|Case 1", "From the west (W)|Case 2" }, groups.Where(g => g.StartsWith("From the west (W)|")).ToList());
+            CollectionAssert.AreEqual(new[] { "From the southwest (SW)|Case 3", "From the southwest (SW)|Case 4" }, groups.Where(g => g.StartsWith("From the southwest (SW)|")).ToList());
+            Assert.AreEqual(212, v.ShownCaseCount, "every case once");
+            foreach (var d in new[] { "W", "E", "S", "N" })
+            {
+                Assert.AreEqual(4, v.WindCases.Count(c => c.From == d && c.FigureCase == 1));
+                Assert.AreEqual(8, v.WindCases.Count(c => c.From == d && c.FigureCase == 2));
+            }
+
+            // the name split at its direction: the group, then the rest
+            var c4 = v.WindCases.First(c => c.FigureCase == 4 && c.From == "NE");
+            var (group, item) = Wind3DViewerControl.SplitName(c4);
+            Assert.AreEqual("Case 4", group);
+            Assert.AreEqual(c4.Name, group + ", from NE, " + item);
+            var min = v.WindCases.First(c => c.IsMinimumCase && c.From == "S");
+            Assert.AreEqual(("Minimum (27.1.5)", "16 psf walls + 8 psf roof (projected)"), Wind3DViewerControl.SplitName(min));
+
+            // a case picked from a closed group draws it; the filter keeps the groups with a match
+            v.SelectedCase = c4;
+            Assert.AreEqual(c4.Name, v.Scene.Title);
+            ((System.Windows.Controls.TextBox)v.FindName("tbCaseFilter")).Text = "torsion ++";
+            Assert.AreEqual(v.WindCases.Count(c => c.Name.Contains("torsion ++")), v.ShownCaseCount);
+            Assert.IsTrue(v.CaseGroups.Where(g => !g.Contains("|")).All(g => new[] { "(SW)", "(SE)", "(NW)", "(NE)" }.Any(g.Contains)), "only the quartering winds have torsion ++");
+        }
+
+        /// <summary>The VIEW flyout: its tab closes and opens the panel (remembered); the building-only view has neither.</summary>
+        [STATestMethod]
+        public void ViewFlyout_OpensAndCloses_NoneForTheBuildingOnly()
+        {
+            string prefs = Path.Combine(Path.GetTempPath(), "w7-prefs-" + Guid.NewGuid().ToString("N") + ".txt");
+            ViewerPreferences.FilePath = prefs;     // never touch the user's own preferences
+            try
+            {
+                var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 };
+                var v = Viewer(b, WindViewMode.WindCases);
+                var panel = (FrameworkElement)v.FindName("bdView");
+                var tab = (System.Windows.Controls.Button)v.FindName("btnEdgeView");
+                var host = (FrameworkElement)v.FindName("viewHost");
+                Assert.AreEqual(Visibility.Visible, panel.Visibility);
+                double narrow = host.ActualWidth;
+                tab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                v.UpdateLayout();
+                Assert.AreEqual(Visibility.Collapsed, panel.Visibility);
+                Assert.IsFalse(ViewerPreferences.ViewPanelOpen, "remembered");
+                Assert.IsTrue(host.ActualWidth > narrow + 250, "the model takes the panel's width");
+                tab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                Assert.AreEqual(Visibility.Visible, panel.Visibility);
+                v.GeometryOnly = true;
+                Assert.AreEqual(Visibility.Collapsed, panel.Visibility);
+                Assert.AreEqual(Visibility.Collapsed, tab.Visibility);
+            }
+            finally { if (File.Exists(prefs)) File.Delete(prefs); }
         }
     }
 }

@@ -63,56 +63,50 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- The flyout tab on the view's right edge (as the Shear Wall Calculator's PLAN / DATA tabs): VIEW opens or closes the
+             panel with what the view shows, so the model can take the whole width -->
+        <Style x:Key="EdgeTab" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="84"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="2,8,2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#4A4945"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="#F1F0EA" BorderBrush="#D8D6CC" BorderThickness="1" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <ContentPresenter.LayoutTransform><RotateTransform Angle="-90"/></ContentPresenter.LayoutTransform>
+                            </ContentPresenter>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#E4E9F5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PanelLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource InkMuted}"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Toolbar: one compact row. Explanations are in the tooltips. -->
-        <Border x:Name="bdModes" Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="{StaticResource Hairline}" BorderThickness="0,0,0,1" Padding="8,5">
-            <WrapPanel VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
-                    <TextBlock Text="Cladding" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
-                               ToolTip="Components and cladding: roofing, siding, windows (Chapter 30)"/>
-                    <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}"
-                                 Content="Suction" Checked="Mode_Checked"
-                                 ToolTip="Wind trying to pull roofing and siding away (suction / uplift). Worst case from any wind direction. Used to fasten coverings."/>
-                    <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
-                                 Content="Push-in" Checked="Mode_Checked"
-                                 ToolTip="Wind pushing roofing and siding inward. Worst case from any wind direction."/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
-                    <TextBlock Text="Shear walls" FontWeight="SemiBold" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
-                               ToolTip="Whole building (main wind force resisting system, Chapter 27): these pressures load the shear walls"/>
-                    <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
-                                 Content="From W" Checked="Mode_Checked"
-                                 ToolTip="Whole-building pressures with wind blowing from the west (along the building length)."/>
-                    <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
-                                 Content="From S" Checked="Mode_Checked"
-                                 ToolTip="Whole-building pressures with wind blowing from the south (along the building width)."/>
-                    <RadioButton x:Name="rbCases" GroupName="mode" Style="{StaticResource Segment}" Margin="4,0,0,0"
-                                 Content="Wind cases" Checked="Mode_Checked"
-                                 ToolTip="Every Fig. 27.3-8 wind case, one at a time: each wind (W, E, S, N and the quartering winds), each roof value, each sign of GCpi and each torsion, with its own wall and roof zones. The envelope shows the largest pressure or the largest suction of all the cases, each with the case that gives it."/>
-                </StackPanel>
-                <StackPanel x:Name="spRoofCase" Orientation="Horizontal">
-                    <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Case A" Checked="Mode_Checked"
-                                 ToolTip="Fig. 27.3-1 gives two roof Cp values for many zones. Case A is the first value listed (on a flat roof: -0.9 / -0.5 / -0.3 by distance from the windward edge). Both values are cases of their own."/>
-                    <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Margin="0" Content="Case B" Checked="Mode_Checked"
-                                 ToolTip="Case B is the second Fig. 27.3-1 roof value (on a flat roof: -0.18 over the whole roof). Both values are cases of their own."/>
-                </StackPanel>
-            </WrapPanel>
-        </Border>
-
         <!-- 3D area with overlays -->
-        <Grid Grid.Row="1" x:Name="viewHost" Background="#FCFCFB" ClipToBounds="True"
+        <Grid x:Name="viewHost" Background="#FCFCFB" ClipToBounds="True"
               MouseDown="View_MouseDown"
               MouseMove="View_MouseMove" MouseUp="View_MouseUp" MouseWheel="View_MouseWheel" MouseLeave="View_MouseLeave">
 
@@ -192,7 +186,7 @@
             </StackPanel>
 
             <!-- Controls hint -->
-            <TextBlock HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" FontSize="11"
+            <TextBlock x:Name="tbControlsHint" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" FontSize="11"
                        Foreground="{StaticResource InkMuted}" IsHitTestVisible="False"
                        Text="Drag: rotate · Right-drag: pan · Wheel: zoom"/>
 
@@ -211,29 +205,68 @@
             </Border>
         </Grid>
 
-        <!-- Wind cases: the envelope first, then every case. Select one to draw it; the arrow keys step through the list. -->
-        <Border x:Name="bdCases" Grid.Row="1" Grid.Column="1" Width="300" Visibility="Collapsed"
-                BorderBrush="{StaticResource Hairline}" BorderThickness="1,0,0,0" Padding="8,6">
+        <Button x:Name="btnEdgeView" Grid.Column="1" Style="{StaticResource EdgeTab}" Click="EdgeView_Click" Content="▼  VIEW"
+                ToolTip="Close the view panel: the model takes the whole width"/>
+
+        <!-- VIEW: what the model shows (cladding, the two whole-building directions, or the wind cases); the wind cases
+             grouped by where the wind comes from, each group opened to its cases. Select one to draw it; the arrow keys step
+             through the list. -->
+        <Border x:Name="bdView" Grid.Column="2" Width="290" BorderBrush="{StaticResource Hairline}" BorderThickness="1,0,0,0" Padding="8,6">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="Procedure" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Segment}" IsChecked="True" Content="Ch. 27" Checked="Procedure_Checked"
-                                 ToolTip="Directional procedure: Fig. 27.3-8 Cases 1 to 4, quartering winds resolved area by area."/>
-                    <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Segment}" Margin="0" Content="Ch. 28" Checked="Procedure_Checked"
-                                 ToolTip="Envelope procedure (low-rise): Figs. 28.3-1 and 28.3-2, Load Cases 1 to 4 with each building corner as the reference corner. The two procedures are alternatives: each has its own envelope."/>
+                <StackPanel x:Name="bdModes" DockPanel.Dock="Top">
+                    <TextBlock Style="{StaticResource PanelLabel}" Text="CLADDING"
+                               ToolTip="Components and cladding: roofing, siding, windows (Chapter 30)"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <RadioButton x:Name="rbCladSuction" GroupName="mode" Style="{StaticResource Segment}"
+                                     Content="Suction" Checked="Mode_Checked"
+                                     ToolTip="Wind trying to pull roofing and siding away (suction / uplift). Worst case from any wind direction. Used to fasten coverings."/>
+                        <RadioButton x:Name="rbCladPressure" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
+                                     Content="Push-in" Checked="Mode_Checked"
+                                     ToolTip="Wind pushing roofing and siding inward. Worst case from any wind direction."/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource PanelLabel}" Text="SHEAR WALLS"
+                               ToolTip="Whole building (main wind force resisting system, Chapter 27): these pressures load the shear walls"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <RadioButton x:Name="rbWindWest" GroupName="mode" Style="{StaticResource Segment}" IsChecked="True"
+                                     Content="From W" Checked="Mode_Checked"
+                                     ToolTip="Whole-building pressures with wind blowing from the west (along the building length)."/>
+                        <RadioButton x:Name="rbWindSouth" GroupName="mode" Style="{StaticResource Segment}"
+                                     Content="From S" Checked="Mode_Checked"
+                                     ToolTip="Whole-building pressures with wind blowing from the south (along the building width)."/>
+                        <RadioButton x:Name="rbCases" GroupName="mode" Style="{StaticResource Segment}" Margin="0"
+                                     Content="Wind cases" Checked="Mode_Checked"
+                                     ToolTip="Every Fig. 27.3-8 wind case, one at a time: each wind (W, E, S, N and the quartering winds), each roof value, each sign of GCpi and each torsion, with its own wall and roof zones. The envelope shows the largest pressure or the largest suction of all the cases, each with the case that gives it."/>
+                    </StackPanel>
+                    <StackPanel x:Name="spRoofCase" Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Roof Cp" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="rbCaseA" GroupName="roof" Style="{StaticResource Segment}" IsChecked="True" Content="Case A" Checked="Mode_Checked"
+                                     ToolTip="Fig. 27.3-1 gives two roof Cp values for many zones. Case A is the first value listed (on a flat roof: -0.9 / -0.5 / -0.3 by distance from the windward edge). Both values are cases of their own."/>
+                        <RadioButton x:Name="rbCaseB" GroupName="roof" Style="{StaticResource Segment}" Margin="0" Content="Case B" Checked="Mode_Checked"
+                                     ToolTip="Case B is the second Fig. 27.3-1 roof value (on a flat roof: -0.18 over the whole roof). Both values are cases of their own."/>
+                    </StackPanel>
                 </StackPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="Envelope" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <RadioButton x:Name="rbEnvMax" GroupName="env" Style="{StaticResource Segment}" IsChecked="True" Content="Max" Checked="Envelope_Checked"
-                                 ToolTip="Each piece of the building with the most positive net pressure (toward the surface) of all the cases, and the case that gives it."/>
-                    <RadioButton x:Name="rbEnvMin" GroupName="env" Style="{StaticResource Segment}" Margin="0" Content="Min" Checked="Envelope_Checked"
-                                 ToolTip="Each piece of the building with the most negative net pressure (suction) of all the cases, and the case that gives it."/>
-                </StackPanel>
-                <TextBox x:Name="tbCaseFilter" DockPanel.Dock="Top" Margin="0,0,0,6" TextChanged="CaseFilter_Changed"
-                         ToolTip="Show only the cases whose name holds this text (e.g. &quot;Case 3&quot;, &quot;from SW&quot;, &quot;−GCpi&quot;)"/>
-                <TextBlock x:Name="tbCaseCount" DockPanel.Dock="Top" Foreground="{StaticResource InkMuted}" FontSize="11" Margin="0,0,0,4"/>
-                <ListBox x:Name="lbCases" SelectionChanged="Cases_SelectionChanged" BorderBrush="{StaticResource Hairline}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+
+                <DockPanel x:Name="bdCases" Visibility="Collapsed">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Procedure" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="rbProc27" GroupName="proc" Style="{StaticResource Segment}" IsChecked="True" Content="Ch. 27" Checked="Procedure_Checked"
+                                     ToolTip="Directional procedure: Fig. 27.3-8 Cases 1 to 4, quartering winds resolved area by area."/>
+                        <RadioButton x:Name="rbProc28" GroupName="proc" Style="{StaticResource Segment}" Margin="0" Content="Ch. 28" Checked="Procedure_Checked"
+                                     ToolTip="Envelope procedure (low-rise): Figs. 28.3-1 and 28.3-2, Load Cases 1 to 4 with each building corner as the reference corner. The two procedures are alternatives: each has its own envelope."/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Envelope" Foreground="{StaticResource InkSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="rbEnvMax" GroupName="env" Style="{StaticResource Segment}" IsChecked="True" Content="Max" Checked="Envelope_Checked"
+                                     ToolTip="Each piece of the building with the most positive net pressure (toward the surface) of all the cases, and the case that gives it."/>
+                        <RadioButton x:Name="rbEnvMin" GroupName="env" Style="{StaticResource Segment}" Margin="0" Content="Min" Checked="Envelope_Checked"
+                                     ToolTip="Each piece of the building with the most negative net pressure (suction) of all the cases, and the case that gives it."/>
+                    </StackPanel>
+                    <TextBox x:Name="tbCaseFilter" DockPanel.Dock="Top" Margin="0,0,0,6" TextChanged="CaseFilter_Changed"
+                             ToolTip="Show only the cases whose name holds this text (e.g. &quot;Case 3&quot;, &quot;torsion&quot;, &quot;−GCpi&quot;); the groups with a match open"/>
+                    <TextBlock x:Name="tbCaseCount" DockPanel.Dock="Top" Foreground="{StaticResource InkMuted}" FontSize="11" Margin="0,0,0,4"/>
+                    <TreeView x:Name="tvCases" SelectedItemChanged="Cases_SelectionChanged" BorderBrush="{StaticResource Hairline}"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                </DockPanel>
             </DockPanel>
         </Border>
     </Grid>

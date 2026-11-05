@@ -27,6 +27,20 @@ namespace ASCE7WindLoadCalculator
             set => Set(nameof(PsfLabels), value ? "1" : "0");
         }
 
+        /// <summary>3D view: the VIEW flyout (what the model shows, the wind cases) open (default open).</summary>
+        public static bool ViewPanelOpen
+        {
+            get => Get(nameof(ViewPanelOpen)) != "0";
+            set => Set(nameof(ViewPanelOpen), value ? "1" : "0");
+        }
+
+        /// <summary>Results page: the RESULTS flyout (the checks and the shear walls) open (default open).</summary>
+        public static bool ResultsPanelOpen
+        {
+            get => Get(nameof(ResultsPanelOpen)) != "0";
+            set => Set(nameof(ResultsPanelOpen), value ? "1" : "0");
+        }
+
         private static string Get(string name)
         {
             Load();

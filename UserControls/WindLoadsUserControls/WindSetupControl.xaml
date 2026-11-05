@@ -250,6 +250,58 @@
             <Setter Property="LineHeight" Value="16"/>
             <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
         </Style>
+        <!-- Results strip: one number per chip on a single line, its make-up in the tooltip -->
+        <Style x:Key="StatChip" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Hairline}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="ToolTipService.ShowDuration" Value="30000"/>
+        </Style>
+        <Style x:Key="ChipLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+        <Style x:Key="ChipValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="ChipUnit" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource InkSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="3,1,0,0"/>
+        </Style>
+        <!-- The flyout tab (as the Shear Wall Calculator's PLAN / DATA tabs): RESULTS opens or closes the panel on the right -->
+        <Style x:Key="EdgeTab" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="104"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="4,40,4,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#4A4945"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="#F1F0EA" BorderBrush="#D8D6CC" BorderThickness="1" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <ContentPresenter.LayoutTransform><RotateTransform Angle="-90"/></ContentPresenter.LayoutTransform>
+                            </ContentPresenter>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#E4E9F5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <!-- Laid out to fit the Wind Setup tab beside the drawing canvas (about 1130 x 790 at 1920 x 1080)
@@ -269,7 +321,7 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="20,12,20,12">
+        <Grid Grid.Row="1" Margin="14,8,14,8">
 
             <!-- ========== PAGE 1: SITE — one labelled row per step, in the order they are decided ========== -->
             <ScrollViewer x:Name="pnlSite" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -737,72 +789,62 @@
                 </Grid>
             </Grid>
 
-            <!-- ========== STEP 3: RESULTS — the prototype layout ========== -->
+            <!-- ========== STEP 3: RESULTS — the model as large as the window allows: one slim strip of numbers above it (their
+                 make-up in the tooltips), the RESULTS flyout on the right (checks, shear walls), the VIEW flyout inside the viewer ========== -->
             <Grid x:Name="pnlResults" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <TextBlock x:Name="tbResultsSub" Style="{StaticResource Hint}" FontSize="14" Margin="0,0,0,10"/>
 
-                <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,12">
-                    <Border Style="{StaticResource StatCard}">
-                        <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource StatLabel}" Text="Roof uplift · cladding"/>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="valRoof" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                                <TextBlock x:Name="unitRoof" Style="{StaticResource StatUnit}" Text="psf"/>
-                            </StackPanel>
-                            <TextBlock x:Name="subRoof" Grid.Row="2" Style="{StaticResource StatDetail}"/>
-                        </Grid>
+                <DockPanel Grid.Row="0" Margin="0,0,0,6" LastChildFill="True">
+                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                        <Border.ToolTip><TextBlock x:Name="subRoof"/></Border.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ChipLabel}" Text="Roof uplift"/>
+                            <TextBlock x:Name="valRoof" Style="{StaticResource ChipValue}" Foreground="#9B1C1C"/>
+                            <TextBlock x:Name="unitRoof" Style="{StaticResource ChipUnit}" Text="psf"/>
+                        </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource StatCard}">
-                        <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource StatLabel}" Text="Wall suction · cladding"/>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="valWall" Style="{StaticResource StatValue}" Foreground="#9B1C1C"/>
-                                <TextBlock x:Name="unitWall" Style="{StaticResource StatUnit}" Text="psf"/>
-                            </StackPanel>
-                            <TextBlock x:Name="subWall" Grid.Row="2" Style="{StaticResource StatDetail}"/>
-                        </Grid>
+                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                        <Border.ToolTip><TextBlock x:Name="subWall"/></Border.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ChipLabel}" Text="Wall suction"/>
+                            <TextBlock x:Name="valWall" Style="{StaticResource ChipValue}" Foreground="#9B1C1C"/>
+                            <TextBlock x:Name="unitWall" Style="{StaticResource ChipUnit}" Text="psf"/>
+                        </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource StatCard}">
-                        <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource StatLabel}" Text="Shear-wall force · wind from W"/>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="valWest" Style="{StaticResource StatValue}"/>
-                                <TextBlock x:Name="unitWest" Style="{StaticResource StatUnit}" Text="kips"/>
-                            </StackPanel>
-                            <TextBlock x:Name="subWest" Grid.Row="2" Style="{StaticResource StatDetail}"/>
-                        </Grid>
+                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                        <Border.ToolTip><TextBlock x:Name="subWest"/></Border.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ChipLabel}" Text="Shear walls, from W"/>
+                            <TextBlock x:Name="valWest" Style="{StaticResource ChipValue}"/>
+                            <TextBlock x:Name="unitWest" Style="{StaticResource ChipUnit}" Text="kips"/>
+                        </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource StatCard}" Margin="0">
-                        <Grid>
-                            <Grid.RowDefinitions><RowDefinition Height="18"/><RowDefinition Height="34"/><RowDefinition Height="34"/></Grid.RowDefinitions>
-                            <TextBlock Style="{StaticResource StatLabel}" Text="Shear-wall force · wind from S"/>
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="valSouth" Style="{StaticResource StatValue}"/>
-                                <TextBlock x:Name="unitSouth" Style="{StaticResource StatUnit}" Text="kips"/>
-                            </StackPanel>
-                            <TextBlock x:Name="subSouth" Grid.Row="2" Style="{StaticResource StatDetail}"/>
-                        </Grid>
+                    <Border DockPanel.Dock="Left" Style="{StaticResource StatChip}">
+                        <Border.ToolTip><TextBlock x:Name="subSouth"/></Border.ToolTip>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ChipLabel}" Text="from S"/>
+                            <TextBlock x:Name="valSouth" Style="{StaticResource ChipValue}"/>
+                            <TextBlock x:Name="unitSouth" Style="{StaticResource ChipUnit}" Text="kips"/>
+                        </StackPanel>
                     </Border>
-                </UniformGrid>
+                    <TextBlock x:Name="tbResultsSub" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="6,0,0,0"
+                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                </DockPanel>
 
-                <Grid Grid.Row="2">
+                <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="400"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition x:Name="resultsColumn" Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <Border Style="{StaticResource Section}" Padding="0" ClipToBounds="True">
                         <ContentControl x:Name="ccViewerResults"/>
                     </Border>
-                    <ScrollViewer x:Name="svResultsSide" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Button x:Name="btnEdgeResults" Grid.Column="1" Style="{StaticResource EdgeTab}" Click="EdgeResults_Click" Content="▼  RESULTS"/>
+                    <ScrollViewer x:Name="svResultsSide" Grid.Column="2" Width="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel>
                             <Border Style="{StaticResource Section}" Margin="0,0,0,12">
                                 <StackPanel>

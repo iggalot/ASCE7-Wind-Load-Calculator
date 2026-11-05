@@ -493,5 +493,42 @@ namespace ASCE7Wind.UI.Tests
             Assert.IsFalse(Find<TextBox>(c, "tbL").IsReadOnly);
             Assert.IsTrue(Find<ComboBox>(c, "cbStories").IsEnabled);
         }
+
+        /// <summary>
+        /// The Results page on a laptop: the numbers are one slim strip (their make-up in the tooltips), and the RESULTS tab
+        /// closes the side panel so the model takes its width; open again, the panel still fits without scrolling.
+        /// </summary>
+        [STATestMethod]
+        public void Results_SlimStrip_AndResultsFlyout()
+        {
+            string prefs = Path.Combine(Path.GetTempPath(), "w7-prefs-" + Guid.NewGuid().ToString("N") + ".txt");
+            ViewerPreferences.FilePath = prefs;     // never touch the user's own preferences
+            try
+            {
+                var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15 });
+                c.GoToStep(WindSetupControl.ResultsStep);
+                c.ApplyResultsPanel(true);
+                Layout(c);
+                var strip = (FrameworkElement)Find<TextBlock>(c, "valRoof").Parent;
+                Assert.IsTrue(((FrameworkElement)strip.Parent).ActualHeight < 34, "one line of numbers");
+                Assert.IsTrue(Find<TextBlock>(c, "subWest").Text.Contains("Minimum"), "the make-up is in the tooltip");
+                var view = Find<FrameworkElement>(c, "ccViewerResults");
+                double withPanel = view.ActualWidth;
+
+                Find<Button>(c, "btnEdgeResults").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                Layout(c);
+                Assert.AreEqual(Visibility.Collapsed, Find<FrameworkElement>(c, "svResultsSide").Visibility);
+                Assert.IsFalse(ViewerPreferences.ResultsPanelOpen, "remembered");
+                Assert.IsTrue(view.ActualWidth > withPanel + 300, $"the model takes the panel's width ({withPanel:0} -> {view.ActualWidth:0})");
+                Snapshot(c, "results_flyout_closed");
+
+                Find<Button>(c, "btnEdgeResults").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                Layout(c);
+                Assert.AreEqual(Visibility.Visible, Find<FrameworkElement>(c, "svResultsSide").Visibility);
+                Assert.AreEqual(0, Find<ScrollViewer>(c, "svResultsSide").ScrollableHeight, 0.5);
+                Snapshot(c, "results_flyout_open");
+            }
+            finally { if (File.Exists(prefs)) File.Delete(prefs); }
+        }
     }
 }

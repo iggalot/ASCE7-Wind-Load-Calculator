@@ -70,6 +70,7 @@ namespace ASCE7WindLoadCalculator
             notifyTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
             notifyTimer.Tick += (s, e) => { notifyTimer.Stop(); InputsChanged?.Invoke(this, EventArgs.Empty); };
             zeroSlopeTimer.Tick += (s, e) => SwitchZeroSlopeToFlat();
+            ApplyResultsPanel(ViewerPreferences.ResultsPanelOpen);
             BuildStepIndicator();
             SetInputs(building, version, parameters);
             GoToStep(SiteStep);
@@ -803,6 +804,27 @@ namespace ASCE7WindLoadCalculator
             value.Text = f.DesignKips.ToString("0.0");
             sub.Text = $"Walls {f.WallsKips:0.0} + roof {f.RoofKips:0.0} = {f.TotalKips:0.0} kips" + Environment.NewLine +
                        $"Minimum {f.MinimumKips:0.0} kips (own case" + (f.MinimumGoverns ? ", larger)" : ")");
+        }
+
+        // ---------------------------------------------------------------- the RESULTS flyout
+
+        /// <summary>Whether the Results page's panel (checks, shear walls) is open; closed, the model takes its width. Remembered between sessions.</summary>
+        public bool ResultsPanelOpen { get; private set; } = true;
+
+        private void EdgeResults_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyResultsPanel(!ResultsPanelOpen);
+            ViewerPreferences.ResultsPanelOpen = ResultsPanelOpen;
+        }
+
+        /// <summary>Opens or closes the RESULTS flyout.</summary>
+        public void ApplyResultsPanel(bool open)
+        {
+            ResultsPanelOpen = open;
+            svResultsSide.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+            btnEdgeResults.Content = open ? "▼  RESULTS" : "▲  RESULTS";
+            btnEdgeResults.ToolTip = open ? "Close the results panel (checks, shear walls): the model takes the whole width"
+                                          : "Open the results panel: the checks and the shear walls";
         }
 
         // ---------------------------------------------------------------- helpers

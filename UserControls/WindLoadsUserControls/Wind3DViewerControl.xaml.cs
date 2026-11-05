@@ -49,8 +49,15 @@ namespace ASCE7WindLoadCalculator
             InitializeComponent();
             RadioGroups.MakeUnique(this); // several viewers can share a window
             cbPsfLabels.IsChecked = ViewerPreferences.PsfLabels;
-            viewHost.SizeChanged += (s, e) => ApplyCamera();
+            viewOpen = ViewerPreferences.ViewPanelOpen;
+            viewHost.SizeChanged += (s, e) =>
+            {
+                ApplyCamera();
+                // the mouse hint only where it clears the camera buttons and the display boxes
+                tbControlsHint.Visibility = e.NewSize.Width >= 720 ? Visibility.Visible : Visibility.Collapsed;
+            };
             UpdateRoofCaseAvailability();
+            ApplyViewPanel();
             ApplyCamera();
         }
 
@@ -78,11 +85,10 @@ namespace ASCE7WindLoadCalculator
                 if (geometryOnly == value) return;
                 geometryOnly = value;
                 var v = value ? Visibility.Collapsed : Visibility.Visible;
-                bdModes.Visibility = v;
                 cbBlocks.Visibility = v;
                 cbOutlines.Visibility = v;
                 cbPsfLabels.Visibility = v;
-                if (value) bdCases.Visibility = Visibility.Collapsed;
+                ApplyViewPanel();
                 Rebuild(resetCamera: false);
             }
         }
@@ -1070,14 +1076,60 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The case drawn, or null when the envelope is drawn.</summary>
         public WindCase SelectedCase
         {
-            get => (lbCases.SelectedItem as ListBoxItem)?.Tag as WindCase;
+            get => picked;
             set
             {
                 var _ = WindCases;
-                foreach (ListBoxItem item in lbCases.Items)
-                    if (item.Tag == value) { lbCases.SelectedItem = item; lbCases.ScrollIntoView(item); return; }
+                var item = value == null ? envelopeItem : Leaves().FirstOrDefault(i => i.Tag == value);
+                if (item != null) Select(item, draw: true);
             }
         }
+
+        // the case drawn (null: the envelope) and the list's envelope item; selecting a group header keeps the drawing
+        private WindCase picked;
+        private TreeViewItem envelopeItem;
+
+        /// <summary>The list's items that draw something: the envelope, then every case shown, in list order.</summary>
+        private IEnumerable<TreeViewItem> Leaves()
+        {
+            IEnumerable<TreeViewItem> Walk(ItemCollection items)
+            {
+                foreach (TreeViewItem i in items)
+                {
+                    if (i.Items.Count == 0) yield return i;
+                    else foreach (var c in Walk(i.Items)) yield return c;
+                }
+            }
+            return Walk(tvCases.Items);
+        }
+
+        /// <summary>How many cases the list shows (the envelope not counted).</summary>
+        public int ShownCaseCount => Leaves().Count(i => i.Tag is WindCase);
+
+        /// <summary>The list's groups, as "header|header": the wind directions and, inside each, its cases (for tests).</summary>
+        public IReadOnlyList<string> CaseGroups =>
+            tvCases.Items.OfType<TreeViewItem>().Where(i => i.Items.Count > 0)
+                   .SelectMany(d => new[] { GroupTitle(d) }.Concat(d.Items.OfType<TreeViewItem>().Where(s => s.Items.Count > 0).Select(s => GroupTitle(d) + "|" + GroupTitle(s))))
+                   .ToList();
+
+        private static string GroupTitle(TreeViewItem i) => (i.Header as TextBlock)?.Inlines.OfType<System.Windows.Documents.Run>().FirstOrDefault()?.Text ?? i.Header?.ToString();
+
+        /// <summary>Selects an item: its groups open, it scrolls into view, and (unless the events are held) the view draws it.</summary>
+        private void Select(TreeViewItem item, bool draw = false)
+        {
+            for (var p = item.Parent as TreeViewItem; p != null; p = p.Parent as TreeViewItem) p.IsExpanded = true;
+            bool held = suppressCaseEvents;
+            suppressCaseEvents = true;      // the selection is set here, not by the event (an item in a closed group may not report it)
+            if (selected != null && selected != item) selected.IsSelected = false;
+            item.IsSelected = true;
+            selected = item;
+            suppressCaseEvents = held;
+            bool changed = picked != item.Tag as WindCase;
+            picked = item.Tag as WindCase;
+            item.BringIntoView();
+            if (draw && changed && IsInitialized && sceneRoot != null && Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
+        }
+        private TreeViewItem selected;
 
         /// <summary>True: the envelope shows the largest pressure of all the cases; false: the largest suction.</summary>
         public bool EnvelopeMax
@@ -1089,8 +1141,8 @@ namespace ASCE7WindLoadCalculator
         private WindScene CaseScene()
         {
             var all = WindCases;
-            var picked = SelectedCase;
-            if (picked != null) return WindSceneBuilder.FromCase(building, picked);
+            var chosen = SelectedCase;
+            if (chosen != null) return WindSceneBuilder.FromCase(building, chosen);
             var proc = CaseProcedure;
             if (!envelopeBy.TryGetValue(proc, out var cells)) envelopeBy[proc] = cells = WindCaseEnvelope.Build(all);
             var s = WindSceneBuilder.FromEnvelope(building, cells, EnvelopeMax, all.Count);
@@ -1106,38 +1158,120 @@ namespace ASCE7WindLoadCalculator
         {
             if (!IsInitialized || sceneRoot == null) return;
             windCases = null;
-            suppressCaseEvents = true;
-            lbCases.SelectedIndex = -1;          // a new list: start at its envelope
-            suppressCaseEvents = false;
+            picked = null;                        // a new list: start at its envelope
             if (Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
         }
 
+        // the wind directions in the order listed: the two principal axes, then the quartering winds
+        private static readonly string[] DirectionOrder = { "W", "E", "S", "N", "SW", "SE", "NW", "NE" };
+
+        private static string DirectionName(string from)
+        {
+            switch (from)
+            {
+                case "W": return "From the west (W)";
+                case "E": return "From the east (E)";
+                case "S": return "From the south (S)";
+                case "N": return "From the north (N)";
+                case "SW": return "From the southwest (SW)";
+                case "SE": return "From the southeast (SE)";
+                case "NW": return "From the northwest (NW)";
+                case "NE": return "From the northeast (NE)";
+                default: return "Other";
+            }
+        }
+
+        /// <summary>
+        /// A case's name split at its wind direction: "Case 2, from W, roof Case A, +GCpi, torsion +" gives the group "Case 2"
+        /// and the item "roof Case A, +GCpi, torsion +"; "Minimum (27.1.5), from W: 16 psf walls ..." gives "Minimum (27.1.5)"
+        /// and "16 psf walls ...". A name without its direction is both.
+        /// </summary>
+        public static (string Group, string Item) SplitName(WindCase c)
+        {
+            string n = c.Name ?? "";
+            string tag = c.From == null ? null : ", from " + c.From;
+            int i = tag == null ? -1 : n.IndexOf(tag, StringComparison.Ordinal);
+            // the direction must end there ("from S" is not the start of "from SW")
+            while (i >= 0 && i + tag.Length < n.Length && char.IsLetter(n[i + tag.Length])) i = n.IndexOf(tag, i + 1, StringComparison.Ordinal);
+            if (i < 0) return (n, n);
+            string head = n.Substring(0, i);
+            string rest = n.Substring(i + tag.Length).TrimStart(',', ':', ' ');
+            return (head, rest.Length == 0 ? head : rest);
+        }
+
+        private static TextBlock Header(string title, int count, bool strong) => new TextBlock
+        {
+            Inlines = { new System.Windows.Documents.Run(title) { FontWeight = strong ? FontWeights.SemiBold : FontWeights.Normal },
+                        new System.Windows.Documents.Run("  " + count) { Foreground = new SolidColorBrush(Color.FromRgb(0x89, 0x87, 0x81)), FontSize = 11 } },
+        };
+
+        /// <summary>
+        /// The list: the envelope first, then a group per wind direction (W, E, S, N, then the quartering winds) holding a
+        /// group per load case ("Case 1", "Case 2" ... "Minimum") and, in it, each roof value, sign of GCpi and torsion.
+        /// The groups start closed; the one holding the case drawn opens, and a filter opens every group with a match.
+        /// </summary>
         private void FillCaseList()
         {
             suppressCaseEvents = true;
-            var keep = SelectedCase?.Name;
-            lbCases.Items.Clear();
+            var keep = picked?.Name;
+            tvCases.Items.Clear();
+            selected = null;
             string filter = tbCaseFilter.Text?.Trim() ?? "";
             var shown = windCases.Where(c => filter.Length == 0 || c.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
-            lbCases.Items.Add(new ListBoxItem { Content = $"Envelope of all {windCases.Count} cases", FontWeight = FontWeights.SemiBold, Tag = null });
-            ListBoxItem select = (ListBoxItem)lbCases.Items[0];
-            foreach (var c in shown)
+            envelopeItem = new TreeViewItem
             {
-                var item = new ListBoxItem { Content = new TextBlock { Text = c.Name, TextWrapping = TextWrapping.Wrap }, Tag = c, ToolTip = CaseTip(c) };
-                lbCases.Items.Add(item);
-                if (c.Name == keep) select = item;
+                Header = new TextBlock { Text = $"Envelope of all {windCases.Count} cases", FontWeight = FontWeights.SemiBold },
+                Tag = null, ToolTip = "Each piece of the building with its largest pressure (Max) or suction (Min) of all the cases",
+            };
+            tvCases.Items.Add(envelopeItem);
+            TreeViewItem select = envelopeItem;
+            bool open = filter.Length > 0;
+            var byDirection = shown.GroupBy(c => c.From ?? "")
+                                   .OrderBy(g => { int k = Array.IndexOf(DirectionOrder, g.Key); return k < 0 ? DirectionOrder.Length : k; });
+            foreach (var d in byDirection)
+            {
+                var dir = new TreeViewItem { Header = Header(DirectionName(d.Key), d.Count(), true), IsExpanded = open };
+                foreach (var g in d.GroupBy(c => SplitName(c).Group))
+                {
+                    var cases = g.ToList();
+                    ItemsControl parent = dir;
+                    if (cases.Count > 1)
+                    {
+                        var sub = new TreeViewItem { Header = Header(g.Key, cases.Count, false), IsExpanded = open };
+                        dir.Items.Add(sub);
+                        parent = sub;
+                    }
+                    foreach (var c in cases)
+                    {
+                        var (group, text) = SplitName(c);
+                        var item = new TreeViewItem
+                        {
+                            Header = new TextBlock { Text = cases.Count > 1 ? text : group + ": " + text, TextWrapping = TextWrapping.Wrap, MaxWidth = 210 },
+                            Tag = c, ToolTip = c.Name + Environment.NewLine + CaseTip(c),
+                        };
+                        if (cases.Count == 1 && text == group) ((TextBlock)item.Header).Text = group;
+                        parent.Items.Add(item);
+                        if (c.Name == keep) select = item;
+                    }
+                }
+                tvCases.Items.Add(dir);
             }
-            lbCases.SelectedItem = select;
-            tbCaseCount.Text = filter.Length == 0 ? $"{windCases.Count} cases" : $"{shown.Count} of {windCases.Count} cases";
+            Select(select);
+            tbCaseCount.Text = filter.Length == 0 ? $"{windCases.Count} cases by wind direction" : $"{shown.Count} of {windCases.Count} cases";
             suppressCaseEvents = false;
         }
 
         private static string CaseTip(WindCase c) =>
             $"Vx {c.Vx:0.0} k, Vy {c.Vy:0.0} k, Mt {c.Mt:0} ft·k, roof uplift {c.UpliftKips:0.0} k" + (c.IsMinimumCase ? " (separate minimum load case)" : "");
 
-        private void Cases_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void Cases_SelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            if (!IsInitialized || suppressCaseEvents || sceneRoot == null || Mode != WindViewMode.WindCases) return;
+            if (suppressCaseEvents) return;
+            // a group header: open or close it and keep drawing what was drawn
+            if (!(e.NewValue is TreeViewItem item) || item.Items.Count > 0) return;
+            selected = item;
+            picked = item.Tag as WindCase;
+            if (!IsInitialized || sceneRoot == null || Mode != WindViewMode.WindCases) return;
             Rebuild(resetCamera: false);
         }
 
@@ -1145,7 +1279,13 @@ namespace ASCE7WindLoadCalculator
         {
             if (!IsInitialized || sceneRoot == null || Mode != WindViewMode.WindCases) return;
             // the toggle shows the envelope: go back to it if a case was selected
-            if (SelectedCase != null) { lbCases.SelectedIndex = 0; return; }
+            if (SelectedCase != null && envelopeItem != null)
+            {
+                suppressCaseEvents = true;
+                Select(envelopeItem);
+                suppressCaseEvents = false;
+            }
+            picked = null;
             Rebuild(resetCamera: false);
         }
 
@@ -1155,6 +1295,37 @@ namespace ASCE7WindLoadCalculator
             var before = SelectedCase;
             FillCaseList();
             if (SelectedCase != before && Mode == WindViewMode.WindCases) Rebuild(resetCamera: false);
+        }
+
+        // ---------------------------------------------------------------------------------------
+        // The VIEW flyout
+        // ---------------------------------------------------------------------------------------
+
+        private bool viewOpen = true;
+
+        private void EdgeView_Click(object sender, RoutedEventArgs e)
+        {
+            viewOpen = !viewOpen;
+            ViewerPreferences.ViewPanelOpen = viewOpen;
+            ApplyViewPanel();
+        }
+
+        /// <summary>The VIEW panel open or closed (the model takes the width); neither the panel nor its tab for the building only.</summary>
+        private void ApplyViewPanel()
+        {
+            if (bdView == null) return;
+            btnEdgeView.Visibility = geometryOnly ? Visibility.Collapsed : Visibility.Visible;
+            bdView.Visibility = !geometryOnly && viewOpen ? Visibility.Visible : Visibility.Collapsed;
+            btnEdgeView.Content = viewOpen ? "▼  VIEW" : "▲  VIEW";
+            btnEdgeView.ToolTip = viewOpen ? "Close the view panel: the model takes the whole width"
+                                           : "Open the view panel: cladding, shear walls, the wind cases by direction";
+        }
+
+        /// <summary>Whether the VIEW panel is open (remembered between sessions).</summary>
+        public bool ViewPanelOpen
+        {
+            get => viewOpen;
+            set { viewOpen = value; ApplyViewPanel(); }
         }
 
         private void Display_Changed(object sender, RoutedEventArgs e)
