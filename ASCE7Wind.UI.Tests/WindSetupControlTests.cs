@@ -162,6 +162,26 @@ namespace ASCE7Wind.UI.Tests
 
         /// <summary>A gable or hip at 0 degrees is a flat roof: leaving the pitch box switches the shape.</summary>
         [STATestMethod]
+        public void ReadOnly_LocksTheInputs_AndUnlocksOnlyWhatItLocked()
+        {
+            var c = Make();
+            c.ReadOnly = true;
+            Assert.IsTrue(Find<TextBox>(c, "tbV").IsReadOnly, "the speed is shown, not typed");
+            Assert.IsFalse(Find<RadioButton>(c, "rbExpB").IsEnabled);
+            Assert.IsFalse(Find<CheckBox>(c, "cbOnlyCases13").IsEnabled);
+            c.GoToStep(WindSetupControl.ResultsStep);
+            Layout(c);
+            Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnSend").Visibility, "nothing to send from a read-only page");
+            Assert.AreEqual(WindSetupControl.ResultsStep, c.Step, "the steps still work");
+            Snapshot(c, "wind-readonly-results");
+
+            c.ReadOnly = false;
+            Assert.IsFalse(Find<TextBox>(c, "tbV").IsReadOnly);
+            Assert.IsTrue(Find<RadioButton>(c, "rbExpB").IsEnabled);
+            Assert.IsFalse(Find<RadioButton>(c, "rbEncOpen").IsEnabled, "Open is not built: it stays off");
+        }
+
+        [STATestMethod]
         public void ZeroPitch_OnSlopedRoof_SwitchesToFlat()
         {
             var c = Make(new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 15, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 });

@@ -33,6 +33,8 @@ namespace ASCE7WindLoadCalculator.App
         private WindSetupControl setup;
         private ModelDocument doc;          // the project as opened or last saved (null: a quick check)
         private string path;
+        /// <summary>This app's hold on the open project (one Wind Load Calculator per project).</summary>
+        private ProjectLock projectLock;
         private string savedWind;           // the Wind section's text when opened or saved
         private Process editor;             // the Building Model editor, while it is open on the project
 
@@ -91,6 +93,7 @@ namespace ASCE7WindLoadCalculator.App
             InputBindings.Add(new KeyBinding(new Command(OpenDialog), Key.O, ModifierKeys.Control));
             InputBindings.Add(new KeyBinding(new Command(() => Save()), Key.S, ModifierKeys.Control));
             Closing += (s, e) => { if (!ConfirmLeave()) e.Cancel = true; };
+            Closed += (s, e) => { projectLock?.Dispose(); projectLock = null; };
             Activated += (s, e) => UpdateTitle();
 
             NewQuickCheck();
@@ -105,6 +108,8 @@ namespace ASCE7WindLoadCalculator.App
         {
             doc = null;
             path = savedWind = null;
+            projectLock?.Dispose();
+            projectLock = null;
             ProjectFolder.Close();
             Show(new WindSetupControl());
             modeText.Text = "Quick check: type the building's size and roof on the Building page (nothing is saved).";
@@ -137,6 +142,16 @@ namespace ASCE7WindLoadCalculator.App
         public void Open(string file)
         {
             ModelDocument opened;
+            // one Wind Load Calculator per project (the same project again keeps this app's own lock)
+            LockHolder heldBy = null;
+            var taken = projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)
+                ? projectLock : ProjectLock.TryTake(file, "wind", "Wind Load Calculator", out heldBy);
+            if (taken == null && heldBy != null)
+            {
+                MessageBox.Show(this, "This project is already open in another Wind Load Calculator: " + heldBy.Describe() + ".\n\nSwitch to that window, or close it first.",
+                                "Open", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             try
             {
                 ProjectFolder.OpenFor(file); // first, so the opening is in the project's log
@@ -145,6 +160,7 @@ namespace ASCE7WindLoadCalculator.App
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidDataException ||
                                        ex is System.Runtime.Serialization.SerializationException || ex is ArgumentException)
             {
+                if (taken != projectLock) taken?.Dispose();
                 Log.Warning("App", "Could not open " + file, ex);
                 MessageBox.Show(this, "The project could not be opened:\n" + ex.Message, "Open", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -158,6 +174,8 @@ namespace ASCE7WindLoadCalculator.App
             page.EditBuildingRequested += (s, e) => EditBuilding();   // before the geometry, so its "Edit building…" shows
             page.SetComponents(wind.RoofComponent, wind.WallComponent);
             page.SetOnlyCases1And3(wind.OnlyCases1And3);
+            if (projectLock != taken) projectLock?.Dispose();
+            projectLock = taken;
             doc = opened;
             path = file;
             Show(page);

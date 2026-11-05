@@ -45,6 +45,49 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Show the "Send loads to shear walls" button on the Results step.</summary>
         public bool ShowSendButton { get; set; } = true;
 
+        private bool readOnly;
+
+        /// <summary>
+        /// The inputs are shown, not edited: for a host that takes the wind from the project (the Shear Wall Calculator),
+        /// where the Wind Load Calculator is the one place the wind is edited. The steps, the results and the details still
+        /// work; the choices are locked and "Send" is hidden.
+        /// </summary>
+        public bool ReadOnly
+        {
+            get => readOnly;
+            set
+            {
+                readOnly = value;
+                // only what this locked is unlocked again (the model's geometry and "Open" stay as they were)
+                foreach (var c in lockedHere) { if (c is TextBox t) { t.IsReadOnly = false; t.IsTabStop = true; } else c.IsEnabled = true; }
+                lockedHere.Clear();
+                if (value) LockInputs();
+                if (value) ShowSendButton = false;
+                UpdateSendState();
+            }
+        }
+
+        private readonly List<Control> lockedHere = new List<Control>();
+
+        private void LockInputs()
+        {
+            foreach (var root in new DependencyObject[] { pnlSite, pnlBuilding, pnlResults })
+                foreach (var c in LogicalDescendants(root))
+                {
+                    if (c is TextBox t && !t.IsReadOnly) { t.IsReadOnly = true; t.IsTabStop = false; lockedHere.Add(t); }
+                    else if ((c is ComboBox || c is System.Windows.Controls.Primitives.ToggleButton) && ((Control)c).IsEnabled) { ((Control)c).IsEnabled = false; lockedHere.Add((Control)c); }
+                }
+        }
+
+        private static IEnumerable<DependencyObject> LogicalDescendants(DependencyObject root)
+        {
+            foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+            {
+                yield return child;
+                foreach (var d in LogicalDescendants(child)) yield return d;
+            }
+        }
+
         /// <summary>The 3D view shown on the Building and Results steps.</summary>
         public Wind3DViewerControl Viewer { get; } = new Wind3DViewerControl();
 
@@ -295,6 +338,9 @@ namespace ASCE7WindLoadCalculator
             bool locked = modelGeometry != null;
             foreach (var t in new[] { tbL, tbB, tbOverhang, tbPlate1, tbPlate2, tbPlate3, tbPitch, tbParapet }) t.IsReadOnly = locked;
             foreach (var c in new Control[] { rbRoofFlat, rbRoofGable, rbRoofHip, cbStories, rbRidgeAlong, rbRidgeAcross }) c.IsEnabled = !locked;
+            lockedHere.RemoveAll(c => c == tbL || c == tbB || c == tbOverhang || c == tbPlate1 || c == tbPlate2 || c == tbPlate3 || c == tbPitch || c == tbParapet ||
+                                      c == rbRoofFlat || c == rbRoofGable || c == rbRoofHip || c == cbStories || c == rbRidgeAlong || c == rbRidgeAcross);
+            if (readOnly) LockInputs(); // the geometry's own lock changed: read-only still holds
             bdModel.Visibility = locked ? Visibility.Visible : Visibility.Collapsed;
             btnEditBuilding.Visibility = locked && EditBuildingRequested != null ? Visibility.Visible : Visibility.Collapsed;
             // the model's geometry is shown as text, not as inputs that cannot be changed
