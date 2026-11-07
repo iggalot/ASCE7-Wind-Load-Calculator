@@ -169,10 +169,14 @@ namespace ASCE7Wind.UI.Tests
             Assert.IsTrue(Find<TextBox>(c, "tbV").IsReadOnly, "the speed is shown, not typed");
             Assert.IsFalse(Find<RadioButton>(c, "rbExpB").IsEnabled);
             Assert.IsFalse(Find<CheckBox>(c, "cbOnlyCases13").IsEnabled);
-            c.GoToStep(WindSetupControl.ResultsStep);
             Layout(c);
+            Assert.AreEqual(WindSetupControl.ResultsStep, c.Step, "read-only: it opens on the results");
+            c.GoToStep(WindSetupControl.SiteStep);
+            Assert.AreEqual(WindSetupControl.ResultsStep, c.Step, "and stays there: no input pages");
+            Assert.AreEqual(Visibility.Collapsed, Find<StackPanel>(c, "spSteps").Visibility, "no step bar");
+            Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnBack").Visibility, "no Back");
+            Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnNext").Visibility, "no Next");
             Assert.AreEqual(Visibility.Collapsed, Find<Button>(c, "btnSend").Visibility, "nothing to send from a read-only page");
-            Assert.AreEqual(WindSetupControl.ResultsStep, c.Step, "the steps still work");
             Snapshot(c, "wind-readonly-results");
 
             c.ReadOnly = false;

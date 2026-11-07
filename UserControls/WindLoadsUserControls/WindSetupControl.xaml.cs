@@ -48,9 +48,10 @@ namespace ASCE7WindLoadCalculator
         private bool readOnly;
 
         /// <summary>
-        /// The inputs are shown, not edited: for a host that takes the wind from the project (the Shear Wall Calculator),
-        /// where the Wind Load Calculator is the one place the wind is edited. The steps, the results and the details still
-        /// work; the choices are locked and "Send" is hidden.
+        /// The wind's results only, not its input pages: for a host that takes the wind from the project (the Shear Wall
+        /// Calculator), where the Wind Load Calculator is the one place the wind is set up. It shows the Results page and
+        /// stays there (no Site and Building pages, no step bar, no Back or Next); the choices on it are locked and "Send"
+        /// is hidden.
         /// </summary>
         public bool ReadOnly
         {
@@ -63,6 +64,10 @@ namespace ASCE7WindLoadCalculator
                 lockedHere.Clear();
                 if (value) LockInputs();
                 if (value) ShowSendButton = false;
+                var steps = value ? Visibility.Collapsed : Visibility.Visible;
+                spSteps.Visibility = steps;
+                tbStepOf.Visibility = steps;
+                GoToStep(value ? ResultsStep : Step);
                 UpdateSendState();
             }
         }
@@ -192,7 +197,7 @@ namespace ASCE7WindLoadCalculator
 
         public void GoToStep(int step)
         {
-            Step = Math.Max(SiteStep, Math.Min(ResultsStep, step));
+            Step = readOnly ? ResultsStep : Math.Max(SiteStep, Math.Min(ResultsStep, step)); // read-only: the results only
             pnlSite.Visibility = Step == SiteStep ? Visibility.Visible : Visibility.Collapsed;
             pnlBuilding.Visibility = Step == BuildingStep ? Visibility.Visible : Visibility.Collapsed;
             pnlResults.Visibility = Step == ResultsStep ? Visibility.Visible : Visibility.Collapsed;
@@ -206,7 +211,7 @@ namespace ASCE7WindLoadCalculator
             if (Step == BuildingStep) ccViewerBuilding.Content = BuildingPreview ?? (object)Viewer;
             if (Step == ResultsStep) ccViewerResults.Content = Viewer;
 
-            btnBack.Visibility = Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
+            btnBack.Visibility = readOnly ? Visibility.Collapsed : Step == SiteStep ? Visibility.Hidden : Visibility.Visible;
             btnNext.Visibility = Step == ResultsStep ? Visibility.Collapsed : Visibility.Visible;
             btnNext.Content = Step == SiteStep ? "Next: Building" : "See results";
             tbStepOf.Text = $"Page {Step + 1} of 3";
