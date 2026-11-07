@@ -23,6 +23,8 @@
     <ProjectReference Include="..\ASCE7Wind.Core\ASCE7Wind.Core.csproj" />
     <ProjectReference Include="..\ASCE7Wind.ModelAdapter\ASCE7Wind.ModelAdapter.csproj" />
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+    <!-- the suite's shared dialogs (save first?, the project lock) -->
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Sketch\BuildingModel.Sketch.csproj" />
     <!-- the Building Model editor: referenced so BuildingModel.exe is copied next to this program (Building > Edit building) -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.App\BuildingModel.App.csproj" />
   </ItemGroup>

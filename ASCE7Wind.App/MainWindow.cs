@@ -9,6 +9,7 @@ using ASCE7WindLoadCalculator.ModelAdapter;
 using BuildingModel.Diagnostics;
 using BuildingModel.Model;
 using BuildingModel.Serialization;
+using BuildingModel.Sketch;
 using Microsoft.Win32;
 
 namespace ASCE7WindLoadCalculator.App
@@ -143,15 +144,10 @@ namespace ASCE7WindLoadCalculator.App
         {
             ModelDocument opened;
             // one Wind Load Calculator per project (the same project again keeps this app's own lock)
-            LockHolder heldBy = null;
+            bool refused = false;
             var taken = projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)
-                ? projectLock : ProjectLock.TryTake(file, "wind", "Wind Load Calculator", out heldBy);
-            if (taken == null && heldBy != null)
-            {
-                MessageBox.Show(this, "This project is already open in another Wind Load Calculator: " + heldBy.Describe() + ".\n\nSwitch to that window, or close it first.",
-                                "Open", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
+                ? projectLock : ProjectDialogs.TakeLock(this, file, "wind", "Wind Load Calculator", out refused);
+            if (refused) return;
             try
             {
                 ProjectFolder.OpenFor(file); // first, so the opening is in the project's log
@@ -253,9 +249,7 @@ namespace ASCE7WindLoadCalculator.App
         private bool ConfirmLeave()
         {
             if (!Dirty) return true;
-            var r = MessageBox.Show(this, $"Save the wind inputs in {Path.GetFileName(path)}?", AppName, MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-            if (r == MessageBoxResult.Cancel) return false;
-            return r == MessageBoxResult.No || Save();
+            return ProjectDialogs.SaveChangesFirst(this, $"Save the wind inputs in {Path.GetFileName(path)}?", AppName, Save);
         }
 
         // ------------------------------------------------------------------ the building: edited in the Building Model editor
