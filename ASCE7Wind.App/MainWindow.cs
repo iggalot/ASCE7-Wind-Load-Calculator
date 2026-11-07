@@ -94,7 +94,7 @@ namespace ASCE7WindLoadCalculator.App
             InputBindings.Add(new KeyBinding(new Command(OpenDialog), Key.O, ModifierKeys.Control));
             InputBindings.Add(new KeyBinding(new Command(() => Save()), Key.S, ModifierKeys.Control));
             Closing += (s, e) => { if (!ConfirmLeave()) e.Cancel = true; };
-            Closed += (s, e) => { projectLock?.Dispose(); projectLock = null; };
+            Closed += (s, e) => { watcher?.Dispose(); projectLock?.Dispose(); projectLock = null; };
             Activated += (s, e) => UpdateTitle();
 
             NewQuickCheck();
@@ -109,6 +109,8 @@ namespace ASCE7WindLoadCalculator.App
         {
             doc = null;
             path = savedWind = null;
+            watcher?.Dispose();
+            watcher = null;
             projectLock?.Dispose();
             projectLock = null;
             ProjectFolder.Close();
@@ -178,6 +180,7 @@ namespace ASCE7WindLoadCalculator.App
             bool ok = ApplyGeometry(b);
             savedWind = had ? CurrentWind().ToJson() : string.Empty;   // no Wind section yet: unsaved until saved
             if (ok) setup.GoToStep(WindSetupControl.ResultsStep);
+            Watch();
             modeText.Text = $"Project: {Path.GetFileName(file)} (the building from the model; wind inputs saved in the file)";
             Log.Info("App", $"Opened {file}; " + (had ? $"wind {wind.WindSpeed:0} mph, exposure {wind.Exposure}, {wind.Edition}." : "no Wind section yet: the starting inputs."));
             UpdateTitle();
@@ -229,6 +232,7 @@ namespace ASCE7WindLoadCalculator.App
                 var wind = CurrentWind();
                 wind.Write(latest.Building);
                 ModelFile.Save(path, latest);
+                watcher?.SavedByMe();
                 doc = latest;
                 savedWind = wind.ToJson();
             }
@@ -250,6 +254,29 @@ namespace ASCE7WindLoadCalculator.App
         {
             if (!Dirty) return true;
             return ProjectDialogs.SaveChangesFirst(this, $"Save the wind inputs in {Path.GetFileName(path)}?", AppName, Save);
+        }
+
+        // ------------------------------------------------------------------ the project file, watched while it is open
+
+        private ProjectWatcher watcher;
+
+        /// <summary>
+        /// The project's file is watched the whole time it is open: when another app saves it (the building changed in the
+        /// Building Model), the building is read again and the wind calculated for it at once; the wind inputs on the screen
+        /// are kept. Nothing is saved in answer.
+        /// </summary>
+        private void Watch()
+        {
+            watcher?.Dispose();
+            watcher = null;
+            if (!HasProject) return;
+            watcher = new ProjectWatcher(path);
+            watcher.ChangedOnDisk += (s, e) =>
+            {
+                if (!HasProject || (editor != null && !editor.HasExited)) return; // Edit building: read again when it closes
+                ReloadBuilding(false);
+                ShowStatus("Another app saved this project: the building was read again and the wind calculated for it." + (Dirty ? " Your unsaved wind inputs are kept." : ""));
+            };
         }
 
         // ------------------------------------------------------------------ the building: edited in the Building Model editor

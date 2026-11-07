@@ -25,6 +25,10 @@
   - They run on 7-16, the closest edition built.
   - **Never change an example's published numbers.** Test each example on the edition it was written to.
   - Three examples each for 7-16 and 7-22 are still wanted (see the roadmap).
+- **The wind with no window:** `WindCheck.Run(building)` (ASCE7Wind.ModelAdapter) is this app's input checks and wind
+  cases for the project as the model has it now. The Shear Wall Calculator's check, the Load Manager and the hub take
+  their wind from it; keep any change to how the wind is found there. The app watches the project file the whole time
+  (`Watch` in `ASCE7Wind.App\MainWindow.cs`).
 - **The suite's TODO list** is `..\ShearWallCalculator\ROADMAP.md`. Its Wind Load Calculator section lists the open
   items: open buildings, flexible buildings, Ch. 28 parapets, Ri, C&C eave height, and others.
 - **Line endings:** some files are mixed LF/CRLF. Scripted multi-line edits must allow `\r?\n`.
