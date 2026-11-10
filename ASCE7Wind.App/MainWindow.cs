@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -226,6 +227,14 @@ namespace ASCE7WindLoadCalculator.App
         /// <summary>The model's size, stories and roof into the page (shown, not editable). False when the model gives none.</summary>
         private bool ApplyGeometry(Building b)
         {
+            // a model that is not valid gives no wind (owner 2026-11-10: nothing is calculated anywhere)
+            var errors = BuildingModel.Checks.ModelChecks.Run(b).Where(i => i.Severity == BuildingModel.Checks.Severity.Error).ToList();
+            if (errors.Count > 0)
+            {
+                ShowStatus($"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}, so no wind is calculated: {errors[0].Message} Fix it in the Building Model (Building > Edit building).");
+                Log.Warning("Wind", "Model errors, no wind: " + string.Join(" | ", errors.Select(e => e.Message)), null);
+                return false;
+            }
             try
             {
                 var input = WindAdapter.From(b, new WindOptions { Enclosure = setup.Building?.EnclosureType ?? BuildingEnclosures.BLDG_ENCLOSED,

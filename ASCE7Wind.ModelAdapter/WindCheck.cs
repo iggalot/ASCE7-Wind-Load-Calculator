@@ -42,6 +42,13 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
             var r = new WindCheckResult();
             r.Section = b == null ? null : WindSection.Read(b);
             if (r.Section == null) { r.NotChecked = "no wind set up"; return r; }
+            // a model that is not valid gives no wind (owner 2026-11-10: nothing is calculated anywhere)
+            var errors = BuildingModel.Checks.ModelChecks.Run(b).Where(i => i.Severity == BuildingModel.Checks.Severity.Error).ToList();
+            if (errors.Count > 0)
+            {
+                r.Problems.Add($"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}, so nothing is calculated: {errors[0].Message}");
+                return r;
+            }
             try
             {
                 r.Input = r.Section.BuildingFor(b);
