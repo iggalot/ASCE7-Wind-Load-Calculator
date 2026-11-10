@@ -22,7 +22,7 @@ namespace ASCE7WindLoadCalculator
             var L = buildingData.BuildingLength;
             var B = buildingData.BuildingWidth;
 
-            double h = buildingData.MeanRoofHeight;
+            double h = buildingData.CcFigureHeight;
             double offset1 = 1.2 * h;
             double offset2 = 0.6 * h;
 
@@ -75,11 +75,11 @@ namespace ASCE7WindLoadCalculator
             // region 3 corner zones
             // lower left
             Vec2 p13 = new Vec2(0, 0);
-            Vec2 p14 = new Vec2(0.6 * buildingData.MeanRoofHeight, 0);
-            Vec2 p15 = new Vec2(0.6 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p16 = new Vec2(0.2 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p17 = new Vec2(0.2 * buildingData.MeanRoofHeight, 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p18 = new Vec2(0, 0.6 * buildingData.MeanRoofHeight);
+            Vec2 p14 = new Vec2(0.6 * buildingData.CcFigureHeight, 0);
+            Vec2 p15 = new Vec2(0.6 * buildingData.CcFigureHeight, 0.2 * buildingData.CcFigureHeight);
+            Vec2 p16 = new Vec2(0.2 * buildingData.CcFigureHeight, 0.2 * buildingData.CcFigureHeight);
+            Vec2 p17 = new Vec2(0.2 * buildingData.CcFigureHeight, 0.6 * buildingData.CcFigureHeight);
+            Vec2 p18 = new Vec2(0, 0.6 * buildingData.CcFigureHeight);
 
             var roof_area_3_1 = new EffectiveWindArea(
                 "Zone3",
@@ -89,11 +89,11 @@ namespace ASCE7WindLoadCalculator
 
             // lower right
             Vec2 p19 = new Vec2(buildingData.BuildingLength, 0);
-            Vec2 p20 = new Vec2(buildingData.BuildingLength, 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p21 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p22 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p23 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p24 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, 0);
+            Vec2 p20 = new Vec2(buildingData.BuildingLength, 0.6 * buildingData.CcFigureHeight);
+            Vec2 p21 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.CcFigureHeight, 0.6 * buildingData.CcFigureHeight);
+            Vec2 p22 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.CcFigureHeight, 0.2 * buildingData.CcFigureHeight);
+            Vec2 p23 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.CcFigureHeight, 0.2 * buildingData.CcFigureHeight);
+            Vec2 p24 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.CcFigureHeight, 0);
 
 
             var roof_area_3_2 = new EffectiveWindArea(
@@ -103,11 +103,11 @@ namespace ASCE7WindLoadCalculator
                 );
 
             // upper right
-            Vec2 p25 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth);
-            Vec2 p26 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p27 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p28 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p29 = new Vec2(buildingData.BuildingLength, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
+            Vec2 p25 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.CcFigureHeight, buildingData.BuildingWidth);
+            Vec2 p26 = new Vec2(buildingData.BuildingLength - 0.6 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.2 * buildingData.CcFigureHeight);
+            Vec2 p27 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.2 * buildingData.CcFigureHeight);
+            Vec2 p28 = new Vec2(buildingData.BuildingLength - 0.2 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.6 * buildingData.CcFigureHeight);
+            Vec2 p29 = new Vec2(buildingData.BuildingLength, buildingData.BuildingWidth - 0.6 * buildingData.CcFigureHeight);
             Vec2 p30 = new Vec2(buildingData.BuildingLength, buildingData.BuildingWidth);
 
             var roof_area_3_3 = new EffectiveWindArea(
@@ -118,11 +118,11 @@ namespace ASCE7WindLoadCalculator
 
             // upper left
             Vec2 p31 = new Vec2(0, buildingData.BuildingWidth);
-            Vec2 p32 = new Vec2(0, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p33 = new Vec2(0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.6 * buildingData.MeanRoofHeight);
-            Vec2 p34 = new Vec2(0.2 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p35 = new Vec2(0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth - 0.2 * buildingData.MeanRoofHeight);
-            Vec2 p36 = new Vec2(0.6 * buildingData.MeanRoofHeight, buildingData.BuildingWidth);
+            Vec2 p32 = new Vec2(0, buildingData.BuildingWidth - 0.6 * buildingData.CcFigureHeight);
+            Vec2 p33 = new Vec2(0.2 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.6 * buildingData.CcFigureHeight);
+            Vec2 p34 = new Vec2(0.2 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.2 * buildingData.CcFigureHeight);
+            Vec2 p35 = new Vec2(0.6 * buildingData.CcFigureHeight, buildingData.BuildingWidth - 0.2 * buildingData.CcFigureHeight);
+            Vec2 p36 = new Vec2(0.6 * buildingData.CcFigureHeight, buildingData.BuildingWidth);
 
             var roof_area_3_4 = new EffectiveWindArea(
                 "Zone3",

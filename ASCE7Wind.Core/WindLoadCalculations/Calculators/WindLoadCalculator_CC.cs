@@ -101,7 +101,7 @@ namespace ASCE7WindLoadCalculator
             if (extGCpCurve_Roof == null || extGCpCurve_Wall == null)
                 return; // outside the method's limits; see ValidationMessages
 
-            double qh = CalculateDynamicWindPressure(buildingData.MeanRoofHeight);
+            double qh = CalculateDynamicWindPressure(buildingData.CcFigureHeight); // h of the figures: the eave height for θ ≤ 10°
 
             // GCp is read at the effective wind area of the component being designed (26.2), not at the area of
             // the zone: the zones only say where each curve applies. (Reading at the zone area gave too small a

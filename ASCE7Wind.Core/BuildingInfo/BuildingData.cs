@@ -165,6 +165,14 @@ namespace ASCE7WindLoadCalculator
         /// </summary>
         public double MwfrsFigureHeight => RoofType == RoofTypes.ROOF_TYPE_FLAT || RoofPitch <= 10 ? BuildingHeight : MeanRoofHeight;
 
+        /// <summary>
+        /// h of the cladding figures (ft), Chapter 30 Part 1 (Figs. 30.3-1 and 30.3-2A to 30.3-2I, 7-16 and 7-22 alike):
+        /// "h = Mean roof height, except that eave height shall be used for θ ≤ 10°", the same rule as the MWFRS figures.
+        /// Used for the cladding qh and the zone widths (a = 0.4h at most, and the 0.6h and 0.2h of Fig. 30.3-2A).
+        /// The 60 ft limit of Part 1 stays on the mean roof height (26.2, the low-rise limit).
+        /// </summary>
+        public double CcFigureHeight => MwfrsFigureHeight;
+
         /// <summary>Height of the highest point of the roof (ft).</summary>
         public double RidgeHeight => ComputeRidgeHeight();
 

@@ -19,6 +19,8 @@ namespace ASCE7WindLoadCalculator
             Note = note_string;
         }
 
+        protected override bool IsWallFigure => true;
+
         public override void ComputeEffectiveWindAreas()
         {
             double length = WallLength;

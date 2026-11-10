@@ -67,7 +67,7 @@ namespace ASCE7WindLoadCalculator
                 ? $"{Asce7Edition.For(version).Name} · V = {parameters.WindSpeed:0.#} mph · Risk Category {parameters.RiskCategory} · " +
                   $"Exposure {ExposureLetter(parameters.ExposureCategory)} · Kzt = {parameters.Kzt:0.00} · " +
                   $"{building.BuildingLength:0.#} × {building.BuildingWidth:0.#} ft, {building.BuildingHeight:0.#} ft walls, " +
-                  $"{RoofName(building)} roof, mean roof height h = {building.MeanRoofHeight:0.#} ft"
+                  $"{RoofName(building)} roof, mean roof height {building.MeanRoofHeight:0.#} ft" + (building.MwfrsFigureHeight != building.MeanRoofHeight ? $" (h = {building.MwfrsFigureHeight:0.#} ft, the eave height: θ ≤ 10°)" : "")
                 : "No results: the wind inputs cannot be calculated yet.";
             double offset = svPage.VerticalOffset;
             ShowPage(CurrentPage);
@@ -144,7 +144,8 @@ namespace ASCE7WindLoadCalculator
             var edition = Asce7Edition.For(version);
             var (alpha, zg) = edition.TerrainConstants(parameters.ExposureCategory);
             var calc = analysis.Cladding ?? analysis.MwfrsAlongLength;
-            double h = building.MeanRoofHeight;
+            double h = building.MwfrsFigureHeight; // the figures' h (Figs. 27.3-1, 28.3-1, 30.3): the eave height for θ ≤ 10°
+            bool eave = h != building.MeanRoofHeight;
 
             var rows = new List<string[]>
             {
@@ -153,7 +154,9 @@ namespace ASCE7WindLoadCalculator
                 new[] { "Risk Category", parameters.RiskCategory, "Table 1.5-1" },
                 new[] { "Exposure", ExposureLetter(parameters.ExposureCategory), "Section 26.7" },
                 new[] { "Terrain constants α, zg", $"{alpha:0.##}, {zg:0} ft", "Table 26.11-1" },
-                new[] { "Mean roof height h", $"{h:0.##} ft", "Section 26.2" },
+                new[] { "Mean roof height", $"{building.MeanRoofHeight:0.##} ft", "Section 26.2" },
+                new[] { "Figure height h", $"{h:0.##} ft" + (eave ? " (the eave height, θ ≤ 10°)" : " (the mean roof height)"),
+                        "Figs. 27.3-1, 28.3-1 and 30.3-1, 30.3-2: the eave height for θ ≤ 10°" },
                 new[] { "Plan ratio L/B (wind from W)", (building.BuildingLength / building.BuildingWidth).ToString("0.00"), "Fig. 27.3-1 leeward wall Cp" },
                 new[] { "Height ratios h/L, h/B", $"{h / building.BuildingLength:0.00}, {h / building.BuildingWidth:0.00}", "Fig. 27.3-1 roof Cp (h/L in the wind direction)" },
             };
@@ -836,7 +839,8 @@ namespace ASCE7WindLoadCalculator
 
         // ------------------------------------------------------------------ helpers
 
-        private double QhOf(WindLoadCalculator_Base calc) => calc.CalculateDynamicWindPressure(building.MeanRoofHeight);
+        /// <summary>qh as the calculators find it: at the figures' h (the eave height for θ ≤ 10°, Figs. 27.3-1 and 30.3).</summary>
+        private double QhOf(WindLoadCalculator_Base calc) => calc.CalculateDynamicWindPressure(building.MwfrsFigureHeight);
 
         private static string NoteSuffix(string note) => string.IsNullOrWhiteSpace(note) ? string.Empty : " · " + note;
 
