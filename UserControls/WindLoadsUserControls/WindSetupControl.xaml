@@ -736,7 +736,7 @@
                         <!-- Derived from the inputs as they are typed: the values the zone layout and Fig. 27.3-1 read -->
                         <UniformGrid x:Name="ugBuildingNumbers" Columns="3" Rows="2">
                             <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,8">
-                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Mean roof height h"/><TextBlock x:Name="valMeanH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Mean roof height"/><TextBlock x:Name="valMeanH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                             <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,8">
                                 <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Ridge height"/><TextBlock x:Name="valRidgeH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
@@ -746,16 +746,16 @@
                                 <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Zone width a"/><TextBlock x:Name="valA" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                             <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,0"
-                                    ToolTip="Plan ratio for wind from the west, L/B (Fig. 27.3-1 leeward wall Cp). For wind from the south it is B/L.">
-                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="L/B (B/L)"/><TextBlock x:Name="valLB" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                                    ToolTip="h of the figures (26.3; Figs. 27.3-1 and 30.3): the mean roof height, except the eave height for a roof of 10° or less.">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Figure height h"/><TextBlock x:Name="valFigH" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                             <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0,0,8,0"
-                                    ToolTip="h/L: roof Cp for wind from the west (Fig. 27.3-1), L along the wind.">
-                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="h/L (wind from W)"/><TextBlock x:Name="valHL" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                                    ToolTip="Wind from the west (or east): L along the wind, B normal to it (26.3). L/B sets the leeward wall Cp, h/L the roof Cp (Fig. 27.3-1).">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Wind from W: L, B"/><TextBlock x:Name="valWindW" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                             <Border Style="{StaticResource StatCard}" Padding="10,4" Margin="0"
-                                    ToolTip="h/B: roof Cp for wind from the south (Fig. 27.3-1), B along the wind.">
-                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="h/B (wind from S)"/><TextBlock x:Name="valHB" FontSize="15" FontWeight="SemiBold"/></StackPanel>
+                                    ToolTip="Wind from the south (or north): L along the wind, B normal to it (26.3). L/B sets the leeward wall Cp, h/L the roof Cp (Fig. 27.3-1).">
+                                <StackPanel><TextBlock Style="{StaticResource StatLabel}" FontSize="11" Text="Wind from S: L, B"/><TextBlock x:Name="valWindS" FontSize="15" FontWeight="SemiBold"/></StackPanel>
                             </Border>
                         </UniformGrid>
                     </StackPanel>

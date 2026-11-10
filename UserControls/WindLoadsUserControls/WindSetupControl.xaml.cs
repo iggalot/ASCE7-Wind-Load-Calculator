@@ -756,9 +756,12 @@ namespace ASCE7WindLoadCalculator
                           !Issues.Any(i => i.Field == WindInputField.RoofPitch && i.Severity == InputSeverity.Error);
             valMeanH.Text = sizeOk ? Building.MeanRoofHeight.ToString("0.#") + " ft" : "-";
             valRidgeH.Text = sizeOk ? Building.RidgeHeight.ToString("0.#") + " ft" : "-";
-            valLB.Text = sizeOk ? $"{Building.L_Over_B:0.00} ({1 / Building.L_Over_B:0.00})" : "-";
-            valHL.Text = sizeOk ? Building.h_Over_L.ToString("0.00") : "-";
-            valHB.Text = sizeOk ? (Building.MeanRoofHeight / Building.BuildingWidth).ToString("0.00") : "-";
+            double hf = Building.MwfrsFigureHeight;
+            valFigH.Text = sizeOk ? hf.ToString("0.#") + " ft" + (hf != Building.MeanRoofHeight ? " (eave, θ ≤ 10°)" : "") : "-";
+            // each wind direction its own L (along the wind) and B (normal to it), 26.3
+            string Direction(double l, double b) => $"L {l:0.#}, B {b:0.#}: L/B {l / b:0.00}";
+            valWindW.Text = sizeOk ? Direction(Building.BuildingLength, Building.BuildingWidth) : "-";
+            valWindS.Text = sizeOk ? Direction(Building.BuildingWidth, Building.BuildingLength) : "-";
 
             // Zone width a from the cladding calculation (it only exists while the cladding method applies).
             var zones = Analysis?.Cladding?.WallAreaCalculator_BldgLength;

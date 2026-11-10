@@ -111,6 +111,48 @@ namespace ASCE7Wind.UI.Tests
             StringAssert.Contains(string.Join("\n", Texts(Page(doc, 1))), "No wind results");
         }
 
+        /// <summary>
+        /// Each wind direction's page works its wall pressures out by hand: its own L (along the wind) and B (normal to it),
+        /// the leeward Cp from that L/B (60 x 40 ft: 1.5 from the west, -0.40 interpolated; 0.667 from the south, -0.5), qz up
+        /// the windward wall to qh at h, qh on the leeward and side walls; and the block fits the printed page.
+        /// </summary>
+        [STATestMethod]
+        [DataRow(ASCE7_Versions.ASCE_VER_7_16)]
+        [DataRow(ASCE7_Versions.ASCE_VER_7_22)]
+        public void MwfrsPages_HandCalculation_ThisDirectionsLAndB(ASCE7_Versions v)
+        {
+            var p = new WindParameters_Base { WindSpeed = 115, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C, RiskCategory = "II" };
+            var b = new BuildingData { BuildingLength = 60, BuildingWidth = 40, BuildingHeight = 25, RoofType = RoofTypes.ROOF_TYPE_GABLE, RoofPitch = 22 };
+            var a = WindAnalysis.Run(v, p, b);
+            var doc = WindReport.Build(new ReportInfo { Project = "Test project" }, v, p, b, a, null);
+            var blocks = Enumerable.Range(0, doc.Pages.Count).SelectMany(i => Descendants(Page(doc, i))).OfType<TextBlock>()
+                                   .Where(t => t.Text.StartsWith("1. Dimensions for wind from the", StringComparison.Ordinal)).ToList();
+            Assert.AreEqual(2, blocks.Count, "one on each direction's page");
+            string west = blocks.Single(t => t.Text.Contains("from the west")).Text, south = blocks.Single(t => t.Text.Contains("from the south")).Text;
+
+            StringAssert.Contains(west, "L = 60 ft");
+            StringAssert.Contains(west, "B = 40 ft");
+            StringAssert.Contains(west, "Cp = −0.5 + (1.500 − 1) × (−0.3 + 0.5) / (2 − 1) = -0.400");
+            StringAssert.Contains(south, "L = 40 ft");
+            StringAssert.Contains(south, "B = 60 ft");
+            StringAssert.Contains(south, "L/B = 0.667 ≤ 1: Cp = −0.5");
+
+            var m = (WindLoadCalculator_MWFRS)a.MwfrsAlongLength;
+            double h = b.MwfrsFigureHeight, qh = m.CalculateDynamicWindPressure(h);
+            StringAssert.Contains(west, $"q = qh = {qh:0.00} psf");
+            StringAssert.Contains(west, "0 to 15");
+            StringAssert.Contains(west, $"{h:0.##} (h)");
+            StringAssert.Contains(west, $"{m.WindwardWallExternalPressureAt(15):0.00}", "qz G Cp at 15 ft");
+            StringAssert.Contains(west, $"{m.WindwardWallExternalPressureAt(h):0.00}", "qh G Cp at h");
+            Assert.IsTrue(m.WindwardWallExternalPressureAt(15) < m.WindwardWallExternalPressureAt(h), "qz grows up the wall");
+            foreach (var t in blocks)
+            {
+                t.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Assert.IsTrue(t.DesiredSize.Width <= WindReport.BodyWidth, $"{t.DesiredSize.Width:0} px wide");
+            }
+            Snapshot(doc, "report_handcalc_" + v);
+        }
+
         private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
         {
             foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())

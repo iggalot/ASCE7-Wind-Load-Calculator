@@ -181,11 +181,9 @@ namespace ASCE7WindLoadCalculator
         public double h_Over_B => MeanRoofHeight / BuildingWidth;
 
         /// <summary>
-        /// h/B of ASCE 7-16 Figs. 30.3-2E and 30.3-2F (hip roofs, 7° &lt; θ ≤ 20°): h the cladding figures' height
-        /// (<see cref="CcFigureHeight"/>) and B the least horizontal dimension. Note 7 makes that B exact for Zone 3; for
-        /// Zones 1 and 2e it takes B "normal to the eave defining Zone 2e", never less than the least dimension, and a
-        /// larger h/B gives the larger suction in every zone of the figure, so one ratio from the least dimension is on the
-        /// safe side for them (one figure for the whole roof).
+        /// Zone 3's h/B of ASCE 7-16 Figs. 30.3-2E and 30.3-2F (hip roofs, 7° &lt; θ ≤ 20°): h the cladding figures' height
+        /// (<see cref="CcFigureHeight"/>) and B the least horizontal dimension (note 7). The figure the charts show is read
+        /// at it; each zone's pressures at its own h/B (B normal to the wind, 26.3: <c>WindLoadCalculator_CC.HipRatiosFor</c>).
         /// </summary>
         public double HipCladdingHOverB => CcFigureHeight / Math.Min(BuildingLength, BuildingWidth);
         public double L_Over_B => BuildingLength / BuildingWidth;

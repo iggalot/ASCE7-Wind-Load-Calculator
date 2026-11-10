@@ -116,8 +116,87 @@ namespace ASCE7WindLoadCalculator
             AddPressures(WallAreaCalculator_BldgLength, extGCpCurve_Wall.WallCurves_Neg, wall, qh, 1.0, windPressureBuildingLengthWall_Neg_External, MinimumNetPressure);
             AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Pos, wall, qh, 1.0, windPressureBuildingWidthWall_Pos_External, MinimumNetPressure);
             AddPressures(WallAreaCalculator_BldgWidth, extGCpCurve_Wall.WallCurves_Neg, wall, qh, 1.0, windPressureBuildingWidthWall_Neg_External, MinimumNetPressure);
+            ApplyHipHOverBByZone(roofArea);
             AddOverhangPressures(qh, roofArea);
             AddParapetCases(wallArea);
+        }
+
+        /// <summary>
+        /// ASCE 7-16 Figs. 30.3-2E and 30.3-2F (hip roofs, 7° &lt; θ ≤ 20°) give GCp for h/B ≤ 0.5 and ≥ 0.8 (note 6:
+        /// interpolate between), B the horizontal dimension normal to the wind (26.3). Note 7 says which B each zone
+        /// takes: Zone 3, the least horizontal dimension; Zones 1 and 2e, the dimension normal to the wind that is normal to
+        /// the eave defining the Zone 2e, which is that eave's length. Zone 2r (the ridge and the hips) is not named: the
+        /// larger of the two wind directions' values is taken. True when it applies (then <see cref="HipHOverBByZone"/>).
+        /// </summary>
+        public bool HipHOverBApplies =>
+            Edition.Version == ASCE7_Versions.ASCE_VER_7_16 && buildingData.RoofType == RoofTypes.ROOF_TYPE_HIP &&
+            buildingData.RoofPitch > 7 && buildingData.RoofPitch <= 20;
+
+        /// <summary>The h/B each roof zone was read at, in words ("h/B = 15.0 / 60.0 = 0.25, B the north and south eaves' length"), by zone key.</summary>
+        public Dictionary<int, string> HipHOverBByZone { get; } = new Dictionary<int, string>();
+
+        /// <summary>The h/B values a roof zone is read at (Figs. 30.3-2E/2F note 7), with the words for each.</summary>
+        public List<(double ratio, string words)> HipRatiosFor(EffectiveWindArea zone)
+        {
+            double h = buildingData.CcFigureHeight, len = buildingData.BuildingLength, wid = buildingData.BuildingWidth;
+            (double, string) Along(double b, string eaves) => (h / b, $"h/B = {h:0.##} / {b:0.##} = {h / b:0.###}, B the length of the {eaves}");
+            var alongLength = Along(len, "eaves along the building's length (wind normal to them)");
+            var alongWidth = Along(wid, "eaves along the building's width (wind normal to them)");
+            string label = zone.Label_Full;
+            if (label.StartsWith("Zone3", StringComparison.Ordinal))
+                return new List<(double, string)> { (h / Math.Min(len, wid), $"h/B = {h:0.##} / {Math.Min(len, wid):0.##} = {h / Math.Min(len, wid):0.###}, B the least horizontal dimension (note 7)") };
+            if (label.StartsWith("Zone2r", StringComparison.Ordinal))
+                return new List<(double, string)> { alongLength, alongWidth };
+            // Zones 1 and 2e: the eave they lie along, the nearest edge (x runs along the length, y along the width)
+            var c = zone.Centroid;
+            double toLengthEave = Math.Min(c.Y, wid - c.Y), toWidthEave = Math.Min(c.X, len - c.X);
+            return new List<(double, string)> { toLengthEave <= toWidthEave ? alongLength : alongWidth };
+        }
+
+        /// <summary>
+        /// Reads every roof zone's GCp again at its own h/B (<see cref="HipHOverBApplies"/>); the figure held for the charts
+        /// is Zone 3's. Suction takes the more negative of two values, pressure the more positive.
+        /// </summary>
+        private void ApplyHipHOverBByZone(double area)
+        {
+            HipHOverBByZone.Clear();
+            if (!HipHOverBApplies || RoofAreaCalculator == null) return;
+            var figures = new Dictionary<double, Chapter27and30_GCpCurveBase>();
+            Chapter27and30_GCpCurveBase Fig(double r) => figures.TryGetValue(r, out var f) ? f : (figures[r] = new Figure30_3_2E_2F_ASCE7_16(r));
+            double kd = PressureKd;
+            foreach (var kv in RoofAreaCalculator.effWindAreas)
+            {
+                var ratios = HipRatiosFor(kv.Value);
+                HipHOverBByZone[kv.Key] = ratios.Count == 1 ? ratios[0].words
+                    : string.Join("; or ", ratios.Select(r => r.words)) + " (Zone 2r is not in note 7: the larger)";
+                void Again(Dictionary<int, PressureData> target, Func<Chapter27and30_GCpCurveBase, Dictionary<string, ExternalGCpCurve>> set, bool suction)
+                {
+                    if (!target.TryGetValue(kv.Key, out var p)) return;
+                    var values = ratios.Select(r => set(Fig(r.ratio)).TryGetValue(kv.Value.Label_Full, out var curve) ? curve.Evaluate(area) : (double?)null)
+                                       .Where(v => v.HasValue).Select(v => v.Value).ToList();
+                    if (values.Count == 0) return;
+                    double gcp = suction ? values.Min() : values.Max();
+                    p.GCp = gcp;
+                    p.ExternalPressure = p.qh * gcp * kd;
+                }
+                Again(windPressureRoof_Neg_External, f => f.RoofCurves_Neg, true);
+                Again(windPressureRoof_Pos_External, f => f.RoofCurves_Pos, false);
+            }
+            hipOverhangFigures = figures;
+        }
+
+        private Dictionary<double, Chapter27and30_GCpCurveBase> hipOverhangFigures;
+
+        /// <summary>The overhang curves for a roof zone: its own h/B's (Fig. 30.3-2F) on a 7-16 hip of 7° to 20°, else the figure's.</summary>
+        private Dictionary<string, ExternalGCpCurve> OverhangCurvesFor(EffectiveWindArea zone, double area)
+        {
+            if (!HipHOverBApplies || hipOverhangFigures == null) return extGCpCurve_Roof.OverhangCurves;
+            var ratios = HipRatiosFor(zone);
+            // the most negative of the zone's h/B values at this area
+            return ratios.Select(r => hipOverhangFigures.TryGetValue(r.ratio, out var f) ? f : new Figure30_3_2E_2F_ASCE7_16(r.ratio))
+                         .Select(f => f.OverhangCurves)
+                         .OrderBy(c => c != null && c.TryGetValue(zone.Label_Full, out var cv) ? cv.Evaluate(area) : 0)
+                         .First();
         }
 
         /// <summary>
@@ -143,7 +222,7 @@ namespace ASCE7WindLoadCalculator
             {
                 double gcp;
                 bool summed = false;
-                if (TryEvaluateCurve(extGCpCurve_Roof.OverhangCurves, zone.Value, area, out gcp)) { }
+                if (TryEvaluateCurve(OverhangCurvesFor(zone.Value, area), zone.Value, area, out gcp)) { }
                 else if (roofPlusWall22
                          && TryEvaluateCurve(extGCpCurve_Roof.RoofCurves_Neg, zone.Value, area, out double roofGcp)
                          && extGCpCurve_Wall.WallCurves_Pos.TryGetValue(zone.Value.Label_Full.StartsWith("Zone3", StringComparison.Ordinal) ? "Zone5" : "Zone4", out var wallCurve))

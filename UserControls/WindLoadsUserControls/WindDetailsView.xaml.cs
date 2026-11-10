@@ -157,8 +157,11 @@ namespace ASCE7WindLoadCalculator
                 new[] { "Mean roof height", $"{building.MeanRoofHeight:0.##} ft", "Section 26.2" },
                 new[] { "Figure height h", $"{h:0.##} ft" + (eave ? " (the eave height, θ ≤ 10°)" : " (the mean roof height)"),
                         "Figs. 27.3-1, 28.3-1 and 30.3-1, 30.3-2: the eave height for θ ≤ 10°" },
-                new[] { "Plan ratio L/B (wind from W)", (building.BuildingLength / building.BuildingWidth).ToString("0.00"), "Fig. 27.3-1 leeward wall Cp" },
-                new[] { "Height ratios h/L, h/B", $"{h / building.BuildingLength:0.00}, {h / building.BuildingWidth:0.00}", "Fig. 27.3-1 roof Cp (h/L in the wind direction)" },
+                // L along the wind and B normal to it (26.3): each wind direction its own; its page works the Cp values out
+                new[] { "Wind from the W (or E): L, B", $"{building.BuildingLength:0.#} ft, {building.BuildingWidth:0.#} ft",
+                        $"L/B = {building.BuildingLength / building.BuildingWidth:0.00}, h/L = {h / building.BuildingLength:0.00} (Fig. 27.3-1; that direction's page)" },
+                new[] { "Wind from the S (or N): L, B", $"{building.BuildingWidth:0.#} ft, {building.BuildingLength:0.#} ft",
+                        $"L/B = {building.BuildingWidth / building.BuildingLength:0.00}, h/L = {h / building.BuildingWidth:0.00} (Fig. 27.3-1; that direction's page)" },
             };
             if (calc != null)
             {
@@ -232,7 +235,7 @@ namespace ASCE7WindLoadCalculator
             if (m == null) { page.Children.Add(Note("Whole-building results are not available for these inputs.")); return page; }
             AddWarnings(page, m);
 
-            page.Children.Add(Para($"Pressure p = q G Cp − qh (±GCpi). qh = {QhOf(m):0.00} psf, G = {parameters.GustFactor:0.00}, GCpi = ±{m.GetGCpi():0.00}. " +
+            page.Children.Add(Para($"Pressure p = q G Cp − qh (±GCpi): q = qz on the windward wall (it grows with height, Kz; qz = qh at z = h), qh on the leeward and side walls and the roof (27.3.1). qh = {QhOf(m):0.00} psf, G = {parameters.GustFactor:0.00}, GCpi = ±{m.GetGCpi():0.00}. " +
                                    "Internal pressure cancels in the total force on the building."));
 
             // The ratios Fig. 27.3-1 reads for this direction (L is the plan dimension along the wind).
@@ -299,7 +302,113 @@ namespace ASCE7WindLoadCalculator
             }
             page.Children.Add(Section("Walls (Fig. 27.3-1)" + NoteSuffix(m.WallAreaCalculator_BldgLength.Note)));
             page.Children.Add(Card(MwfrsWallTable(m)));
+            if (m is WindLoadCalculator_MWFRS mh)
+            {
+                page.Children.Add(Section($"Hand calculation: wall pressures, wind from the {from}"));
+                page.Children.Add(Card(WallHandCalculation(mh, from)));
+            }
             return page;
+        }
+
+        /// <summary>
+        /// This wind direction's wall pressures written out as a hand calculation: L and B for the direction (26.3), Kz and qz up
+        /// the windward wall (qz = qh at z = h), qh for the leeward and side walls (27.3.1), G, GCpi, each Fig. 27.3-1 Cp (the
+        /// leeward wall's from L/B, interpolated), and p = q G Cp − qh (±GCpi) with the numbers, the way the calculator runs them.
+        /// </summary>
+        private FrameworkElement WallHandCalculation(WindLoadCalculator_MWFRS m, string from)
+        {
+            var e = m.Edition;
+            var bd = m.buildingData;
+            var p = m.Parameters;
+            var (alpha, zg) = e.TerrainConstants(p.ExposureCategory);
+            double h = bd.MwfrsFigureHeight, L = bd.BuildingLength, B = bd.BuildingWidth, V = p.WindSpeed, kzt = p.Kzt;
+            double kd = m.GetKd(WindLoadCalculationTypes.MWFRS), G = p.GustFactor, gcpi = m.GetGCpi(), kdP = m.PressureKd;
+            bool kdInQ = e.KdInVelocityPressure;
+            double kh = m.GetKz(h, p.ExposureCategory), qh = m.CalculateDynamicWindPressure(h);
+            double inner = qh * gcpi * kdP;
+            string K(double z) => $"{e.KzCoefficient:0.##} × ({Math.Max(z, 15):0.##} / {zg:0}) ^ (2 / {alpha:0.##})";
+            string kdQ = kdInQ ? $" × {kd:0.00}" : "";
+            string kdPx = kdInQ ? "" : $" × {kd:0.00}";
+
+            var s = new System.Text.StringBuilder();
+            void Line(string t = "") => s.AppendLine(t);
+
+            Line($"1. Dimensions for wind from the {from} (26.3)");
+            Line($"   L = {L:0.##} ft     horizontal dimension of the building parallel to the wind");
+            Line($"   B = {B:0.##} ft     horizontal dimension of the building normal to the wind");
+            Line($"   h = {h:0.##} ft     " + (h != bd.MeanRoofHeight ? $"eave height (roof θ = {bd.RoofPitch:0.#}° ≤ 10°)" : "mean roof height"));
+            Line($"   L/B = {L:0.##} / {B:0.##} = {L / B:0.000}        h/L = {h:0.##} / {L:0.##} = {h / L:0.000}");
+            Line();
+            Line("2. Velocity pressure (26.10)");
+            Line($"   V   = {V:0.#} mph (Fig. 26.5-1, Risk Category {p.RiskCategory})");
+            Line($"   Exposure {ExposureLetter(p.ExposureCategory)}: α = {alpha:0.##}, zg = {zg:0} ft (Table 26.11-1)");
+            Line($"   Kz  = {e.KzCoefficient:0.##} (z / zg)^(2/α), z not less than 15 ft (Table 26.10-1, note)");
+            Line($"   Kzt = {kzt:0.00} (26.8)     Ke = 1.00 (26.9)     Kd = {kd:0.00} (Table 26.6-1)");
+            Line($"   Kh  = {K(h)} = {kh:0.000}");
+            if (kdInQ)
+                Line($"   qh  = 0.00256 Kh Kzt Ke Kd V² = 0.00256 × {kh:0.000} × {kzt:0.00} × 1.00 × {kd:0.00} × {V:0.#}² = {qh:0.00} psf  (Eq. 26.10-1)");
+            else
+                Line($"   qh  = 0.00256 Kh Kzt Ke V² = 0.00256 × {kh:0.000} × {kzt:0.00} × 1.00 × {V:0.#}² = {qh:0.00} psf  (Eq. 26.10-1; Kd goes in Eq. 27.3-1)");
+            Line();
+            Line("3. Coefficients");
+            Line($"   G    = {G:0.00} (26.11, rigid building)");
+            Line($"   GCpi = ±{gcpi:0.00} (Table 26.13-1, {EnclosureName(bd).ToLowerInvariant()})");
+            Line($"   Cp, Fig. 27.3-1 walls:  windward 0.8 (with qz)    side walls −0.7 (with qh)    leeward from L/B (with qh)");
+            double lb = L / B, cpLw = m.Cp_LW;
+            string interp =
+                lb <= 1 ? $"L/B = {lb:0.000} ≤ 1: Cp = −0.5" :
+                lb <= 2 ? $"L/B = {lb:0.000}, between 1 (−0.5) and 2 (−0.3): Cp = −0.5 + ({lb:0.000} − 1) × (−0.3 + 0.5) / (2 − 1) = {cpLw:0.000}" :
+                lb < 4 ? $"L/B = {lb:0.000}, between 2 (−0.3) and 4 (−0.2): Cp = −0.3 + ({lb:0.000} − 2) × (−0.2 + 0.3) / (4 − 2) = {cpLw:0.000}" :
+                         $"L/B = {lb:0.000} ≥ 4: Cp = −0.2";
+            Line($"   Leeward wall: {interp}");
+            Line();
+            Line("4. Wall pressures (Eq. 27.3-1)");
+            Line(kdInQ ? "   p = q G Cp − qh (GCpi)       q = qz on the windward wall, qh on the leeward and side walls"
+                       : "   p = q Kd G Cp − qh Kd (GCpi)  q = qz on the windward wall, qh on the leeward and side walls");
+            Line($"   Internal: qh{kdPx} × {gcpi:0.00} = {inner:0.00} psf, acting either way (+GCpi pushes out, −GCpi pulls in)");
+            Line();
+
+            // windward wall: qz at the heights of Table 26.10-1 up to its top (a gable end rises above h), and at h itself
+            double top = h;
+            foreach (var z in m.WallAreaCalculator_BldgLength.effWindAreas.Values.Where(a => a.Label_Full == "ZoneWW"))
+                top = Math.Max(top, z.OuterBoundary.Max(v => v.Y));
+            var heights = new[] { 15.0, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500 }
+                .Where(z => z < top - 0.005).Concat(new[] { h, top }).Select(z => Math.Round(z, 2)).Distinct().OrderBy(z => z).ToList();
+            Line($"   Windward wall, Cp = {m.Cp_WW:0.0}, q = qz at height z (qz = qh at z = h = {h:0.##} ft):");
+            Line("     qz = 0.00256 Kz Kzt Ke" + (kdInQ ? " Kd" : "") + " V²        external = qz" + (kdInQ ? "" : " Kd") + " G Cp");
+            Line($"     {"z (ft)",-12}{"Kz",8}{"qz (psf)",11}{"external",11}{"+GCpi",10}{"−GCpi",10}");
+            foreach (double z in heights)
+            {
+                double kz = m.GetKz(z, p.ExposureCategory), qz = m.CalculateDynamicWindPressure(z), ext = m.WindwardWallExternalPressureAt(z);
+                string label = z <= 15 ? "0 to 15" : z.ToString("0.##") + (Math.Abs(z - h) < 0.005 ? " (h)" : Math.Abs(z - top) < 0.005 && top > h ? " (top)" : "");
+                Line($"     {label,-12}{kz,8:0.000}{qz,11:0.00}{ext,11:0.00}{ext - inner,10:0.00}{ext + inner,10:0.00}");
+            }
+            double z0 = heights[0];
+            Line($"     e.g. z = {z0:0.##}: Kz = {K(z0)} = {m.GetKz(z0, p.ExposureCategory):0.000}; qz = 0.00256 × {m.GetKz(z0, p.ExposureCategory):0.000} × {kzt:0.00} × 1.00{kdQ} × {V:0.#}² = {m.CalculateDynamicWindPressure(z0):0.00} psf;");
+            Line($"          external = {m.CalculateDynamicWindPressure(z0):0.00}{kdPx} × {G:0.00} × {m.Cp_WW:0.0} = {m.WindwardWallExternalPressureAt(z0):0.00} psf");
+            Line();
+
+            void Qh(string name, double cp)
+            {
+                double ext = qh * G * cp * kdP;
+                Line($"   {name}, Cp = {cp:0.00}, q = qh = {qh:0.00} psf (the same over the whole wall):");
+                Line($"     external = {qh:0.00}{kdPx} × {G:0.00} × ({cp:0.00}) = {ext:0.00} psf");
+                Line($"     with +GCpi: {ext:0.00} − {inner:0.00} = {ext - inner:0.00} psf      with −GCpi: {ext:0.00} + {inner:0.00} = {ext + inner:0.00} psf");
+                Line();
+            }
+            Qh("Leeward wall", cpLw);
+            Qh("Side walls", m.Cp_SW);
+
+            double ww = m.WindwardWallExternalPressureAt(h), lw = qh * G * cpLw * kdP;
+            Line("5. Along the wind, windward + leeward (the internal pressure cancels)");
+            Line($"   at z = h: {ww:0.00} + {Math.Abs(lw):0.00} = {ww - lw:0.00} psf;  at 0 to 15 ft: {m.WindwardWallExternalPressureAt(0):0.00} + {Math.Abs(lw):0.00} = {m.WindwardWallExternalPressureAt(0) - lw:0.00} psf");
+            Line("   + positive toward the wall's surface, − away from it. The shear-wall force integrates qz up the windward wall's area.");
+
+            return new TextBlock
+            {
+                Text = s.ToString().TrimEnd(), FontFamily = new FontFamily("Consolas"), FontSize = 12.5,
+                Foreground = Ink, TextWrapping = TextWrapping.NoWrap,
+            };
         }
 
         /// <summary>
@@ -612,7 +721,7 @@ namespace ASCE7WindLoadCalculator
                 m.windPressureWall_Pos_External_MWFRS.TryGetValue(a.Key, out var p);
                 return new
                 {
-                    Zone = WallName(a.Value.Label_Short), Swatch = EffectiveWindAreaRenderer.GetColorForRegion(a.Value.Label_Short), Area = a.Value.Area,
+                    Zone = a.Value.Label_Short == "WW" ? "WW (windward), at z = h" : WallName(a.Value.Label_Short), Swatch = EffectiveWindAreaRenderer.GetColorForRegion(a.Value.Label_Short), Area = a.Value.Area,
                     Qh = p?.qh ?? 0, Cp = p?.GCp ?? 0, Press = p?.ExternalPressure ?? 0, Net = p?.NetPressure ?? 0,
                 };
             }).ToList();
