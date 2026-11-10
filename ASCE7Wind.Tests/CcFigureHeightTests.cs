@@ -47,6 +47,23 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(steep.CalculateDynamicWindPressure(h), steep.windPressureRoof_Neg_External.Values.First().qh, 1e-9);
         }
 
+        /// <summary>
+        /// 7-16 Fig. 30.3-2E note 7: B for Zone 3 is the least horizontal dimension. A 40 ft long, 60 ft wide hip at 15°:
+        /// h/40, not h/60 (which read the h/B ≤ 0.5 curve); Zone 3 at 10 sq ft between -1.8 (h/B ≤ 0.5) and -2.6 (≥ 0.8).
+        /// </summary>
+        [TestMethod]
+        public void Hip7_16_HOverB_FromTheLeastDimension()
+        {
+            var c = Cc(ASCE7_Versions.ASCE_VER_7_16, 40, 60, 20, RoofTypes.ROOF_TYPE_HIP, 15);
+            var bd = c.buildingData;
+            double r = bd.CcFigureHeight / 40;
+            Assert.AreEqual(r, bd.HipCladdingHOverB, 1e-9);
+            Assert.IsTrue(r > 0.5 && r < 0.8, $"between the two curves: {r:0.000}");
+            Assert.IsTrue(bd.MeanRoofHeight / 60 < 0.5, "the width alone read the lower curve");
+            double expected = -1.8 + (r - 0.5) / 0.3 * (-2.6 + 1.8);
+            Assert.AreEqual(expected, c.extGCpCurve_Roof.RoofCurves_Neg["Zone3"].Evaluate(10), 1e-6);
+        }
+
         [DataTestMethod]
         [DataRow(ASCE7_Versions.ASCE_VER_7_16)]
         [DataRow(ASCE7_Versions.ASCE_VER_7_22)]

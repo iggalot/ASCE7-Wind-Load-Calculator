@@ -179,6 +179,15 @@ namespace ASCE7WindLoadCalculator
         /// <summary>h/L of Fig. 27.3-1, with h the figure height (<see cref="MwfrsFigureHeight"/>) and L the dimension along the wind.</summary>
         public double h_Over_L => MwfrsFigureHeight / BuildingLength;
         public double h_Over_B => MeanRoofHeight / BuildingWidth;
+
+        /// <summary>
+        /// h/B of ASCE 7-16 Figs. 30.3-2E and 30.3-2F (hip roofs, 7° &lt; θ ≤ 20°): h the cladding figures' height
+        /// (<see cref="CcFigureHeight"/>) and B the least horizontal dimension. Note 7 makes that B exact for Zone 3; for
+        /// Zones 1 and 2e it takes B "normal to the eave defining Zone 2e", never less than the least dimension, and a
+        /// larger h/B gives the larger suction in every zone of the figure, so one ratio from the least dimension is on the
+        /// safe side for them (one figure for the whole roof).
+        /// </summary>
+        public double HipCladdingHOverB => CcFigureHeight / Math.Min(BuildingLength, BuildingWidth);
         public double L_Over_B => BuildingLength / BuildingWidth;
 
         /// <summary>Horizontal span measured across the ridge (ft): the roof rises over half of it.</summary>

@@ -24,7 +24,7 @@ namespace ASCE7WindLoadCalculator
                     return new Figure30_3_2D_ASCE7_16();
                 case RoofTypes.ROOF_TYPE_HIP:
                     if (slope <= 7) return new Figure30_3_2A_ASCE7_16();
-                    if (slope <= 20) return new Figure30_3_2E_2F_ASCE7_16(buildingData.h_Over_B);
+                    if (slope <= 20) return new Figure30_3_2E_2F_ASCE7_16(buildingData.HipCladdingHOverB); // note 7: B for Zone 3 the least dimension
                     if (slope <= 27) return new Figure30_3_2G_ASCE7_16();
                     return new Figure30_3_2H_2I_ASCE7_16(slope);
                 default:
