@@ -85,7 +85,9 @@ namespace ASCE7WindLoadCalculator.App
             var root = new DockPanel();
             DockPanel.SetDock(appBar, Dock.Top);
             DockPanel.SetDock(statusBar, Dock.Bottom);
+            DockPanel.SetDock(viewOnlyBanner, Dock.Top);
             root.Children.Add(appBar);
+            root.Children.Add(viewOnlyBanner);
             root.Children.Add(statusBar);
             root.Children.Add(host);
             Content = root;
@@ -104,6 +106,38 @@ namespace ASCE7WindLoadCalculator.App
 
         private bool HasProject => path != null;
 
+        /// <summary>
+        /// Someone else's project, opened to look at only (the suite's view-only mode): no lock, the Results page only
+        /// (<see cref="WindSetupControl.ReadOnly"/>, as the Shear Wall Calculator shows it), no saves, no "save first?", no
+        /// Edit building; their saves are read again whole, the wind too. Opening it again once they have closed it works on it.
+        /// </summary>
+        private bool viewOnly;
+        private bool reopeningViewOnly;
+        private readonly Border viewOnlyBanner = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x3F, 0x4A, 0x5C)), Padding = new Thickness(10, 5, 10, 5), Visibility = Visibility.Collapsed,
+            Child = new TextBlock
+            {
+                Text = "View only: someone else is working on this project. You can look at the wind's results; nothing can be changed or saved here. Their saves show here as they make them. Open it again once they have closed it.",
+                Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap,
+            },
+        };
+
+        private void SetViewOnly(bool on)
+        {
+            viewOnly = on;
+            viewOnlyBanner.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+            if (on) Log.Info("App", "View only: someone else is working on this project.");
+        }
+
+        /// <summary>Says no to a change for the view-only mode; true when it said it.</summary>
+        private bool RefusedViewOnly(string what)
+        {
+            if (!viewOnly) return false;
+            MessageBox.Show(this, $"View only: someone else is working on this project, so {what}.", AppName, MessageBoxButton.OK, MessageBoxImage.Information);
+            return true;
+        }
+
         /// <summary>A fresh page for a quick check: the size and roof typed on the Building step, nothing saved.</summary>
         private void NewQuickCheck()
         {
@@ -113,6 +147,7 @@ namespace ASCE7WindLoadCalculator.App
             watcher = null;
             projectLock?.Dispose();
             projectLock = null;
+            SetViewOnly(false);
             ProjectFolder.Close();
             Show(new WindSetupControl());
             modeText.Text = "Quick check: type the building's size and roof on the Building page (nothing is saved).";
@@ -146,9 +181,9 @@ namespace ASCE7WindLoadCalculator.App
         {
             ModelDocument opened;
             // one Wind Load Calculator per project (the same project again keeps this app's own lock)
-            bool refused = false;
-            var taken = projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)
-                ? projectLock : ProjectDialogs.TakeLock(this, file, "wind", "Wind Load Calculator", out refused);
+            bool refused = false, lookOnly = viewOnly && reopeningViewOnly; // their save read again: still view only, not asked again
+            var taken = lookOnly ? null : projectLock != null && string.Equals(projectLock.ModelPath, file, StringComparison.OrdinalIgnoreCase)
+                ? projectLock : ProjectDialogs.TakeLock(this, file, "wind", "Wind Load Calculator", true, out refused, out lookOnly);
             if (refused) return;
             try
             {
@@ -176,10 +211,12 @@ namespace ASCE7WindLoadCalculator.App
             projectLock = taken;
             doc = opened;
             path = file;
+            SetViewOnly(lookOnly);
             Show(page);
             bool ok = ApplyGeometry(b);
             savedWind = had ? CurrentWind().ToJson() : string.Empty;   // no Wind section yet: unsaved until saved
             if (ok) setup.GoToStep(WindSetupControl.ResultsStep);
+            if (lookOnly) setup.ReadOnly = true; // the results only, the choices on them locked
             Watch();
             modeText.Text = $"Project: {Path.GetFileName(file)} (the building from the model; wind inputs saved in the file)";
             Log.Info("App", $"Opened {file}; " + (had ? $"wind {wind.WindSpeed:0} mph, exposure {wind.Exposure}, {wind.Edition}." : "no Wind section yet: the starting inputs."));
@@ -212,7 +249,7 @@ namespace ASCE7WindLoadCalculator.App
             WindSection.From(setup.Version, setup.Parameters, setup.Building.EnclosureType, setup.Building.ParapetEnclosure,
                              setup.OnlyCases1And3, setup.RoofComponent, setup.WallComponent);
 
-        private bool Dirty => HasProject && savedWind != null && CurrentWind().ToJson() != savedWind;
+        private bool Dirty => HasProject && !viewOnly && savedWind != null && CurrentWind().ToJson() != savedWind;
 
         /// <summary>
         /// Writes the wind inputs into the project file: the file is read again and only its Wind section is replaced, so what
@@ -225,6 +262,7 @@ namespace ASCE7WindLoadCalculator.App
                 ShowStatus("A quick check is not saved. Open a project (File > Open project) to keep the wind inputs with a building.");
                 return false;
             }
+            if (RefusedViewOnly("the wind is not saved from here")) return false;
             setup.FlushPendingChange(); // a value still being typed counts
             try
             {
@@ -274,6 +312,15 @@ namespace ASCE7WindLoadCalculator.App
             watcher.ChangedOnDisk += (s, e) =>
             {
                 if (!HasProject || (editor != null && !editor.HasExited)) return; // Edit building: read again when it closes
+                if (viewOnly)
+                {
+                    // nothing here to keep: their project read again whole, the wind too
+                    reopeningViewOnly = true;
+                    try { Open(path); }
+                    finally { reopeningViewOnly = false; }
+                    ShowStatus("They saved this project: it was read again (view only).");
+                    return;
+                }
                 ReloadBuilding(false);
                 ShowStatus("Another app saved this project: the building was read again and the wind calculated for it." + (Dirty ? " Your unsaved wind inputs are kept." : ""));
             };
@@ -290,6 +337,7 @@ namespace ASCE7WindLoadCalculator.App
         private void EditBuilding()
         {
             if (!HasProject) { ShowStatus("A quick check has no building model: its size and roof are typed on the Building page."); return; }
+            if (RefusedViewOnly("the Building Model is not opened on it from here")) return;
             if (editor != null && !editor.HasExited) return;
             if (!File.Exists(EditorPath))
             {
@@ -342,10 +390,10 @@ namespace ASCE7WindLoadCalculator.App
 
         private void UpdateTitle()
         {
-            Title = HasProject ? $"{Path.GetFileName(path).Replace(ProjectFolder.ModelExtension, "")}{(Dirty ? " *" : "")} - {AppName}" : $"Quick check - {AppName}";
-            saveItem.IsEnabled = HasProject;
+            Title = HasProject ? $"{Path.GetFileName(path).Replace(ProjectFolder.ModelExtension, "")}{(Dirty ? " *" : "")}{(viewOnly ? " (view only)" : "")} - {AppName}" : $"Quick check - {AppName}";
+            saveItem.IsEnabled = HasProject && !viewOnly;
             closeItem.IsEnabled = HasProject;
-            editItem.IsEnabled = HasProject;
+            editItem.IsEnabled = HasProject && !viewOnly;
             reloadItem.IsEnabled = HasProject;
         }
 

@@ -15,7 +15,7 @@
   - `ASCE7Wind.UI.Tests`: 72 pass, offscreen.
 - **The wind is edited only in this app.** The Shear Wall Calculator shows `WindSetupControl` with `ReadOnly = true`
   (the inputs locked, Send hidden), and its **Edit wind** opens this app on the project. On save this app re-reads the
-  file and replaces only `Wind`. It holds the `wind` project lock (`ProjectLock`): one copy per project.
+  file and replaces only `Wind`. It holds the `wind` project lock (`ProjectLock`): one copy per project. Someone else's project opens view only (`viewOnly`: the Results page only, no Save or Edit building).
 - **The code itself.** The ASCE 7-16 and 7-22 PDFs are in `C:\AllenEngineering\Codes` (**read only**).
   - PDF page = printed page + 55 for 7-16, + 61 for 7-22.
   - Both editions were audited against them on 2026-11-05 (Ch. 26, 27, 28, 30; commit `62b3570`).
