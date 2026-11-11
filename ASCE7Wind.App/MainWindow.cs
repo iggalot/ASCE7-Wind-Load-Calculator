@@ -28,6 +28,8 @@ namespace ASCE7WindLoadCalculator.App
         private const string AppName = "Wind Load Calculator";
 
         private readonly ContentControl host = new ContentControl();
+        /// <summary>The suite's issues button (owner 2026-11-11): the building model's errors and warnings; a row opens the Building Model at its member.</summary>
+        private readonly IssuesButton issuesButton = new IssuesButton { Scope = "the building model" };
         private readonly TextBlock modeText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = new SolidColorBrush(Color.FromRgb(0x52, 0x51, 0x4E)), Margin = new Thickness(12, 0, 6, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         private readonly TextBlock status = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(10, 0, 10, 0) };
         private readonly MenuItem saveItem, closeItem, editItem, reloadItem;
@@ -78,6 +80,9 @@ namespace ASCE7WindLoadCalculator.App
             DockPanel.SetDock(menu, Dock.Left);
             bar.Children.Add(name);
             bar.Children.Add(menu);
+            DockPanel.SetDock(issuesButton, Dock.Right);
+            bar.Children.Add(issuesButton);
+            issuesButton.Picked += (s, i) => EditBuilding(i.Ids.FirstOrDefault()); // no plan here: the Building Model, at the member
             bar.Children.Add(modeText);
             var line = new SolidColorBrush(Color.FromRgb(0xE1, 0xE0, 0xD9));
             var appBar = new Border { Child = bar, BorderBrush = line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(6, 3, 6, 3) };
@@ -142,6 +147,7 @@ namespace ASCE7WindLoadCalculator.App
         /// <summary>A fresh page for a quick check: the size and roof typed on the Building step, nothing saved.</summary>
         private void NewQuickCheck()
         {
+            issuesButton.Show(null);
             doc = null;
             path = savedWind = null;
             watcher?.Dispose();
@@ -227,11 +233,12 @@ namespace ASCE7WindLoadCalculator.App
         /// <summary>The model's size, stories and roof into the page (shown, not editable). False when the model gives none.</summary>
         private bool ApplyGeometry(Building b)
         {
+            issuesButton.Show(BuildingModel.Checks.ModelChecks.Run(b));
             // a model that is not valid gives no wind (owner 2026-11-10: nothing is calculated anywhere)
             var errors = BuildingModel.Checks.ModelChecks.Run(b).Where(i => i.Severity == BuildingModel.Checks.Severity.Error).ToList();
             if (errors.Count > 0)
             {
-                ShowStatus($"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}, so no wind is calculated: {errors[0].Message} Fix it in the Building Model (Building > Edit building).");
+                ShowStatus($"The building model has {errors.Count} error{(errors.Count == 1 ? "" : "s")}, so no wind is calculated: {errors[0].Message} Fix it in the Building Model (Building > Edit building, or click an error under the red issues button at the top right).");
                 Log.Warning("Wind", "Model errors, no wind: " + string.Join(" | ", errors.Select(e => e.Message)), null);
                 return false;
             }
@@ -343,7 +350,10 @@ namespace ASCE7WindLoadCalculator.App
         /// Saves the wind inputs and opens the project in the Building Model editor. This window waits while it is open and
         /// reads the building again when it closes (the wind inputs are kept).
         /// </summary>
-        private void EditBuilding()
+        private void EditBuilding() => EditBuilding(null);
+
+        /// <summary>The Building Model on the project, at a member when one is given (an issue clicked: <c>--select</c>, as the hub does).</summary>
+        private void EditBuilding(string select)
         {
             if (!HasProject) { ShowStatus("A quick check has no building model: its size and roof are typed on the Building page."); return; }
             if (RefusedViewOnly("the Building Model is not opened on it from here")) return;
@@ -356,7 +366,7 @@ namespace ASCE7WindLoadCalculator.App
             if (Dirty && !Save()) return;
             try
             {
-                editor = Process.Start(new ProcessStartInfo(EditorPath, "\"" + path + "\"") { UseShellExecute = false });
+                editor = Process.Start(new ProcessStartInfo(EditorPath, "\"" + path + "\"" + (string.IsNullOrEmpty(select) ? "" : " --select " + select)) { UseShellExecute = false });
             }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is InvalidOperationException)
             {
