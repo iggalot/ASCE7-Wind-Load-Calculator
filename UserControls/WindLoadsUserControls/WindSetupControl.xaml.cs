@@ -103,7 +103,8 @@ namespace ASCE7WindLoadCalculator
         private static readonly Brush ControlBrush = Frozen("#C3C2B7");
         private static readonly Brush WarnBrush = Frozen("#B45309");
         private static readonly Brush OkInk = Frozen("#006300");
-        private static readonly Brush WarnInk = Frozen("#8A3B00");
+        private static readonly Brush WarnInk = Frozen("#8A5A00");   // the suite's warning amber
+        private static readonly Brush ErrorInk = Frozen("#B42318");  // the suite's error red
         private static readonly Brush Ink = Frozen("#0B0B0B");
         private static readonly Brush InkSecondary = Frozen("#52514E");
 
@@ -685,6 +686,7 @@ namespace ASCE7WindLoadCalculator
             var bldg = Issues.Where(i => i.Field == WindInputField.Building).Select(i => i.Message).ToList();
             if (calcError != null) bldg.Add("These inputs cannot be calculated: " + calcError);
             SetMessage(msgBuilding, string.Join(Environment.NewLine, bldg));
+            msgBuilding.Foreground = calcError != null || Issues.Any(i => i.Field == WindInputField.Building && i.Severity == InputSeverity.Error) ? ErrorInk : WarnInk;
 
             bool sloped = Building.RoofTypeIsSloped();
             secSlope.Visibility = sloped && !GeometryFromModel ? Visibility.Visible : Visibility.Collapsed; // the model's: in its read-out
@@ -710,7 +712,10 @@ namespace ASCE7WindLoadCalculator
         {
             var list = Issues.Where(i => fields.Contains(i.Field)).ToList();
             SetMessage(message, string.Join(Environment.NewLine, list.Select(i => i.Message)));
-            if (frame != null) frame.BorderBrush = list.Count > 0 ? WarnBrush : ControlBrush;
+            // an error in the suite's red, a warning in its amber (owner 2026-11-11)
+            bool error = list.Any(i => i.Severity == InputSeverity.Error);
+            message.Foreground = error ? ErrorInk : WarnInk;
+            if (frame != null) frame.BorderBrush = list.Count == 0 ? ControlBrush : error ? ErrorInk : WarnBrush;
         }
 
         private static void SetMessage(TextBlock tb, string text)
@@ -794,9 +799,9 @@ namespace ASCE7WindLoadCalculator
             var rows = new List<CheckRow>();
             // Building-level limits (e.g. over 60 ft) are also reported by the engine in s.Checks; show them once.
             foreach (var i in Issues.Where(i => s == null || i.Field != WindInputField.Building))
-                rows.Add(new CheckRow(false, i.Message));
+                rows.Add(new CheckRow(i.Severity == InputSeverity.Error ? CheckRow.Kinds.Error : CheckRow.Kinds.Warning, i.Message));
             if (calcError != null)
-                rows.Add(new CheckRow(false, "These inputs cannot be calculated: " + calcError));
+                rows.Add(new CheckRow(CheckRow.Kinds.Error, "These inputs cannot be calculated: " + calcError));
             if (s != null)
             {
                 // The two directions usually agree; say it once to keep the list short.
@@ -810,9 +815,9 @@ namespace ASCE7WindLoadCalculator
                     rows.Add(new CheckRow(check.Ok, text));
                 }
             }
-            rows.Add(new CheckRow(false, "Confirm the wind speed V against the map for your site and risk category."));
+            rows.Add(new CheckRow(CheckRow.Kinds.Note, "Confirm the wind speed V against the map for your site and risk category."));
             // only rigid buildings are calculated (G = 0.85, 26.11.1; torsion at ±0.15B, Fig. 27.3-8)
-            rows.Add(new CheckRow(false, "Rigid building assumed (G = 0.85, 26.11); flexible buildings are not handled at this time."));
+            rows.Add(new CheckRow(CheckRow.Kinds.Note, "Rigid building assumed (G = 0.85, 26.11); flexible buildings are not handled at this time."));
             icChecks.ItemsSource = rows;
 
             // the wind cases the shear walls and the Load Manager take (WindCases.For: every case of the code and commentary)
@@ -969,14 +974,21 @@ namespace ASCE7WindLoadCalculator
         }
 
         /// <summary>One row of the results checklist (bound in XAML).</summary>
+        /// <remarks>
+        /// Marked as in every app of the suite (owner 2026-11-11): ✓ OK in green, ● an error in red (nothing is calculated), ▲ a
+        /// warning in amber (look at it), and • a note, a standing reminder, in grey.
+        /// </remarks>
         public sealed class CheckRow
         {
-            public CheckRow(bool ok, string text) { Ok = ok; Text = text; }
-            public bool Ok { get; }
+            public enum Kinds { Ok, Error, Warning, Note }
+            public CheckRow(bool ok, string text) : this(ok ? Kinds.Ok : Kinds.Warning, text) { }
+            public CheckRow(Kinds kind, string text) { Kind = kind; Text = text; }
+            public Kinds Kind { get; }
+            public bool Ok => Kind == Kinds.Ok;
             public string Text { get; }
-            public string Mark => Ok ? "✓" : "!";
-            public string Lead => Ok ? "OK:" : "Check:";
-            public Brush MarkBrush => Ok ? OkInk : WarnInk;
+            public string Mark => Kind == Kinds.Ok ? "✓" : Kind == Kinds.Error ? "●" : Kind == Kinds.Warning ? "▲" : "•";
+            public string Lead => Kind == Kinds.Ok ? "OK:" : Kind == Kinds.Error ? "Error:" : Kind == Kinds.Warning ? "Check:" : "Note:";
+            public Brush MarkBrush => Kind == Kinds.Ok ? OkInk : Kind == Kinds.Error ? ErrorInk : Kind == Kinds.Warning ? WarnInk : InkSecondary;
         }
 
         private static class AutomationPropertiesHelper

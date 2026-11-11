@@ -14,7 +14,7 @@
         <SolidColorBrush x:Key="Control" Color="#C3C2B7"/>
         <SolidColorBrush x:Key="Surface" Color="#F3F5F8"/>
         <SolidColorBrush x:Key="Selected" Color="#F0EFEC"/>
-        <SolidColorBrush x:Key="WarnInk" Color="#8A3B00"/>
+        <SolidColorBrush x:Key="WarnInk" Color="#8A5A00"/>
         <SolidColorBrush x:Key="WarnBorder" Color="#B45309"/>
         <SolidColorBrush x:Key="OkInk" Color="#006300"/>
 

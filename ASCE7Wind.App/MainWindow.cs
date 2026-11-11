@@ -67,12 +67,11 @@ namespace ASCE7WindLoadCalculator.App
             saveItem = Item(file, "_Save", "Ctrl+S", () => Save(), "Writes the wind inputs into the project file (its Wind section; the building and everything else are left as they are)");
             closeItem = Item(file, "_Close project", null, () => { if (ConfirmLeave()) NewQuickCheck(); }, "Back to a quick check");
             file.Items.Add(new Separator());
-            Item(file, "Open the _log folder", null, () => OpenFolder(Log.Folder));
-            file.Items.Add(new Separator());
             Item(file, "E_xit", "Alt+F4", Close);
             var building = Item(menu, "_Building", null, null);
             editItem = Item(building, "_Edit building…", null, EditBuilding, "Opens the project in the Building Model editor, the one place the size, levels and roof are changed; this window updates when it saves");
             reloadItem = Item(building, "_Reload the building", null, () => ReloadBuilding(true), "Reads the building from the file again (another app has changed it); your wind inputs are kept");
+            menu.Items.Add(HelpMenu.For(this, AppName, "Wind loads: ASCE 7-22 Chapters 26 to 30 (the main wind force resisting system and the components and cladding)."));
 
             var bar = new DockPanel { LastChildFill = true };
             var name = new TextBlock { Text = AppName, FontWeight = FontWeights.SemiBold, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 12, 0) };
