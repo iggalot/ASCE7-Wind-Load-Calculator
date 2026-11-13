@@ -93,6 +93,8 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                 return;
             }
             double x0 = env.Bounds.X0, y0 = env.Bounds.Y0, eave = env.EaveHeight;
+            // h: the eave and the roof's highest point (26.2), not a roof spread over the bounding box
+            data.HighestRoofRise = Math.Max(0, fr.Faces.SelectMany(f => f.Pieces.SelectMany(c => c.P).Select(q => f.Plane.Z(q))).Max());
             var main = fr.Sections.Select((s, i) => (s, i)).Where(p => p.s.EaveRise <= 1e-9).OrderByDescending(p => p.s.Walls.Width * p.s.Walls.Height).Select(p => p.i).DefaultIfEmpty(0).First();
             Vec2 E(Point2 p) => new Vec2(p.X - x0, p.Y - y0);
             var faces = new List<RoofFacePlane>();

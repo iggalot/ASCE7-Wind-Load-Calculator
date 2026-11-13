@@ -78,6 +78,9 @@ namespace ASCE7Wind.Tests
             var d = w.Building;
             Assert.AreEqual(60, d.BuildingLength, 1e-9);
             Assert.AreEqual(50, d.BuildingWidth, 1e-9);
+            // h (26.2): the eave 10 and the highest point, the main ridge 10 + 7.5; not a gable over the 50 ft width (10 + 12.5)
+            Assert.AreEqual(17.5, d.RidgeHeight, 1e-9);
+            Assert.AreEqual(13.75, d.MeanRoofHeight, 1e-9);
             Assert.IsTrue(w.Notes.Any(n => n.Contains("face by face")));
             Assert.IsTrue(w.Notes.Any(n => n.Contains("not regular-shaped") && n.Contains("wing")), "the wing projects past the main roof: flagged (26.2, 27.1.3)");
             var cases = WindCases.Build(Run(d));

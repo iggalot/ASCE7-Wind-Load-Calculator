@@ -209,7 +209,14 @@ namespace ASCE7WindLoadCalculator
         public void ValidateRidgeDirection() => requestedRidge = RidgeDirection;
 
         public double ComputeRidgeHeight() =>
-            BuildingHeight + Math.Tan(RoofPitch * Math.PI / 180.0) * SpanAcrossRidge / 2.0;
+            BuildingHeight + (HighestRoofRise ?? Math.Tan(RoofPitch * Math.PI / 180.0) * SpanAcrossRidge / 2.0);
+
+        /// <summary>
+        /// A roof of sections (<see cref="RoofFaces"/>): its highest point above the eave (ft), from its faces (owner 2026-11-13,
+        /// "follow the codes": ASCE 7 26.2, h is the average of the eave height and the height to the highest point on the roof
+        /// surface). Null: the plain roof's rise over the bounding box.
+        /// </summary>
+        public double? HighestRoofRise { get; set; }
 
         public bool RoofTypeIsSloped() => RoofType == RoofTypes.ROOF_TYPE_HIP || RoofType == RoofTypes.ROOF_TYPE_GABLE;
 
