@@ -160,5 +160,29 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(without.Vy + expected, withWalls.Vy, 1e-9);
             Assert.AreEqual(without.Mt, withWalls.Mt, 1e-9, "the dormer on the plan's center line (x = 20): no torsion of its own");
         }
+        /// <summary>Chapter 28 chosen on a roof of several sections: not applied (C28.2), Chapter 27 face by face, said why.</summary>
+        [TestMethod]
+        public void Chapter28_OnARoofOfSections_FallsBackToChapter27FaceByFace()
+        {
+            var b = Box(40, 30);
+            b.Roof = new Roof
+            {
+                Shape = RoofShape.Gable, Pitch = Pitch, Ridge = RidgeAxis.WestEast,
+                Sections = new List<RoofSection>
+                {
+                    new RoofSection { Name = "main", Walls = new Rect2(0, 0, 40, 30), Shape = RoofShape.Gable, Ridge = RidgeAxis.WestEast },
+                    new RoofSection { Name = "dormer", Walls = new Rect2(15, 4, 25, 12), Shape = RoofShape.Gable, Ridge = RidgeAxis.SouthNorth, EaveRise = 5 },
+                },
+            };
+            var d = WindAdapter.From(b).Building;
+            Assert.IsTrue(EnvelopeLateralLoads.Applicability(d).Any(x => x.Contains("several sections")));
+            var a = WindAnalysis.Run(ASCE7_Versions.ASCE_VER_7_22, new WindParameters_Base
+            {
+                WindSpeed = 115, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C, LateralProcedure = LateralProcedure.Envelope,
+            }, d);
+            Assert.AreEqual(LateralProcedure.Directional, WindCases.ProcedureOf(a));
+            Assert.AreEqual(WindCases.Build(a).Count, WindCases.For(a).Count);
+        }
+
     }
 }
