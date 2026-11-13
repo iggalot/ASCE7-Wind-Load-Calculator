@@ -52,6 +52,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Outward unit normal.</summary>
         public Vec3 Normal { get; internal set; }
 
+        /// <summary>The model's roof face this surface is a piece of (a roof of several sections); null: the plain roof's plane.</summary>
+        public RoofFacePlane RoofFace { get; internal set; }
+
         /// <summary>Wall local (u, v) to 3D.</summary>
         public Vec3 FromWallFrame(Vec2 p) => Origin + U * p.X + V * p.Y;
 
@@ -106,6 +109,14 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Roof height at a plan point (ft): the highest roof plane covering it.</summary>
         public double RoofHeightAt(double x, double y)
         {
+            if (Building.HasRoofFaces)
+            {
+                // the roof of several sections: the face over the point (on none, the eave)
+                double top = EaveHeight;
+                foreach (var r in Roofs)
+                    if (PolygonOps.ContainsPoint(r.PlanRegion, new Vec2(x, y))) top = Math.Max(top, r.Z0 + r.Zx * x + r.Zy * y);
+                return top;
+            }
             double tan = Math.Tan(Building.RoofPitch * Math.PI / 180.0);
             double h = EaveHeight;
             switch (Building.RoofType)
@@ -159,6 +170,26 @@ namespace ASCE7WindLoadCalculator
         {
             double h = EaveHeight;
             double tan = Math.Tan(Building.RoofPitch * Math.PI / 180.0);
+
+            if (Building.HasRoofFaces)
+            {
+                // owner 2026-11-13: the model's faces (hips, wings, dormers), each piece clipped to the bounding box (the eaves
+                // past it are the overhang's, as for the plain roof)
+                var box = Rect(0, 0, L, B);
+                foreach (var f in Building.RoofFaces)
+                    foreach (var piece in f.Pieces)
+                    {
+                        var region = PolygonOps.ClipToConvex(PolygonOps.CounterClockwise(piece), box);
+                        if (region.Count < 3 || Math.Abs(PolygonOps.SignedArea(region)) < 1e-6) continue;
+                        var face = Math.Abs(f.Zx) < 1e-12 && Math.Abs(f.Zy) < 1e-12 ? BuildingFace.RoofFlat
+                            : Math.Abs(f.Zx) >= Math.Abs(f.Zy) ? (f.Zx > 0 ? BuildingFace.RoofWest : BuildingFace.RoofEast)
+                            : (f.Zy > 0 ? BuildingFace.RoofSouth : BuildingFace.RoofNorth);
+                        var s = Roof(face, f.Name, region, f.Z0, f.Zx, f.Zy);
+                        s.RoofFace = f;
+                        list.Add(s);
+                    }
+                return;
+            }
 
             switch (Building.RoofType)
             {

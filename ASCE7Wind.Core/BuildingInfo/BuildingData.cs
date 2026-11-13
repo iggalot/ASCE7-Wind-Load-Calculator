@@ -215,9 +215,32 @@ namespace ASCE7WindLoadCalculator
 
         public bool RoofTypeIsFlat() => RoofType == RoofTypes.ROOF_TYPE_FLAT;
 
+        /// <summary>
+        /// A roof of several sections, face by face (owner 2026-11-13; null or empty: the plain roof of <see cref="RoofType"/>
+        /// on the bounding box). Each face takes the wind by its own section's ridge (<see cref="RoofAreaCalculator_MWFRS"/>).
+        /// </summary>
+        public List<RoofFacePlane> RoofFaces { get; set; }
+        /// <summary>The walls standing on a lower roof (dormers' fronts and cheeks), with <see cref="RoofFaces"/>.</summary>
+        public List<RoofWallPiece> RoofWalls { get; set; }
+        public bool HasRoofFaces => RoofFaces != null && RoofFaces.Count > 0;
+
+        /// <summary>
+        /// Reverses x (x' = L − x) for a roof of several sections, whose wind from the far end is not the near end's mirrored
+        /// (a wing on one side): the wind along +x' is the wind from the other end. A plain roof is symmetric: nothing changes.
+        /// </summary>
+        public void MirrorX()
+        {
+            double L = BuildingLength;
+            RoofFaces = RoofFaces?.Select(f => f.Mirrored(L)).ToList();
+            RoofWalls = RoofWalls?.Select(w => w.Mirrored(L)).ToList();
+        }
+
         /// <summary>Turns the plan by 90 degrees: swaps L and B and flips the ridge direction, so the physical building is unchanged.</summary>
         public void RotateBuilding()
         {
+            // the faces turned with it (the engine's turn swaps x and y: its other wind's frame)
+            RoofFaces = RoofFaces?.Select(f => f.Swapped()).ToList();
+            RoofWalls = RoofWalls?.Select(w => w.Swapped()).ToList();
             var ridge = RidgeDirection;
             double temp = BuildingLength;
             BuildingLength = BuildingWidth;

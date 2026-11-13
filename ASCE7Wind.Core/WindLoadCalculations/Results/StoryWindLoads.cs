@@ -104,6 +104,7 @@ namespace ASCE7WindLoadCalculator
 
         public static StoryWindResult Compute(WindAnalysisResult analysis, bool onlyCases1And3, int stories)
         {
+            onlyCases1And3 &= !WindCases.ExemptionsParked;   // owner 2026-11-13: the exemptions parked, every case designed
             if (!(analysis?.MwfrsAlongLength is WindLoadCalculator_MWFRS mx) || !(analysis.MwfrsAlongWidth is WindLoadCalculator_MWFRS my))
                 throw new ArgumentException("Both MWFRS directions are needed.", nameof(analysis));
 

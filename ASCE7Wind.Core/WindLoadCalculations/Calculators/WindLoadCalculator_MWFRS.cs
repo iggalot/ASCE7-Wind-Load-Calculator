@@ -51,6 +51,16 @@ namespace ASCE7WindLoadCalculator
             double G = Parameters.GustFactor; // gust-effect factor; 0.85 for rigid buildings (26.11.1)
             double qh = CalculateDynamicWindPressure(buildingData.MwfrsFigureHeight);
 
+            if (buildingData.HasRoofFaces)
+            {
+                // a roof of several sections (owner 2026-11-13): each zone at its own face's values; qh the building's
+                AddFacePressures(qh, G);
+                AddWallPressures(qh, G, windPressureWall_Pos_External_MWFRS);
+                AddWallPressures(qh, G, windPressureWall_Neg_External_MWFRS);
+                overhangQhGKd = qh * G * PressureKd;
+                return;
+            }
+
             // Roof planes facing the wind (windward/leeward roof) read Cp against roof slope; the distance bands 1-4 have one
             // value each (their curves are flat).
             double slope = buildingData.RoofPitch;
@@ -94,6 +104,52 @@ namespace ASCE7WindLoadCalculator
                     p.ExternalPressure = qh * gcp * G * PressureKd;
                     p.AreaReductionFactor = f;
                     p.ReductionArea = area;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The roof's pressures face by face (<see cref="RoofAreaCalculator_MWFRS"/>'s zones on a roof of several sections):
+        /// each zone at its face's table (<see cref="Chapter27RoofFigureFactory.ForFace"/>), the windward and leeward roof
+        /// read at the face's slope, the bands at their area; Case A the first value, Case B the second; note b's area
+        /// reduction on each face's own −1.3 zones (its Zone4 or windward roof, their area on the slope).
+        /// </summary>
+        private void AddFacePressures(double qh, double G)
+        {
+            if (RoofAreaCalculator == null) return;
+            double kd = PressureKd, gcpi = GetGCpi();
+            bool Normal(EffectiveWindArea a) => a.Label_Full == "ZoneWWR" || a.Label_Full == "ZoneLWR";
+            double X(EffectiveWindArea a) => Normal(a) ? a.Face.SlopeDeg : a.Area;
+            foreach (var kv in RoofAreaCalculator.effWindAreas)
+            {
+                var a = kv.Value;
+                if (a.Face == null) continue;
+                var fig = Chapter27RoofFigureFactory.ForFace(a.Face, Normal(a));
+                foreach (var (curves, target) in new[] { (fig.RoofCurves_Pos, windPressureRoof_Pos_External), (fig.RoofCurves_Neg, windPressureRoof_Neg_External) })
+                {
+                    if (!curves.TryGetValue(a.Label_Full, out var curve)) continue;
+                    double gcp = curve.Evaluate(X(a));
+                    target.Add(kv.Key, new PressureData
+                    {
+                        AreaID = kv.Key, qh = qh, GCp = gcp, ExternalPressure = qh * gcp * G * kd, GCpi = gcpi, InternalPressure = qh * gcpi * kd,
+                    });
+                }
+            }
+            foreach (var g in RoofAreaCalculator.effWindAreas.Where(z => z.Value.Face != null && (z.Value.Label_Full == "Zone4" || z.Value.Label_Full == "ZoneWWR"))
+                                                             .GroupBy(z => (z.Value.Face, z.Value.Label_Full)))
+            {
+                double cos = Math.Cos(g.Key.Face.SlopeDeg * Math.PI / 180.0);
+                double area = g.Sum(z => z.Value.Area) / cos;
+                double f = Chapter27RoofFigureFactory.AreaReductionFactor(area);
+                if (f >= 1.0) continue;
+                var reduced = Chapter27RoofFigureFactory.ForFace(g.Key.Face, g.Key.Label_Full == "ZoneWWR", f);
+                if (!reduced.RoofCurves_Neg.TryGetValue(g.Key.Label_Full, out var curve)) continue;
+                foreach (var z in g)
+                {
+                    if (!windPressureRoof_Neg_External.TryGetValue(z.Key, out var p)) continue;
+                    double gcp = curve.Evaluate(X(z.Value));
+                    if (Math.Abs(gcp - p.GCp) < 1e-12) continue;
+                    p.GCpUnreduced = p.GCp; p.GCp = gcp; p.ExternalPressure = qh * gcp * G * kd; p.AreaReductionFactor = f; p.ReductionArea = area;
                 }
             }
         }

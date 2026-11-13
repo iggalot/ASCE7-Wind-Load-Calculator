@@ -38,6 +38,17 @@
         }
 
         /// <summary>
+        /// A face of a roof of several sections (owner 2026-11-13): its own Fig. 27.3-1 table, the wind along +x: normal to its
+        /// ridge (the windward and leeward roof, at its slope) or parallel to it (the distance bands), at its h/L (its section's
+        /// h over its size along the wind: <see cref="RoofFacePlane.H"/>, <see cref="RoofFacePlane.Lx"/>).
+        /// </summary>
+        public static Chapter27and30_GCpCurveBase ForFace(RoofFacePlane f, bool normalToRidge, double reductionFactor = 1.0)
+        {
+            double hOverL = f.Lx > 0 ? f.H / f.Lx : 1.0;
+            return normalToRidge ? NormalToRidge(hOverL, f.SlopeDeg, reductionFactor) : ParallelToRidge(hOverL, f.SlopeDeg, reductionFactor);
+        }
+
+        /// <summary>
         /// Hip roofs present both kinds of surface to the wind: planes running along the wind (distance
         /// zones 1-4 of the parallel-to-ridge table) and the hipped planes facing it (windward/leeward roof,
         /// normal-to-ridge table at the roof slope). Fig. 27.3-1 has no separate hip table, so both sets are

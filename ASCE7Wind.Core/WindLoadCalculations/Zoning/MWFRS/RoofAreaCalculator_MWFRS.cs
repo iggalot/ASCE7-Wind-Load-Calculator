@@ -28,6 +28,7 @@ namespace ASCE7WindLoadCalculator
         public override void ComputeEffectiveWindAreas()
         {
             var model = new WindGeometry(buildingData);
+            if (buildingData.HasRoofFaces) { FaceByFace(model); return; }
             double h = buildingData.MwfrsFigureHeight;   // Fig. 27.3-1: eave height for θ ≤ 10°
             double L = buildingData.BuildingLength;
             bool steep = buildingData.RoofPitch >= NormalToRidgeMinSlope;
@@ -56,6 +57,47 @@ namespace ASCE7WindLoadCalculator
                     if (piece.Count >= 3 && Math.Abs(PolygonOps.SignedArea(piece)) > MinZoneArea)
                         effWindAreas.Add(id++, new EffectiveWindArea(bandLabels[b], piece));
                 }
+            }
+        }
+
+        /// <summary>
+        /// A roof of several sections (owner 2026-11-13), the wind along +x, each face by its own section's ridge:
+        /// - its section's ridge across the wind (along y), the face sloping along the wind and θ ≥ 10°: the windward roof
+        ///   (rising downwind) or the leeward roof, normal-to-ridge values at its slope and its section's h/L;
+        /// - every other face (its ridge along the wind, a hip end when the wind is across the ridge, below 10°): the
+        ///   distance bands 0 to h/2, h/2 to h, h to 2h, past 2h of the parallel-to-ridge values, measured from the face's own
+        ///   windward edge (owner 2026-11-13), h its section's. A hip end with the wind along the main ridge is so taken: the
+        ///   ASCE 7 subcommittee's reading (ASCE Standards Exchange, "MWFRS wind pressures on hipped end, wind parallel to
+        ///   ridge"), the parallel-to-ridge values.
+        /// Each zone keeps its face (<see cref="EffectiveWindArea.Face"/>): its values are its face's own.
+        /// </summary>
+        private void FaceByFace(WindGeometry model)
+        {
+            int id = 1;
+            var labels = new[] { "Zone4", "Zone3", "Zone2", "Zone1" };
+            foreach (var group in model.Roofs.Where(r => r.RoofFace != null).GroupBy(r => r.RoofFace))
+            {
+                var f = group.Key;
+                bool normal = !f.RidgeAlongX && f.SlopeDeg >= NormalToRidgeMinSlope && Math.Abs(f.Zx) > 1e-12;
+                if (normal)
+                {
+                    foreach (var plane in group)
+                        effWindAreas.Add(id++, new EffectiveWindArea(f.Zx > 0 ? "ZoneWWR" : "ZoneLWR", plane.PlanRegion) { Face = f });
+                    continue;
+                }
+                double x0 = group.SelectMany(p => p.PlanRegion).Min(v => v.X), x1 = group.SelectMany(p => p.PlanRegion).Max(v => v.X);
+                double h = f.H;
+                var edges = new[] { x0, x0 + 0.5 * h, x0 + h, x0 + 2 * h, double.PositiveInfinity };
+                foreach (var plane in group)
+                    for (int b = 0; b < labels.Length; b++)
+                    {
+                        double a0 = edges[b], a1 = Math.Min(edges[b + 1], x1 + 1);
+                        if (a0 >= x1) break;
+                        var band = new List<Vec2> { new Vec2(a0, -1), new Vec2(a1, -1), new Vec2(a1, buildingData.BuildingWidth + 1), new Vec2(a0, buildingData.BuildingWidth + 1) };
+                        var piece = PolygonOps.ClipToConvex(plane.PlanRegion, band);
+                        if (piece.Count >= 3 && Math.Abs(PolygonOps.SignedArea(piece)) > MinZoneArea)
+                            effWindAreas.Add(id++, new EffectiveWindArea(labels[b], piece) { Face = f });
+                    }
             }
         }
     }

@@ -185,6 +185,10 @@ namespace ASCE7WindLoadCalculator
             public double Walls;             // the walls alone (kips along the wind)
             public double MinimumKips;       // 27.1.5
             public double MinimumWallKips, MinimumRoofKips;  // its two parts: 16 psf on the walls, 8 psf on the roof projected
+            // a roof of several sections (owner 2026-11-13): the torsion of its roof's horizontal force about the plan's center
+            // (kip-ft, counter-clockwise +), and the walls standing on the roof (dormers): their force along the wind and torsion
+            public Dictionary<RoofValue, double> RoofMt = new Dictionary<RoofValue, double>();
+            public double RoofWallKips, RoofWallMt;
         }
 
         /// <param name="onlyCases1And3">The Fig. 27.3-8 exception: Cases 1 and 3 only.</param>
@@ -196,13 +200,25 @@ namespace ASCE7WindLoadCalculator
             var g = new WindGeometry(b);
             double L = b.BuildingLength, B = b.BuildingWidth;
 
+            // a roof of several sections: the winds from E and N on the building seen from there (not W's and S's mirrored)
+            var me = analysis.MwfrsFromEast as WindLoadCalculator_MWFRS ?? mx;
+            var mn = analysis.MwfrsFromNorth as WindLoadCalculator_MWFRS ?? my;
             var winds = new[]
             {
                 MakeWind("W", true, +1, mx, g, p => p),
-                MakeWind("E", true, -1, mx, g, p => new Vec2(L - p.X, p.Y)),
+                MakeWind("E", true, -1, me, g, p => new Vec2(L - p.X, p.Y)),
                 MakeWind("S", false, +1, my, g, p => new Vec2(p.Y, p.X)),
-                MakeWind("N", false, -1, my, g, p => new Vec2(p.Y, B - p.X)),
+                MakeWind("N", false, -1, mn, g, p => new Vec2(p.Y, B - p.X)),
             }.ToDictionary(w => w.From);
+            // owner 2026-11-13: a roof of several sections puts its wind off the plan's center even in Case 1: that torsion is
+            // real (not the Fig. 27.3-8 eccentricity), the roof pieces' horizontal forces about the center (each wind's own,
+            // <see cref="Wind.RoofMt"/>), in every case at the case's factor; Cases 2 and 4 add their 0.15B on top. A plain
+            // roof is symmetric: none (its numbers unchanged).
+            bool faces = b.HasRoofFaces;
+            IEnumerable<ForcePart> Torsion(bool alongLength, double mt)
+            {
+                if (faces && Math.Abs(mt) > 0) yield return new ForcePart { AlongLength = alongLength, Share = PartShare.Top, Mt = mt };
+            }
 
             double gcpi = mx.GetGCpi();
             double qi = mx.CalculateDynamicWindPressure(b.MwfrsFigureHeight) * gcpi * mx.PressureKd;
@@ -248,18 +264,21 @@ namespace ASCE7WindLoadCalculator
                         double V = w.Design[v];
                         RoofValue? rx = w.AlongLength ? v : (RoofValue?)null, ry = w.AlongLength ? (RoofValue?)null : v;
                         double vx = w.AlongLength ? w.Sign * V : 0, vy = w.AlongLength ? 0 : w.Sign * V;
+                        double own = w.RoofMt[v] + w.RoofWallMt;   // the roof's own torsion (a roof of several sections)
                         var c1 = Make(1, $"Case 1, from {w.From}, roof {Roof(v)}, {Gcpi(s)}", w.From, rx, ry,
-                                      w.AlongLength ? 1 : 0, w.AlongLength ? 0 : 1, s, w.Pieces[v], vx, vy, 0);
+                                      w.AlongLength ? 1 : 0, w.AlongLength ? 0 : 1, s, w.Pieces[v], vx, vy, own);
                         c1.RoofNeglected = w.RoofNeglected[v];
                         c1.Parts.AddRange(Along(w, 1, w.Walls, V - w.Walls, 0));
+                        c1.Parts.AddRange(Torsion(w.AlongLength, own));
                         if (onlyCases1And3) continue;
                         double e = w.AlongLength ? ex : ey, f = Case2Factor;
                         foreach (int t in new[] { +1, -1 })
                         {
                             var c2 = Make(2, $"Case 2, from {w.From}, roof {Roof(v)}, {Gcpi(s)}, torsion {T(t)}", w.From, rx, ry,
-                                          w.AlongLength ? f : 0, w.AlongLength ? 0 : f, s, Scaled(w.Pieces[v], f), f * vx, f * vy, t * f * V * e);
+                                          w.AlongLength ? f : 0, w.AlongLength ? 0 : f, s, Scaled(w.Pieces[v], f), f * vx, f * vy, t * f * V * e + f * own);
                             c2.RoofNeglected = w.RoofNeglected[v];
                             c2.Parts.AddRange(Along(w, f, w.Walls, V - w.Walls, t * f * e));
+                            c2.Parts.AddRange(Torsion(w.AlongLength, f * own));
                         }
                     }
 
@@ -302,20 +321,26 @@ namespace ASCE7WindLoadCalculator
                         foreach (int s in signs)
                         {
                             string roofs = $"roof {xs} {Roof(rx)} / {ys} {Roof(ry)}";
-                            var c3 = Make(3, $"Case 3, from {from}, {roofs}, {Gcpi(s)}", from, rx, ry, Case3Factor, Case3Factor, s, p3, v3x, v3y, 0);
+                            // the roof's own torsion of its two winds at the case's factor (the overlaid zones' own resultant is
+                            // not taken: a plain roof keeps none, as before)
+                            double own3 = Case3Factor * (wx.RoofMt[rx] + wy.RoofMt[ry] + wx.RoofWallMt + wy.RoofWallMt);
+                            var c3 = Make(3, $"Case 3, from {from}, {roofs}, {Gcpi(s)}", from, rx, ry, Case3Factor, Case3Factor, s, p3, v3x, v3y, own3);
                             c3.RoofNeglected = neglected;
                             c3.Parts.AddRange(Quarter(wx, Case3Factor, Vx, v3x, 0));
                             c3.Parts.AddRange(Quarter(wy, Case3Factor, Vy, v3y, 0));
+                            c3.Parts.AddRange(Torsion(true, own3));
                             if (onlyCases1And3) continue;
                             // torsion 0.563 (V e) about each axis, as Fig. 27.3-8 Case 4 (75% of Case 2)
                             foreach (int t1 in new[] { +1, -1 })
                                 foreach (int t2 in new[] { +1, -1 })
                                 {
+                                    double own4 = Case4Factor * (wx.RoofMt[rx] + wy.RoofMt[ry] + wx.RoofWallMt + wy.RoofWallMt);
                                     var c4 = Make(4, $"Case 4, from {from}, {roofs}, {Gcpi(s)}, torsion {T(t1)}{T(t2)}", from, rx, ry,
-                                                  Case4Factor, Case4Factor, s, p4, v4x, v4y, Case4Factor * (t1 * Vx * ex + t2 * Vy * ey));
+                                                  Case4Factor, Case4Factor, s, p4, v4x, v4y, Case4Factor * (t1 * Vx * ex + t2 * Vy * ey) + own4);
                                     c4.RoofNeglected = neglected;
                                     c4.Parts.AddRange(Quarter(wx, Case4Factor, Vx, v4x, Case4Factor * t1 * ex));
                                     c4.Parts.AddRange(Quarter(wy, Case4Factor, Vy, v4y, Case4Factor * t2 * ey));
+                                    c4.Parts.AddRange(Torsion(true, own4));
                                 }
                         }
                     }
@@ -363,9 +388,23 @@ namespace ASCE7WindLoadCalculator
         /// (<see cref="BuildEnvelope"/>) when chosen and it applies (otherwise Chapter 27, as <see cref="WindLateralLoads.Compute(WindAnalysisResult, bool)"/>).
         /// The one list of wind for every app: the shear walls and the load path take these cases, by name.
         /// </summary>
-        /// <param name="onlyCases1And3">Fig. 27.3-8 exception (Cases 1 and 3 only); for Chapter 28 no torsional cases (28.3.2 in 7-22, Fig. 28.3-1 note 5 in 7-16).</param>
-        public static List<WindCase> For(WindAnalysisResult analysis, bool onlyCases1And3 = false) =>
-            ProcedureOf(analysis) == LateralProcedure.Envelope ? BuildEnvelope(analysis, onlyCases1And3) : Build(analysis, onlyCases1And3);
+        /// <param name="onlyCases1And3">
+        /// Fig. 27.3-8 exception (Cases 1 and 3 only); for Chapter 28 no torsional cases (28.3.2 in 7-22, Fig. 28.3-1 note 5 in
+        /// 7-16). PARKED (owner 2026-11-13: "park the exemptions, design for everything; if we have a problem we can revert"):
+        /// taken but not applied, every case is designed. To revert, pass it on to <see cref="Build"/> and
+        /// <see cref="BuildEnvelope"/> again (<see cref="ExemptionsParked"/>).
+        /// </param>
+        public static List<WindCase> For(WindAnalysisResult analysis, bool onlyCases1And3 = false)
+        {
+            bool exempt = !ExemptionsParked && onlyCases1And3;
+            return ProcedureOf(analysis) == LateralProcedure.Envelope ? BuildEnvelope(analysis, exempt) : Build(analysis, exempt);
+        }
+
+        /// <summary>
+        /// The torsional exemptions (Fig. 27.3-8's Appendix D exception, Chapter 28's 28.3.2 / note 5) are parked (owner
+        /// 2026-11-13): the project's wind designs every case whatever its setup says. False reverts to the setup's choice.
+        /// </summary>
+        public const bool ExemptionsParked = true;
 
         /// <summary>The procedure <see cref="For"/> uses: Chapter 28 only when chosen and it applies.</summary>
         public static LateralProcedure ProcedureOf(WindAnalysisResult analysis)
@@ -411,6 +450,8 @@ namespace ASCE7WindLoadCalculator
             w.MinimumKips = force.MinimumKips;
             w.MinimumWallKips = WindLateralLoads.MinimumWallPressure * force.ProjectedWallArea / 1000.0;
             w.MinimumRoofKips = force.MinimumKips - w.MinimumWallKips;
+            RoofWalls(w, calc, g, toPlan);
+            w.WallsAndParapets += w.RoofWallKips;
             foreach (var v in new[] { RoofValue.CaseA, RoofValue.CaseB })
             {
                 var set = v == RoofValue.CaseA ? calc.windPressureRoof_Neg_External : calc.windPressureRoof_Pos_External;
@@ -422,9 +463,57 @@ namespace ASCE7WindLoadCalculator
                 // roof force against the wind is left out of the shear (the roof zones stay in the case, for uplift)
                 double roof = WindLateralLoads.RoofHorizontalKips(calc, model, set);
                 w.RoofNeglected[v] = roof < 0;
-                w.Design[v] = force.WallsKips + Math.Max(0, roof) + force.ParapetKips;
+                w.Design[v] = force.WallsKips + Math.Max(0, roof) + force.ParapetKips + w.RoofWallKips;
+                // a roof of several sections: its own torsion about the plan's center (none when its force is left out)
+                w.RoofMt[v] = calc.buildingData.HasRoofFaces && roof >= 0 ? MomentAbout(pieces, g.L / 2, g.B / 2) : 0;
             }
             return w;
+        }
+
+        /// <summary>
+        /// The torsion of the roof pieces' horizontal forces about a point of the plan (kip-ft, counter-clockwise +, as the
+        /// shear walls take it): Σ (c − o) × F, F = −p A n (external pressures; the internal pressure cancels over the roof).
+        /// </summary>
+        private static double MomentAbout(IEnumerable<Piece> pieces, double ox, double oy)
+        {
+            double m = 0;
+            foreach (var p in pieces.Where(q => q.Surface.Kind == SurfaceKind.Roof))
+            {
+                var z = ToZone(p, 0);
+                var f = z.ForceKips;
+                m += (z.Centroid.X - ox) * f.Y - (z.Centroid.Y - oy) * f.X;
+            }
+            return m;
+        }
+
+        /// <summary>
+        /// The walls standing on the roof (owner 2026-11-13: a dormer's front takes the windward wall's pressure, its cheeks
+        /// the side walls', its back the leeward wall's), the wind along +x of the calculation's frame: windward
+        /// q(z at its centroid) G Cp Kd with Cp 0.8, side −0.7 and leeward the building's Fig. 27.3-1 value at qh; the force
+        /// F = −p A n, along the wind into <see cref="Wind.RoofWallKips"/> (on the top story, as the roof's) and its torsion
+        /// about the plan's center into <see cref="Wind.RoofWallMt"/>. External pressures only (the internal cancels).
+        /// </summary>
+        private static void RoofWalls(Wind w, WindLoadCalculator_MWFRS calc, WindGeometry g, Func<Vec2, Vec2> toPlan)
+        {
+            var walls = calc.buildingData.RoofWalls;
+            if (walls == null || walls.Count == 0) return;
+            double G = calc.Parameters.GustFactor, kd = calc.PressureKd, qh = calc.CalculateDynamicWindPressure(calc.buildingData.MwfrsFigureHeight);
+            double along = 0, mt = 0;
+            foreach (var r in walls)
+            {
+                double cp, q = qh;
+                if (r.Normal.X < -0.5) { cp = calc.Cp_WW; q = calc.CalculateDynamicWindPressure(Math.Max(15, r.CentroidZ)); }
+                else if (r.Normal.X > 0.5) cp = calc.Cp_LW;
+                else cp = calc.Cp_SW;
+                double p = q * G * cp * kd;
+                var f = new Vec2(-p * r.Area * r.Normal.X / 1000.0, -p * r.Area * r.Normal.Y / 1000.0);
+                along += f.X;
+                var c = toPlan(r.Centroid);
+                var fp = toPlan(r.Centroid + f) - c;
+                mt += (c.X - g.L / 2) * fp.Y - (c.Y - g.B / 2) * fp.X;
+            }
+            w.RoofWallKips = along;
+            w.RoofWallMt = mt;
         }
 
         private static List<Piece> RoofPieces(WindLoadCalculator_Base calc, WindGeometry g, Dictionary<int, PressureData> set,

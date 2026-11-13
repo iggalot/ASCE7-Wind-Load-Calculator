@@ -142,7 +142,8 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(lateral.AlongWidth.DesignKips, full.FromSouth.DesignKips, 1e-12);
             // Fig. 27.3-8, wind from both sides of each axis: 4 + 8 + 4 + 16, and the 27.1.5 minimum as 4 separate cases (C27.1.5)
             Assert.AreEqual(32 + 4, full.Lateral.LoadCases.Count);
-            Assert.AreEqual(8 + 4, reduced.Lateral.LoadCases.Count);  // Cases 1 and 3: 4 + 4, and the minimum
+            // the exception (Cases 1 and 3 only) is parked (owner 2026-11-13): every case all the same
+            Assert.AreEqual(32 + 4, reduced.Lateral.LoadCases.Count);
         }
 
         [TestMethod]

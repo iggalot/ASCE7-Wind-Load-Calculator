@@ -164,9 +164,15 @@ namespace ASCE7Wind.Tests
         [TestMethod]
         public void LoadCases_Exception_OnlyCases1And3()
         {
-            var r = WindLateralLoads.Compute(Analysis(Bldg.Make(60, 40, 15)), onlyCases1And3: true);
-            CollectionAssert.AreEquivalent(new[] { 1, 3, WindLateralLoads.MinimumCaseNumber }, r.LoadCases.Select(c => c.CaseNumber).Distinct().ToArray());
-            Assert.IsTrue(r.LoadCases.All(c => c.Mt == 0));
+            // owner 2026-11-13: the exemption parked: asked for, every case is still designed
+            var a = Analysis(Bldg.Make(60, 40, 15));
+            var r = WindLateralLoads.Compute(a, onlyCases1And3: true);
+            CollectionAssert.AreEquivalent(new[] { 1, 2, 3, 4, WindLateralLoads.MinimumCaseNumber }, r.LoadCases.Select(c => c.CaseNumber).Distinct().ToArray());
+            Assert.AreEqual(WindCases.Build(a).Count, WindCases.For(a, true).Count);
+            // the exception itself, called directly (to revert): Cases 1 and 3 and the minimum, no torsion
+            var only = WindCases.Build(a, true);
+            CollectionAssert.AreEquivalent(new[] { 1, 3, WindLateralLoads.MinimumCaseNumber }, only.Select(c => c.FigureCase).Distinct().ToArray());
+            Assert.IsTrue(only.All(c => c.Mt == 0));
         }
 
         [TestMethod]

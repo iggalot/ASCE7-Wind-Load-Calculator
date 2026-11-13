@@ -87,6 +87,23 @@ namespace ASCE7WindLoadCalculator
             else { tris.Add(a); tris.Add(c); tris.Add(b); }
         }
 
+        /// <summary>A point inside a convex polygon or on its edge (either winding).</summary>
+        public static bool ContainsPoint(IReadOnlyList<Vec2> convex, Vec2 q, double tol = 1e-9)
+        {
+            if (convex == null || convex.Count < 3) return false;
+            int sign = 0;
+            for (int i = 0; i < convex.Count; i++)
+            {
+                Vec2 a = convex[i], b = convex[(i + 1) % convex.Count];
+                double c = (b.X - a.X) * (q.Y - a.Y) - (b.Y - a.Y) * (q.X - a.X);
+                if (Math.Abs(c) <= tol) continue;
+                int s = c > 0 ? 1 : -1;
+                if (sign == 0) sign = s;
+                else if (s != sign) return false;
+            }
+            return true;
+        }
+
         /// <summary>Returns the CCW version of a polygon.</summary>
         public static List<Vec2> CounterClockwise(IReadOnlyList<Vec2> p)
         {

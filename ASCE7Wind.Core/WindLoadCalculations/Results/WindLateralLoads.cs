@@ -101,6 +101,7 @@ namespace ASCE7WindLoadCalculator
         /// <see cref="WindLateralResult.ProcedureNote"/> saying why, for a building it does not cover.</param>
         public static WindLateralResult Compute(WindAnalysisResult analysis, bool onlyCases1And3, LateralProcedure procedure)
         {
+            onlyCases1And3 &= !WindCases.ExemptionsParked;   // owner 2026-11-13: the exemptions parked, every case designed
             if (procedure == LateralProcedure.Envelope && analysis?.MwfrsAlongLength != null)
             {
                 var why = EnvelopeLateralLoads.Applicability(analysis.MwfrsAlongLength.buildingData);

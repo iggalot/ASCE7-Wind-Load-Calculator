@@ -17,6 +17,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>Long zone name that always starts with "Zone", e.g. "Zone2e".</summary>
         public string Label_Full { get; set; }
 
+        /// <summary>The roof face it lies on, for a roof of several sections (its own Fig. 27.3-1 values); null otherwise.</summary>
+        public RoofFacePlane Face { get; set; }
+
         /// <summary>Zone identifier without the "Zone" prefix, e.g. "2e".</summary>
         public string Label_Short => Label_Full.Substring(4);
 

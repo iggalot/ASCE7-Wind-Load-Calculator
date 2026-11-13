@@ -22,6 +22,14 @@ namespace ASCE7WindLoadCalculator
 
         /// <summary>MWFRS with the wind along the BuildingWidth (analysed on the building turned 90 degrees).</summary>
         public WindLoadCalculator_Base MwfrsAlongWidth { get; internal set; }
+
+        /// <summary>
+        /// A roof of several sections only (owner 2026-11-13; null otherwise): the wind from the east (toward −x) and from the
+        /// north (toward −y), each on the building seen from that side (<see cref="BuildingData.MirrorX"/>): a wing on one side
+        /// meets each wind its own way, so the far side is not the near side mirrored.
+        /// </summary>
+        public WindLoadCalculator_Base MwfrsFromEast { get; internal set; }
+        public WindLoadCalculator_Base MwfrsFromNorth { get; internal set; }
     }
 
     /// <summary>Single entry point that runs every wind calculation for a building.</summary>
@@ -40,12 +48,20 @@ namespace ASCE7WindLoadCalculator
             var rotated = building.Clone();
             rotated.RotateBuilding();
 
-            return new WindAnalysisResult
+            var result = new WindAnalysisResult
             {
                 Cladding = Calculate(version, WindLoadCalculationTypes.COMPONENT_AND_CLADDING, parameters, building),
                 MwfrsAlongLength = Calculate(version, WindLoadCalculationTypes.MWFRS, parameters, building),
                 MwfrsAlongWidth = Calculate(version, WindLoadCalculationTypes.MWFRS, parameters, rotated),
             };
+            if (building.HasRoofFaces)
+            {
+                var east = building.Clone(); east.MirrorX();
+                var north = rotated.Clone(); north.MirrorX();
+                result.MwfrsFromEast = Calculate(version, WindLoadCalculationTypes.MWFRS, parameters, east);
+                result.MwfrsFromNorth = Calculate(version, WindLoadCalculationTypes.MWFRS, parameters, north);
+            }
+            return result;
         }
 
         private static WindLoadCalculator_Base Calculate(ASCE7_Versions version, WindLoadCalculationTypes type, WindParameters_Base parameters, BuildingData building)

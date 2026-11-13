@@ -836,9 +836,12 @@ namespace ASCE7WindLoadCalculator
             // one choice, the exception of the procedure in use: Ch. 27 (27.3.5, Appendix D) drops Fig. 27.3-8 Cases 2 and 4;
             // Ch. 28 (28.3.2 in 7-22, Fig. 28.3-1 note 5 in 7-16) drops its torsional Load Cases 3 and 4
             tbOnlyCasesTitle.Text = envelope ? "Skip the torsional Load Cases 3 and 4" : "Use Cases 1 and 3 only (skip 2 and 4)";
-            tbOnlyCasesHint.Text = envelope
+            string exception = envelope
                 ? $"{Analysis?.MwfrsAlongLength?.Edition?.EnvelopeTorsionExemption ?? "28.3.2 exception"}: allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms."
                 : "27.3.5 exception (Appendix D): allowed for 1 story with h ≤ 30 ft, or up to 2 stories light-frame or with flexible diaphragms.";
+            // owner 2026-11-13: the exceptions parked, every case designed whether checked or not (the rule in the tooltip)
+            tbOnlyCasesHint.Text = WindCases.ExemptionsParked ? "Parked (owner 2026-11-13): every case is designed." : exception;
+            tbOnlyCasesHint.ToolTip = exception;
             // Ch. 27: Fig. 27.3-8 Cases 1 to 4; Ch. 28: Load Cases 1 and 2 (basic, Fig. 28.3-1) and 3 and 4 (torsional, Fig.
             // 28.3-2); each with its separate minimum (27.1.5 / 28.3.6). The skipped cases fade.
             tbCase1a.Text = envelope ? "LC 1, 2" : "Case 1";

@@ -256,7 +256,11 @@ namespace ASCE7Wind.Tests
             StringAssert.Contains(full.LoadCases.First(c => c.CaseNumber == WindLateralLoads.MinimumCaseNumber).Name, "28.3.6");
             Assert.IsFalse(full.LoadCases.Any(c => c.CaseNumber == 3), "no Load Case 3 in the shear-wall list: the minimum is case 0");
 
-            var exempt = WindLateralLoads.Compute(a, true, LateralProcedure.Envelope);
+            // owner 2026-11-13: the exemption parked, the project's wind has every case whatever it asks
+            Assert.IsTrue(WindCases.ExemptionsParked);
+            Assert.AreEqual(full.LoadCases.Count, WindLateralLoads.Compute(a, true, LateralProcedure.Envelope).LoadCases.Count);
+            // the exemption itself still works where it is called directly (to revert)
+            var exempt = EnvelopeLateralLoads.Compute(a, true);
             Assert.AreEqual(2 * (2 * 4 + 2), exempt.LoadCases.Count);
             Assert.IsFalse(exempt.LoadCases.Any(c => c.CaseNumber == 2));
         }
