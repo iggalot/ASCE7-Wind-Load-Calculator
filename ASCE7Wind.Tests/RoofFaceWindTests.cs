@@ -79,6 +79,7 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(60, d.BuildingLength, 1e-9);
             Assert.AreEqual(50, d.BuildingWidth, 1e-9);
             Assert.IsTrue(w.Notes.Any(n => n.Contains("face by face")));
+            Assert.IsTrue(w.Notes.Any(n => n.Contains("not regular-shaped") && n.Contains("wing")), "the wing projects past the main roof: flagged (26.2, 27.1.3)");
             var cases = WindCases.Build(Run(d));
             WindCase C1(string from) => cases.First(c => c.FigureCase == 1 && c.From == from);
             IEnumerable<WindCaseZone> Roof(WindCase c, string section) => c.Zones.Where(z => z.Kind == SurfaceKind.Roof && z.Surface.RoofFace.Section == section);
@@ -175,7 +176,8 @@ namespace ASCE7Wind.Tests
                 },
             };
             var d = WindAdapter.From(b).Building;
-            Assert.IsTrue(EnvelopeLateralLoads.Applicability(d).Any(x => x.Contains("several sections")));
+            Assert.IsTrue(EnvelopeLateralLoads.Applicability(d).Any(x => x.Contains("several sections") && x.Contains("28.1.3")));
+            Assert.IsFalse(WindAdapter.From(b).Notes.Any(n => n.Contains("not regular-shaped")), "a dormer on the roof is no projection of the plan");
             var a = WindAnalysis.Run(ASCE7_Versions.ASCE_VER_7_22, new WindParameters_Base
             {
                 WindSpeed = 115, ExposureCategory = WindExposureCategories.WIND_EXP_CAT_C, LateralProcedure = LateralProcedure.Envelope,

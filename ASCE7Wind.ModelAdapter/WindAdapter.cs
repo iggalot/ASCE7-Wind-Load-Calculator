@@ -116,10 +116,18 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                 });
             }
             data.RoofFaces = faces;
+            // owner 2026-11-13, "follow the codes": Chapter 27 is for regular-shaped buildings too (27.1.2 item 1); a plan with
+            // significant projections may be an unusual shape (26.2; C26.1.2 item 2), which 27.1.3 sends to recognized
+            // literature or the Wind Tunnel Procedure (Chapter 31). Whether a wing is significant is the engineer's call: said.
+            var wings = fr.Sections.Where((s, i) => i != main && s.EaveRise <= 1e-9 && !Inside(s.Walls, fr.Sections[main].Walls)).Select(s => s.Name ?? "a wing").ToList();
+            if (wings.Count > 0)
+                notes?.Add($"The plan projects past the main roof ({string.Join(", ", wings)}): if the projection is significant the building is not regular-shaped (ASCE 7 26.2, C26.1.2 item 2), and 27.1.3 calls for recognized literature or the Wind Tunnel Procedure (Chapter 31). The engineer decides; Chapter 27 is applied face by face.");
             data.RoofWalls = RoofWalls(fr, roof.Overhang, x0, y0, eave);
             notes?.Add($"The roof's {fr.Sections.Count} sections taken face by face ({faces.Count} faces, each by its own ridge; owner 2026-11-13)" +
                        (data.RoofWalls.Count > 0 ? $", with {data.RoofWalls.Count} wall{(data.RoofWalls.Count == 1 ? "" : "s")} standing on the roof (dormers' fronts and cheeks)" : "") + ".");
         }
+
+        private static bool Inside(Rect2 a, Rect2 b) => a.X0 >= b.X0 - 1e-6 && a.X1 <= b.X1 + 1e-6 && a.Y0 >= b.Y0 - 1e-6 && a.Y1 <= b.Y1 + 1e-6;
 
         /// <summary>
         /// The walls standing on a lower roof: along each section's wall lines, where another section's roof is under it, the

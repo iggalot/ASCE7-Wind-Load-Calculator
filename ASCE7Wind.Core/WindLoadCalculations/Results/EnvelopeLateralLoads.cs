@@ -272,12 +272,13 @@ namespace ASCE7WindLoadCalculator
             if (b.MeanRoofHeight > 60) why.Add($"mean roof height {b.MeanRoofHeight:0.#} ft is over 60 ft (low-rise limit, 26.2)");
             if (b.MeanRoofHeight > least) why.Add($"mean roof height {b.MeanRoofHeight:0.#} ft exceeds the least plan dimension {least:0.#} ft (low-rise, 26.2)");
             if (b.EnclosureType == BuildingEnclosures.BLDG_OPEN) why.Add("open buildings are not covered by Chapter 28 Part 1");
-            // owner 2026-11-13 asked for Chapter 28 on these too; its figures are one gable or hip, laid out about the plan's
-            // center and turned corner to corner by symmetry, and C28.2 sends L, T and U plans and roofs of several ridges to
-            // engineering judgment, the Inscribed or Separate Structures Methods (ICC 600, AISI S230, AWC WFCM: not in our
-            // codes folder): until a rule is chosen, Chapter 27 face by face
+            // owner 2026-11-13, "follow the codes": 28.1.2 item 1 limits Chapter 28 to a regular-shaped building (26.2: "no
+            // unusual geometrical irregularity in spatial form"; C26.1.2 item 2: irregular plans from significant projections),
+            // and its figures are one flat, gable or hip roof (28.3.2; Fig. C28.3-2 for hips). 28.1.3: a building that does not
+            // meet 28.1.2 "shall be designed using appropriate procedures in Chapter 27, recognized literature ..., or the Wind
+            // Tunnel Procedure": a roof of several sections takes Chapter 27, face by face
             if (b.HasRoofFaces)
-                why.Add("the roof has several sections (wings, cross gables, dormers): Chapter 28's figures cover one gable or hip roof (C28.2: engineering judgment, or the Inscribed or Separate Structures Methods); Chapter 27 face by face is used");
+                why.Add("the roof has several sections (wings, cross gables, dormers): not a regular-shaped building for Chapter 28 (28.1.2 item 1, its figures one flat, gable or hip roof), so by 28.1.3 Chapter 27 is used, face by face");
             return why;
         }
 
