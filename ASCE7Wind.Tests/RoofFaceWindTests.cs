@@ -122,6 +122,12 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(650, Wall(0, 50, 60, 50), 1e-6);
             Assert.AreEqual(612.5, west.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneWW")).Sum(z => z.Area), 1e-6, "the windward wall's bands");
             Assert.AreEqual(650, south.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneLW")).Sum(z => z.Area), 1e-6, "from the south, the leeward north wall");
+            // the Results page's force table is the wind cases themselves, the roof's torsion in it
+            var table = WindLateralLoads.Compute(Run(d)).LoadCases;
+            Assert.AreEqual(cases.Count, table.Count);
+            var t1 = table.Single(c => c.Name == west.Name);
+            Assert.AreEqual(west.Vx, t1.Vx, 1e-9);
+            Assert.AreEqual(west.Mt, t1.Mt, 1e-9);
             // Case 2 adds 0.75 of it to the Fig. 27.3-8 eccentricity
             var c2 = cases.First(c => c.FigureCase == 2 && c.From == "W" && c.RoofAlongLength == west.RoofAlongLength && c.InternalSign == west.InternalSign && c.Name.EndsWith("torsion +"));
             Assert.AreEqual(0.75 * west.Vx * 0.15 * 50 + 0.75 * west.Mt, c2.Mt, 1e-6);

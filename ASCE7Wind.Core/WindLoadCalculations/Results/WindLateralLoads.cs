@@ -135,6 +135,16 @@ namespace ASCE7WindLoadCalculator
                 OnlyCases1And3 = onlyCases1And3,
             };
 
+            if (analysis.MwfrsAlongLength.buildingData.HasRoofFaces)
+            {
+                // a roof of several sections (owner 2026-11-13): each wind is its own (E is not W reversed) and the roof's own
+                // torsion is real even in Case 1, so the table is the wind cases themselves (what SWC, the Load Manager and the
+                // hub design for), the minimum cases among them
+                foreach (var c in WindCases.Build(analysis, onlyCases1And3))
+                    r.LoadCases.Add(new WindLoadCase { CaseNumber = c.FigureCase, Name = c.Name, Vx = c.Vx + 0.0, Vy = c.Vy + 0.0, Mt = c.Mt + 0.0 });
+                return r;
+            }
+
             // Fig. 27.3-8 Cases 1-4 on the calculated forces; the 27.1.5 minimum is a separate load case in addition to them
             // (C27.1.5, ASCE 7-16 and 7-22), along each axis from either side, without torsion.
             AddDirectionalCases(r.LoadCases, r.AlongLength.TotalKips, r.AlongWidth.TotalKips,
