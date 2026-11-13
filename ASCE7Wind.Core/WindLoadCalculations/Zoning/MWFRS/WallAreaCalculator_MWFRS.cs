@@ -27,7 +27,18 @@ namespace ASCE7WindLoadCalculator
             Vec2 G = new Vec2(length, buildingData.BuildingHeight);
             Vec2 H = new Vec2(0, buildingData.BuildingHeight);
             Vec2 ridge;
-            
+
+            if (buildingData.HasRoofFaces)
+            {
+                // a roof of sections (owner 2026-11-13): each wall's top is the faces' own profile over its edge. The wind is
+                // along +x: the windward wall at x = 0, the leeward at x = L, the side walls taken at y = 0 (their pressures
+                // are across the wind; the north side's own profile drawn the same)
+                effWindAreas.Add(10, new EffectiveWindArea("ZoneWW", RoofFaceProfile.WallOutline(buildingData, 0, 0, 0, width), null));
+                effWindAreas.Add(20, new EffectiveWindArea("ZoneLW", RoofFaceProfile.WallOutline(buildingData, length, 0, length, width), null));
+                effWindAreas.Add(30, new EffectiveWindArea("ZoneSW", RoofFaceProfile.WallOutline(buildingData, 0, 0, length, 0), null));
+                return;
+            }
+
             // check if we have a gable end
             if(buildingData.RoofType == RoofTypes.ROOF_TYPE_GABLE)
             {

@@ -145,11 +145,29 @@ namespace ASCE7WindLoadCalculator
         private void BuildWalls(List<BuildingSurface> list)
         {
             double h = EaveHeight, ridge = RidgeHeight;
+            if (Building.HasRoofFaces)
+            {
+                // a roof of sections: each wall's top follows the faces over its edge (RoofFaceProfile)
+                list.Add(Profiled(BuildingFace.SouthWall, "South wall", new Vec3(0, 0, 0), Vec3.UnitX, -Vec3.UnitY, RoofFaceProfile.WallOutline(Building, 0, 0, L, 0)));
+                list.Add(Profiled(BuildingFace.NorthWall, "North wall", new Vec3(0, B, 0), Vec3.UnitX, Vec3.UnitY, RoofFaceProfile.WallOutline(Building, 0, B, L, B)));
+                list.Add(Profiled(BuildingFace.WestWall, "West wall", new Vec3(0, 0, 0), Vec3.UnitY, -Vec3.UnitX, RoofFaceProfile.WallOutline(Building, 0, 0, 0, B)));
+                list.Add(Profiled(BuildingFace.EastWall, "East wall", new Vec3(L, 0, 0), Vec3.UnitY, Vec3.UnitX, RoofFaceProfile.WallOutline(Building, L, 0, L, B)));
+                return;
+            }
 
             list.Add(Wall(BuildingFace.SouthWall, "South wall", new Vec3(0, 0, 0), Vec3.UnitX, L, -Vec3.UnitY, GableEndsOnLengthWalls, h, ridge));
             list.Add(Wall(BuildingFace.NorthWall, "North wall", new Vec3(0, B, 0), Vec3.UnitX, L, Vec3.UnitY, GableEndsOnLengthWalls, h, ridge));
             list.Add(Wall(BuildingFace.WestWall, "West wall", new Vec3(0, 0, 0), Vec3.UnitY, B, -Vec3.UnitX, GableEndsOnWidthWalls, h, ridge));
             list.Add(Wall(BuildingFace.EastWall, "East wall", new Vec3(L, 0, 0), Vec3.UnitY, B, Vec3.UnitX, GableEndsOnWidthWalls, h, ridge));
+        }
+
+        private static BuildingSurface Profiled(BuildingFace face, string name, Vec3 origin, Vec3 u, Vec3 normal, List<Vec2> local)
+        {
+            var s = new BuildingSurface { Face = face, Kind = SurfaceKind.Wall, Name = name, Origin = origin, U = u, V = Vec3.UnitZ, Normal = normal };
+            var pts = local.Select(s.FromWallFrame).ToList();
+            if (u.Cross(Vec3.UnitZ).Dot(normal) < 0) pts.Reverse();
+            s.Outline = pts;
+            return s;
         }
 
         private static BuildingSurface Wall(BuildingFace face, string name, Vec3 origin, Vec3 u, double length, Vec3 normal,

@@ -112,6 +112,16 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(0, Roof(west, "main").Where(z => z.Label.StartsWith("Zone4")).SelectMany(z => z.Outline).Min(p => p.X), 1e-6);
             Assert.AreEqual(west.Vx, -east.Vx, 1e-6);
             Assert.AreEqual(west.Mt, -east.Mt, 1e-6);
+            // the box's walls follow the faces over their edges, not one gable over the 50 ft width (that was 500 + ½ 50 ×
+            // 12.5 = 812.5): west and east the main gable (y 0..30, ridge 10 + 7.5) and the eave past it, 500 + ½ 30 × 7.5 =
+            // 612.5; south the main eave, 600; north the wing's gable (x 40..60, 10 + 5), 600 + ½ 20 × 5 = 650
+            double Wall(double x0, double y0, double x1, double y1) => Math.Abs(PolygonOps.SignedArea(RoofFaceProfile.WallOutline(d, x0, y0, x1, y1)));
+            Assert.AreEqual(612.5, Wall(0, 0, 0, 50), 1e-6);
+            Assert.AreEqual(612.5, Wall(60, 0, 60, 50), 1e-6);
+            Assert.AreEqual(600, Wall(0, 0, 60, 0), 1e-6);
+            Assert.AreEqual(650, Wall(0, 50, 60, 50), 1e-6);
+            Assert.AreEqual(612.5, west.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneWW")).Sum(z => z.Area), 1e-6, "the windward wall's bands");
+            Assert.AreEqual(650, south.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneLW")).Sum(z => z.Area), 1e-6, "from the south, the leeward north wall");
             // Case 2 adds 0.75 of it to the Fig. 27.3-8 eccentricity
             var c2 = cases.First(c => c.FigureCase == 2 && c.From == "W" && c.RoofAlongLength == west.RoofAlongLength && c.InternalSign == west.InternalSign && c.Name.EndsWith("torsion +"));
             Assert.AreEqual(0.75 * west.Vx * 0.15 * 50 + 0.75 * west.Mt, c2.Mt, 1e-6);

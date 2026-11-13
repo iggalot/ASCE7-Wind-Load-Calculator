@@ -48,6 +48,71 @@ namespace ASCE7WindLoadCalculator
     }
 
     /// <summary>
+    /// The bounding box's walls under a roof of sections: each wall's top follows the faces over its edge (a wing's gable
+    /// where the wing reaches the box, the main roof's eave or gable elsewhere), not one gable over the whole box. A wall
+    /// standing on a lower roof is a <see cref="RoofWallPiece"/>, never on the box's edge, so nothing is counted twice.
+    /// </summary>
+    public static class RoofFaceProfile
+    {
+        /// <summary>Sampling along a wall (ft); the profile is straight between the faces' corners, so it is exact at them.</summary>
+        public const double Step = 0.25;
+
+        /// <summary>The roof's top over a plan point (ft above grade): the highest face over it, else the eave.</summary>
+        public static double TopAt(BuildingData b, double x, double y) => TopAt(b, x, y, x, y);
+
+        /// <summary>The faces over (<paramref name="qx"/>, <paramref name="qy"/>), their height at (x, y): a wall's edge.</summary>
+        private static double TopAt(BuildingData b, double x, double y, double qx, double qy)
+        {
+            double top = b.BuildingHeight;
+            if (b.RoofFaces == null) return top;
+            var q = new Vec2(qx, qy);
+            foreach (var f in b.RoofFaces)
+                foreach (var p in f.Pieces)
+                    if (PolygonOps.ContainsPoint(PolygonOps.CounterClockwise(p), q, 1e-9)) { top = System.Math.Max(top, f.Z0 + f.Zx * x + f.Zy * y); break; }
+            return top;
+        }
+
+        /// <summary>
+        /// The outline of a box wall in its (along, up) frame: along runs from (x0, y0) to (x1, y1), the plan's edge; the top
+        /// sampled just inside the box (the faces end on its edge), with the faces' corners and points where it bends kept.
+        /// </summary>
+        public static List<Vec2> WallOutline(BuildingData b, double x0, double y0, double x1, double y1)
+        {
+            double len = System.Math.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+            double ux = (x1 - x0) / len, uy = (y1 - y0) / len;
+            double cx = b.BuildingLength / 2, cy = b.BuildingWidth / 2;
+            // just inside, across the wall only (along it the top must be read where it is)
+            const double inset = 1e-7;
+            double nx = -uy, ny = ux;
+            if (nx * (cx - x0) + ny * (cy - y0) < 0) { nx = -nx; ny = -ny; }
+            double At(double s) => TopAt(b, x0 + ux * s, y0 + uy * s, x0 + ux * s + nx * inset, y0 + uy * s + ny * inset);
+            var ss = new SortedSet<double> { 0, len };
+            int m = System.Math.Max(1, (int)System.Math.Ceiling(len / Step));
+            for (int i = 1; i < m; i++) ss.Add(len * i / m);
+            foreach (var f in b.RoofFaces ?? new List<RoofFacePlane>())
+                foreach (var p in f.Pieces)
+                    foreach (var v in p)
+                    {
+                        double s = (v.X - x0) * ux + (v.Y - y0) * uy;
+                        if (s > 1e-6 && s < len - 1e-6) ss.Add(s);
+                    }
+            var top = ss.Select(s => new Vec2(s, At(s))).ToList();
+            // drop the samples on a straight run
+            var kept = new List<Vec2> { top[0] };
+            for (int i = 1; i + 1 < top.Count; i++)
+            {
+                Vec2 a = kept[kept.Count - 1], c = top[i + 1], q = top[i];
+                double cross = (c.X - a.X) * (q.Y - a.Y) - (c.Y - a.Y) * (q.X - a.X);
+                if (System.Math.Abs(cross) > 1e-6 * System.Math.Max(1, (c.X - a.X))) kept.Add(q);
+            }
+            kept.Add(top[top.Count - 1]);
+            var outline = new List<Vec2> { new Vec2(0, 0), new Vec2(len, 0) };
+            for (int i = kept.Count - 1; i >= 0; i--) outline.Add(kept[i]);
+            return outline;
+        }
+    }
+
+    /// <summary>
     /// A wall standing on a lower roof (a dormer's front or cheek, a taller wing's gable over the main roof): owner
     /// 2026-11-13, the front takes the windward wall's pressure, the cheeks the side walls'. Its area and centroid on its
     /// vertical plane, in the engine's frame.
