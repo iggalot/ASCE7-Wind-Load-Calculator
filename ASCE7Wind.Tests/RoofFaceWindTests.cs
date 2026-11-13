@@ -94,10 +94,12 @@ namespace ASCE7Wind.Tests
             Assert.IsTrue(Roof(south, "main").All(z => z.Label.StartsWith("ZoneWWR") || z.Label.StartsWith("ZoneLWR")));
             var wingBands = Roof(south, "wing").ToList();
             Assert.IsTrue(wingBands.All(z => !z.Label.StartsWith("ZoneWW") && !z.Label.StartsWith("ZoneLW")));
-            // its own windward edge: Zone4 (0 to h/2) starts at y = 30, the wing's south wall, not the building's
+            // its own windward edge: the wing's ridge runs back over the main roof until it meets it (owner 2026-11-13: two
+            // roofs merged, no gable wall), (30 − y) / 2 = 5 at y = 20, its slopes with it: Zone4 (0 to h/2) starts there
             var z4 = wingBands.Where(z => z.Label.StartsWith("Zone4")).ToList();
             Assert.IsTrue(z4.Count > 0);
-            Assert.AreEqual(30, z4.SelectMany(z => z.Outline).Min(p => p.Y), 1e-6);
+            Assert.AreEqual(20, z4.SelectMany(z => z.Outline).Min(p => p.Y), 1e-6);
+            Assert.IsFalse(d.RoofWalls.Any(x => x.Name.StartsWith("wing, south")), "no gable wall where the wing meets the main roof");
 
             // the torsion of Case 1 from the west: the roof's pieces about the plan's center (30, 25), external pressures
             double M(WindCase c) => c.Zones.Where(z => z.Kind == SurfaceKind.Roof).Sum(z =>
@@ -110,11 +112,13 @@ namespace ASCE7Wind.Tests
             var east = C1("E");
             Assert.AreEqual(M(east), east.Mt, 1e-6);
             // from the east the building is seen from there: the main roof's 0 to h/2 band at its east end; the wing's two
-            // slopes trade places, the main roof pushes nothing along x, so the force is the same and the torsion reversed
+            // slopes trade places and the main roof pushes nothing along x, so the force is the same. The torsion is not the
+            // west's reversed: the wing notches the main roof's north slope at its east end (the valleys), so that slope's push
+            // along y differs with the bands taken from the other end
             Assert.AreEqual(60, Roof(east, "main").Where(z => z.Label.StartsWith("Zone4")).SelectMany(z => z.Outline).Max(p => p.X), 1e-6);
             Assert.AreEqual(0, Roof(west, "main").Where(z => z.Label.StartsWith("Zone4")).SelectMany(z => z.Outline).Min(p => p.X), 1e-6);
             Assert.AreEqual(west.Vx, -east.Vx, 1e-6);
-            Assert.AreEqual(west.Mt, -east.Mt, 1e-6);
+            Assert.IsTrue(Math.Abs(west.Mt + east.Mt) > 0.01, "the notched north slope's bands differ from each end");
             // the box's walls follow the faces over their edges, not one gable over the 50 ft width (that was 500 + ½ 50 ×
             // 12.5 = 812.5): west and east the main gable (y 0..30, ridge 10 + 7.5) and the eave past it, 500 + ½ 30 × 7.5 =
             // 612.5; south the main eave, 600; north the wing's gable (x 40..60, 10 + 5), 600 + ½ 20 × 5 = 650
@@ -140,9 +144,9 @@ namespace ASCE7Wind.Tests
         /// A dormer on the south slope of a 40 × 30 gable (W-E, 6:12, tan θ = 1/2): its walls (15..25, 4..12), a gable S-N at
         /// 6:12, its eave 5 ft above the roof level. Its front (y = 4) from the main roof (z = y / 2 = 2) up to its own eave
         /// (5) and rake (5 + (5 − |x − 20|) / 2): 10 × 3 + ½ × 10 × 2.5 = 42.5 sq ft. Each cheek (x = 15, 25) from the roof
-        /// (y / 2) up to 5, where it is above: ∫ from y = 4 to 10 of (5 − y / 2) dy = 9 sq ft. Its back (y = 12): its rake above
-        /// the roof's 6, 1.5 − |x − 20| / 2: ½ × 6 × 1.5 = 4.5 sq ft. From the south the front takes q(z) G (0.8) Kd, the back
-        /// q(h) G Cp(leeward) Kd: Vy grows by their F = −p A n.
+        /// (y / 2) up to 5, where it is above: ∫ from y = 4 to 10 of (5 − y / 2) dy = 9 sq ft. No back wall: its ridge (5 + 2.5)
+        /// runs back into the main roof, which rises to it at its ridge (y = 15; owner 2026-11-13, two roofs merged). From the
+        /// south the front takes q(z) G (0.8) Kd: Vy grows by its F = −p A n.
         /// </summary>
         [TestMethod]
         public void Dormer_ItsWallsOnTheRoof_ByHand()
@@ -165,8 +169,8 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(20, front.Centroid.X, 1e-6);
             Assert.AreEqual(9, walls.Single(x => x.Name.StartsWith("dormer, west")).Area, 1e-6);
             Assert.AreEqual(9, walls.Single(x => x.Name.StartsWith("dormer, east")).Area, 1e-6);
-            Assert.AreEqual(4.5, walls.Single(x => x.Name.StartsWith("dormer, north")).Area, 1e-6);
-            Assert.AreEqual(4, walls.Count, "the main roof's walls stand on the ground: the bounding box's");
+            Assert.IsFalse(walls.Any(x => x.Name.StartsWith("dormer, north")), "its ridge runs back into the roof: no back wall");
+            Assert.AreEqual(3, walls.Count, "the main roof's walls stand on the ground: the bounding box's");
 
             var a = Run(d);
             var bare = d.Clone(); bare.RoofWalls = new List<RoofWallPiece>();
@@ -175,8 +179,7 @@ namespace ASCE7Wind.Tests
             var my = (WindLoadCalculator_MWFRS)a.MwfrsAlongWidth;
             double G = my.Parameters.GustFactor, kd = my.PressureKd, qh = my.CalculateDynamicWindPressure(my.buildingData.MwfrsFigureHeight);
             double qz = my.CalculateDynamicWindPressure(Math.Max(15, front.CentroidZ));
-            double back = walls.Single(x => x.Name.StartsWith("dormer, north")).Area;
-            double expected = (qz * G * 0.8 * kd * front.Area - qh * G * my.Cp_LW * kd * back) / 1000.0;
+            double expected = qz * G * 0.8 * kd * front.Area / 1000.0;
             Assert.AreEqual(without.Vy + expected, withWalls.Vy, 1e-9);
             Assert.AreEqual(without.Mt, withWalls.Mt, 1e-9, "the dormer on the plan's center line (x = 20): no torsion of its own");
         }

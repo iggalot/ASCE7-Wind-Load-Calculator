@@ -152,6 +152,8 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                     ("east", new Point2(w.X1, w.Y0), new Point2(w.X1, w.Y1), new Vec2(1, 0)),
                 })
                 {
+                    // a gable end that runs on into the roof it meets: no wall there, its slopes go on to the valleys
+                    if (k < fr.OpenEnds.Count && fr.OpenEnds[k].Contains(name)) continue;
                     double len = Math.Sqrt((bEnd.X - a.X) * (bEnd.X - a.X) + (bEnd.Y - a.Y) * (bEnd.Y - a.Y));
                     int m = Math.Max(1, (int)Math.Ceiling(len / step));
                     double ds = len / m, area = 0, cx = 0, cy = 0, cz = 0;
