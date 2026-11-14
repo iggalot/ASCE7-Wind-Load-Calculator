@@ -365,12 +365,11 @@ namespace ASCE7WindLoadCalculator
                 Vx = (w.AlongLength ? w.Sign * V : 0) + 0.0, Vy = (w.AlongLength ? 0 : w.Sign * V) + 0.0, Mt = 0,
             };
             c.Parts.AddRange(MinimumParts(w.AlongLength, w.Sign, w.MinimumWallKips, w.MinimumRoofKips));
-            var wall = g.Surface(w.WindwardFace);
-            if (wall != null)
+            foreach (var wall in g.WallsFacing(w.WindwardFace))   // every wall facing the wind (the plan's own: several)
                 c.Zones.Add(ToZone(new Piece
                 {
                     Surface = wall, Ext = WindLateralLoads.MinimumWallPressure, Label = $"Minimum wall 16 psf ({w.From})",
-                    Poly = PolygonOps.CounterClockwise(wall.Outline.Select(p => new Vec2((p - wall.Origin).Dot(wall.U), (p - wall.Origin).Dot(wall.V))).ToList()),
+                    Poly = WindGeometry.LocalOutline(wall),
                 }, 0));
             return c;
         }
@@ -537,7 +536,7 @@ namespace ASCE7WindLoadCalculator
                 foreach (var poly in polys)
                 {
                     var ccw = PolygonOps.CounterClockwise(poly);
-                    foreach (var roof in g.Roofs)
+                    foreach (var roof in g.Roofs.Where(area.On))   // its own face only (faces may overlap on plan)
                     {
                         var piece = PolygonOps.ClipToConvex(ccw, roof.PlanRegion);
                         if (piece.Count < 3 || Math.Abs(PolygonOps.SignedArea(piece)) < 1e-6) continue;
@@ -558,11 +557,13 @@ namespace ASCE7WindLoadCalculator
             {
                 var area = kv.Value;
                 if (!faces.TryGetValue(area.Label_Full, out var onto)) continue;
-                var outline = PolygonOps.CounterClockwise(area.OuterBoundary);
-                foreach (var face in onto)
+                var zoneOutline = PolygonOps.CounterClockwise(area.OuterBoundary);
+                // the plan's own walls (owner 2026-11-13): every wall facing that way, on its own outline; else the box's wall
+                var on = g.Building.HasWallLines
+                    ? onto.SelectMany(g.WallsFacing).Select(w => (wall: w, outline: WindGeometry.LocalOutline(w)))
+                    : onto.Select(g.Surface).Where(w => w != null).Select(w => (wall: w, outline: zoneOutline));
+                foreach (var (wall, outline) in on.ToList())
                 {
-                    var wall = g.Surface(face);
-                    if (wall == null) continue;
                     if (area.Label_Full == "ZoneWW")
                     {
                         // qz grows with height: bands (0-15 ft, then every 5 ft), each with its average external pressure

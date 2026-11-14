@@ -7,12 +7,25 @@ namespace ASCE7WindLoadCalculator
     {
         internal WindAnalysisResult() { }
 
-        /// <summary>Wraps calculators produced elsewhere (e.g. by the wind input screen).</summary>
+        /// <summary>
+        /// Wraps calculators produced elsewhere (e.g. by the wind input screen). A roof of several sections also needs the winds
+        /// from the east and the north on the building seen from there: worked out here from the two given (their edition,
+        /// inputs and building), as <see cref="WindAnalysis.Run"/> does, so no caller can leave them out (the 3D view did: its
+        /// winds from the east and north were the west's and south's mirrored, their roof zones on the wrong faces).
+        /// </summary>
         public WindAnalysisResult(WindLoadCalculator_Base cladding, WindLoadCalculator_Base mwfrsAlongLength, WindLoadCalculator_Base mwfrsAlongWidth)
         {
             Cladding = cladding;
             MwfrsAlongLength = mwfrsAlongLength;
             MwfrsAlongWidth = mwfrsAlongWidth;
+            if (mwfrsAlongLength?.buildingData?.HasRoofFaces == true && mwfrsAlongLength.Parameters != null
+                && mwfrsAlongWidth?.buildingData != null && mwfrsAlongWidth.Parameters != null)
+            {
+                var east = mwfrsAlongLength.buildingData.Clone(); east.MirrorX();
+                var north = mwfrsAlongWidth.buildingData.Clone(); north.MirrorX();
+                MwfrsFromEast = WindAnalysis.Mirrored(mwfrsAlongLength, east);
+                MwfrsFromNorth = WindAnalysis.Mirrored(mwfrsAlongWidth, north);
+            }
         }
 
         public WindLoadCalculator_Base Cladding { get; internal set; }
@@ -63,6 +76,10 @@ namespace ASCE7WindLoadCalculator
             }
             return result;
         }
+
+        /// <summary>The same whole-building calculation (edition, inputs) on another view of its building.</summary>
+        internal static WindLoadCalculator_Base Mirrored(WindLoadCalculator_Base calc, BuildingData building) =>
+            Calculate(calc.ASCEVersion, WindLoadCalculationTypes.MWFRS, calc.Parameters, building);
 
         private static WindLoadCalculator_Base Calculate(ASCE7_Versions version, WindLoadCalculationTypes type, WindParameters_Base parameters, BuildingData building)
         {

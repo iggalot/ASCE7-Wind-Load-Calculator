@@ -229,6 +229,12 @@ namespace ASCE7WindLoadCalculator
         public List<RoofFacePlane> RoofFaces { get; set; }
         /// <summary>The walls standing on a lower roof (dormers' fronts and cheeks), with <see cref="RoofFaces"/>.</summary>
         public List<RoofWallPiece> RoofWalls { get; set; }
+        /// <summary>
+        /// The plan's own outline, wall by wall (owner 2026-11-13: an L's six walls, not its bounding box's four), with
+        /// <see cref="RoofFaces"/>; null: the bounding box's walls.
+        /// </summary>
+        public List<WallLine> WallLines { get; set; }
+        public bool HasWallLines => WallLines != null && WallLines.Count > 0;
         public bool HasRoofFaces => RoofFaces != null && RoofFaces.Count > 0;
 
         /// <summary>
@@ -240,6 +246,7 @@ namespace ASCE7WindLoadCalculator
             double L = BuildingLength;
             RoofFaces = RoofFaces?.Select(f => f.Mirrored(L)).ToList();
             RoofWalls = RoofWalls?.Select(w => w.Mirrored(L)).ToList();
+            WallLines = WallLines?.Select(w => w.Mirrored(L)).ToList();
         }
 
         /// <summary>Turns the plan by 90 degrees: swaps L and B and flips the ridge direction, so the physical building is unchanged.</summary>
@@ -248,6 +255,7 @@ namespace ASCE7WindLoadCalculator
             // the faces turned with it (the engine's turn swaps x and y: its other wind's frame)
             RoofFaces = RoofFaces?.Select(f => f.Swapped()).ToList();
             RoofWalls = RoofWalls?.Select(w => w.Swapped()).ToList();
+            WallLines = WallLines?.Select(w => w.Swapped()).ToList();
             var ridge = RidgeDirection;
             double temp = BuildingLength;
             BuildingLength = BuildingWidth;

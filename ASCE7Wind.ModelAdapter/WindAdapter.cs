@@ -110,7 +110,7 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                 double ownEave = eave + s.EaveRise;
                 faces.Add(new RoofFacePlane
                 {
-                    Id = f.Id, Name = $"{s.Name ?? "roof"}, {f.Name}", Section = s.Name,
+                    Id = f.Id, Name = $"{s.Name ?? "roof"}, {f.Name}", Section = s.Name, OnRoof = s.EaveRise > 1e-9,
                     Z0 = eave + p.Z0 + p.Gx * x0 + p.Gy * y0, Zx = p.Gx, Zy = p.Gy, SlopeDeg = theta, RidgeAlongX = ridgeX,
                     H = isMain ? data.MwfrsFigureHeight : theta <= 10 ? ownEave : ownEave + tan * run / 2,
                     Lx = isMain ? data.BuildingLength : s.Walls.Width, Ly = isMain ? data.BuildingWidth : s.Walls.Height,
@@ -125,8 +125,32 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
             if (wings.Count > 0)
                 notes?.Add($"The plan projects past the main roof ({string.Join(", ", wings)}): if the projection is significant the building is not regular-shaped (ASCE 7 26.2, C26.1.2 item 2), and 27.1.3 calls for recognized literature or the Wind Tunnel Procedure (Chapter 31). The engineer decides; Chapter 27 is applied face by face.");
             data.RoofWalls = RoofWalls(fr, roof.Overhang, x0, y0, eave);
+            data.WallLines = WallLines(b, x0, y0);
             notes?.Add($"The roof's {fr.Sections.Count} sections taken face by face ({faces.Count} faces, each by its own ridge; owner 2026-11-13)" +
                        (data.RoofWalls.Count > 0 ? $", with {data.RoofWalls.Count} wall{(data.RoofWalls.Count == 1 ? "" : "s")} standing on the roof (dormers' fronts and cheeks)" : "") + ".");
+        }
+
+        /// <summary>
+        /// The plan's own walls (owner 2026-11-13: "the wind loads are acting on the bounding box of the building, not on the
+        /// individual walls"): every straight piece of the footprint's outline (holes' too: a courtyard's walls face into it),
+        /// each with its outward normal, in the engine's frame. Null when the outline is the bounding box itself (nothing to add).
+        /// </summary>
+        internal static List<WallLine> WallLines(Building b, double x0, double y0)
+        {
+            var foot = b.Footprint();
+            var lines = new List<WallLine>();
+            foreach (var s in foot.Outline())
+            {
+                if (s.Length < 1e-6) continue;
+                double mx = (s.A.X + s.B.X) / 2, my = (s.A.Y + s.B.Y) / 2;
+                bool vertical = Math.Abs(s.A.X - s.B.X) < 1e-9;
+                const double d = 0.01;
+                // outward: the side the footprint is not on
+                var n = vertical ? (foot.Contains(mx - d, my, 0) ? new Vec2(1, 0) : new Vec2(-1, 0))
+                                 : (foot.Contains(mx, my - d, 0) ? new Vec2(0, 1) : new Vec2(0, -1));
+                lines.Add(new WallLine { A = new Vec2(s.A.X - x0, s.A.Y - y0), B = new Vec2(s.B.X - x0, s.B.Y - y0), Normal = n });
+            }
+            return lines.Count == 0 ? null : lines;
         }
 
         private static bool Inside(Rect2 a, Rect2 b) => a.X0 >= b.X0 - 1e-6 && a.X1 <= b.X1 + 1e-6 && a.Y0 >= b.Y0 - 1e-6 && a.Y1 <= b.Y1 + 1e-6;

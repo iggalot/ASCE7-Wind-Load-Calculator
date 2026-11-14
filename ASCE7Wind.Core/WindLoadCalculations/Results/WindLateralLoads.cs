@@ -263,7 +263,7 @@ namespace ASCE7WindLoadCalculator
             {
                 if (!pressures.TryGetValue(kv.Key, out var p)) continue;
                 var outer = PolygonOps.CounterClockwise(kv.Value.OuterBoundary);
-                foreach (var plane in model.Roofs)
+                foreach (var plane in model.Roofs.Where(kv.Value.On))
                 {
                     if (Math.Abs(plane.Zx) < 1e-12) continue; // plane parallel to the wind: no x component
                     double planArea = Math.Abs(PolygonOps.SignedArea(PolygonOps.ClipToConvex(outer, plane.PlanRegion)));

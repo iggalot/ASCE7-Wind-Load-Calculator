@@ -28,6 +28,16 @@ namespace ASCE7WindLoadCalculator
             Vec2 H = new Vec2(0, buildingData.BuildingHeight);
             Vec2 ridge;
 
+            if (buildingData.HasRoofFaces && buildingData.HasWallLines)
+            {
+                // the plan's own walls (owner 2026-11-13): the walls facing the wind, those facing away and those along it, each
+                // set projected across its direction (RoofFaceProfile.Silhouette: its force along the wind). On the building each
+                // wall takes its set's pressure on its own outline (WindCases, WindScene)
+                effWindAreas.Add(10, new EffectiveWindArea("ZoneWW", RoofFaceProfile.Silhouette(buildingData, new Vec2(-1, 0)), null));
+                effWindAreas.Add(20, new EffectiveWindArea("ZoneLW", RoofFaceProfile.Silhouette(buildingData, new Vec2(1, 0)), null));
+                effWindAreas.Add(30, new EffectiveWindArea("ZoneSW", RoofFaceProfile.Silhouette(buildingData, new Vec2(0, -1)), null));
+                return;
+            }
             if (buildingData.HasRoofFaces)
             {
                 // a roof of sections (owner 2026-11-13): each wall's top is the faces' own profile over its edge. The wind is

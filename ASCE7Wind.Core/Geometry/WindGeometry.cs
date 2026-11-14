@@ -55,6 +55,9 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The model's roof face this surface is a piece of (a roof of several sections); null: the plain roof's plane.</summary>
         public RoofFacePlane RoofFace { get; internal set; }
 
+        /// <summary>The plan's wall this surface is (a plan of its own outline); null: a bounding-box wall.</summary>
+        public WallLine Line { get; internal set; }
+
         /// <summary>Wall local (u, v) to 3D.</summary>
         public Vec3 FromWallFrame(Vec2 p) => Origin + U * p.X + V * p.Y;
 
@@ -145,6 +148,22 @@ namespace ASCE7WindLoadCalculator
         private void BuildWalls(List<BuildingSurface> list)
         {
             double h = EaveHeight, ridge = RidgeHeight;
+            if (Building.HasRoofFaces && Building.HasWallLines)
+            {
+                // the plan's own walls (owner 2026-11-13: an L's six, not the bounding box's four), each its top following the
+                // faces over it; several walls may face one way (Surfaces, not Surface, for them)
+                foreach (var line in Building.WallLines)
+                {
+                    var face = (BuildingFace)Enum.Parse(typeof(BuildingFace), line.Facing + "Wall");
+                    double len = line.Length;
+                    var u = new Vec3((line.B.X - line.A.X) / len, (line.B.Y - line.A.Y) / len, 0);
+                    var s = Profiled(face, $"{line.Facing} wall, {Span(line)}", new Vec3(line.A.X, line.A.Y, 0), u, new Vec3(line.Normal.X, line.Normal.Y, 0),
+                                     RoofFaceProfile.WallOutline(Building, line.A.X, line.A.Y, line.B.X, line.B.Y, line.Normal));
+                    s.Line = line;
+                    list.Add(s);
+                }
+                return;
+            }
             if (Building.HasRoofFaces)
             {
                 // a roof of sections: each wall's top follows the faces over its edge (RoofFaceProfile)
@@ -160,6 +179,18 @@ namespace ASCE7WindLoadCalculator
             list.Add(Wall(BuildingFace.WestWall, "West wall", new Vec3(0, 0, 0), Vec3.UnitY, B, -Vec3.UnitX, GableEndsOnWidthWalls, h, ridge));
             list.Add(Wall(BuildingFace.EastWall, "East wall", new Vec3(L, 0, 0), Vec3.UnitY, B, Vec3.UnitX, GableEndsOnWidthWalls, h, ridge));
         }
+
+        /// <summary>Where a wall runs, for its name: "x 0-28 ft" along y, "y 0-56 ft"... by the coordinate that changes.</summary>
+        private static string Span(WallLine l) => Math.Abs(l.A.X - l.B.X) < 1e-9
+            ? $"x = {l.A.X:0.##}, y {Math.Min(l.A.Y, l.B.Y):0.##}-{Math.Max(l.A.Y, l.B.Y):0.##} ft"
+            : $"y = {l.A.Y:0.##}, x {Math.Min(l.A.X, l.B.X):0.##}-{Math.Max(l.A.X, l.B.X):0.##} ft";
+
+        /// <summary>Every wall facing one way (a plan of its own outline may have several).</summary>
+        public IEnumerable<BuildingSurface> WallsFacing(BuildingFace face) => Walls.Where(w => w.Face == face);
+
+        /// <summary>A wall's outline in its own (along, up) frame.</summary>
+        public static List<Vec2> LocalOutline(BuildingSurface wall) =>
+            PolygonOps.CounterClockwise(wall.Outline.Select(p => new Vec2((p - wall.Origin).Dot(wall.U), (p - wall.Origin).Dot(wall.V))).ToList());
 
         private static BuildingSurface Profiled(BuildingFace face, string name, Vec3 origin, Vec3 u, Vec3 normal, List<Vec2> local)
         {

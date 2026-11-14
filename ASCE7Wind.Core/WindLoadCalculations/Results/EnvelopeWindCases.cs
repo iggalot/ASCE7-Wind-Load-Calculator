@@ -121,12 +121,11 @@ namespace ASCE7WindLoadCalculator
                         Vx = (alongLength ? sgn * min : 0) + 0.0, Vy = (alongLength ? 0 : sgn * min) + 0.0, Mt = 0,
                     };
                     c.Parts.AddRange(MinimumParts(alongLength, sgn, minWall, min - minWall));
-                    var wall = g.Surface(face);
-                    if (wall != null)
+                    foreach (var wall in g.WallsFacing(face))   // every wall facing the wind (the plan's own: several)
                         c.Zones.Add(ToZone(new Piece
                         {
                             Surface = wall, Ext = WindLateralLoads.MinimumWallPressure, Label = $"Minimum wall 16 psf ({from})",
-                            Poly = PolygonOps.CounterClockwise(wall.Outline.Select(p => new Vec2((p - wall.Origin).Dot(wall.U), (p - wall.Origin).Dot(wall.V))).ToList()),
+                            Poly = WindGeometry.LocalOutline(wall),
                         }, 0));
                     cases.Add(c);
                 }
@@ -141,17 +140,29 @@ namespace ASCE7WindLoadCalculator
         {
             Vec2 At(double s) => row.Side == 0 ? new Vec2(0, s) : row.Side == 1 ? new Vec2(D, s) : row.Side == 2 ? new Vec2(s, 0) : new Vec2(s, W);
             Vec2 a = toPlan(At(row.S0)), c = toPlan(At(row.S1));
-            var wall = g.Walls.OrderBy(w => DistanceToWallLine(w, a) + DistanceToWallLine(w, c)).First();
-            double u0 = Along(wall, a), u1 = Along(wall, c);
-            if (u1 < u0) { var t = u0; u0 = u1; u1 = t; }
-            if (u1 - u0 < 1e-9) yield break;
+            IEnumerable<BuildingSurface> onto;
+            if (g.Building.HasWallLines)
+            {
+                // the plan's own walls (owner 2026-11-13): every wall facing the row's side, over the stretch it shares with it
+                var o = toPlan(At(0.5 * (row.S0 + row.S1)));
+                var side = row.Side == 0 ? new Vec2(-1, 0) : row.Side == 1 ? new Vec2(1, 0) : row.Side == 2 ? new Vec2(0, -1) : new Vec2(0, 1);
+                var n = toPlan(At(0.5 * (row.S0 + row.S1)) + side) - o;
+                onto = g.Walls.Where(w => w.Normal.X * n.X + w.Normal.Y * n.Y > 0.5).ToList();
+            }
+            else onto = new[] { g.Walls.OrderBy(w => DistanceToWallLine(w, a) + DistanceToWallLine(w, c)).First() };
+            foreach (var wall in onto)
+            {
+                double u0 = Along(wall, a), u1 = Along(wall, c);
+                if (u1 < u0) { var t = u0; u0 = u1; u1 = t; }
+                if (u1 - u0 < 1e-9) continue;
 
-            var outline = PolygonOps.CounterClockwise(wall.Outline.Select(p => new Vec2((p - wall.Origin).Dot(wall.U), (p - wall.Origin).Dot(wall.V))).ToList());
-            double lo = outline.Min(p => p.Y) - 1, hi = outline.Max(p => p.Y) + 1;
-            var band = new List<Vec2> { new Vec2(u0, lo), new Vec2(u1, lo), new Vec2(u1, hi), new Vec2(u0, hi) };
-            var piece = PolygonOps.ClipToConvex(outline, band);
-            if (piece.Count >= 3 && Math.Abs(PolygonOps.SignedArea(piece)) > 1e-9)
-                yield return new Piece { Surface = wall, Poly = PolygonOps.CounterClockwise(piece), Ext = ext, Label = label };
+                var outline = WindGeometry.LocalOutline(wall);
+                double lo = outline.Min(p => p.Y) - 1, hi = outline.Max(p => p.Y) + 1;
+                var band = new List<Vec2> { new Vec2(u0, lo), new Vec2(u1, lo), new Vec2(u1, hi), new Vec2(u0, hi) };
+                var piece = PolygonOps.ClipToConvex(outline, band);
+                if (piece.Count >= 3 && Math.Abs(PolygonOps.SignedArea(piece)) > 1e-9)
+                    yield return new Piece { Surface = wall, Poly = PolygonOps.CounterClockwise(piece), Ext = ext, Label = label };
+            }
         }
 
         /// <summary>A roof row on the building: its outline on one roof plane (<see cref="EnvelopeZoneForce.PlanPolygon"/>,

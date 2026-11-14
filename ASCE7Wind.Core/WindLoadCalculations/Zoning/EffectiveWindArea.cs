@@ -20,6 +20,12 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The roof face it lies on, for a roof of several sections (its own Fig. 27.3-1 values); null otherwise.</summary>
         public RoofFacePlane Face { get; set; }
 
+        /// <summary>
+        /// Whether it goes on that roof plane: a face's zone on that face's own pieces only (faces may lie over each other on
+        /// plan: a dormer over the slope under it, a wing's eave over the main roof); a zone of the plain roof on any.
+        /// </summary>
+        public bool On(BuildingSurface roof) => Face == null || roof.RoofFace == null || roof.RoofFace.Id == Face.Id;
+
         /// <summary>Zone identifier without the "Zone" prefix, e.g. "2e".</summary>
         public string Label_Short => Label_Full.Substring(4);
 

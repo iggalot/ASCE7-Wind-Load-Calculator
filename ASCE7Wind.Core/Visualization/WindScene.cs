@@ -338,7 +338,7 @@ namespace ASCE7WindLoadCalculator
 
                 // A zone may span several roof planes; emit one SceneZone per plane it touches so each
                 // piece knows its own surface (for hover text and lighting).
-                foreach (var roof in roofs)
+                foreach (var roof in roofs.Where(area.On))
                 {
                     var sz = NewZone(kv.Key, area, pressures, roof, analysis);
                     for (int i = 0; i + 2 < tris.Count; i += 3)
@@ -368,6 +368,11 @@ namespace ASCE7WindLoadCalculator
             WindLoadCalculator_MWFRS taper = null)
         {
             if (zones == null) return;
+            if (scene.Model.Building.HasWallLines)
+            {
+                OwnWallZones(scene, zones, pressures, allFaces, facesByLabel, analysis, taper);
+                return;
+            }
             foreach (var kv in zones.effWindAreas)
             {
                 var area = kv.Value;
@@ -394,6 +399,79 @@ namespace ASCE7WindLoadCalculator
                             sz.Edges.Add((wall.FromWallFrame(ring[i]), wall.FromWallFrame(ring[(i + 1) % n])));
                     scene.Zones.Add(sz);
                 }
+            }
+        }
+
+        /// <summary>
+        /// The plan's own walls (owner 2026-11-13: an L's six, not the bounding box's four). The whole-building wind: every
+        /// wall facing the wind takes the windward zone on its own outline (in bands), those facing away the leeward, those
+        /// along it the side walls'. Cladding: each wall its Zone 5 within a of an outside corner (Fig. 30.3-1), Zone 4 between;
+        /// a re-entrant corner is not an edge of the building, so no Zone 5 there.
+        /// </summary>
+        private static void OwnWallZones(WindScene scene, AreaCalculator_Base zones, Dictionary<int, PressureData> pressures,
+            BuildingFace[] allFaces, Dictionary<string, BuildingFace[]> facesByLabel, WindLoadCalculationTypes analysis,
+            WindLoadCalculator_MWFRS taper)
+        {
+            void Add(int id, string label, BuildingSurface wall, List<Vec2> poly)
+            {
+                if (poly.Count < 3 || Math.Abs(PolygonOps.SignedArea(poly)) < AreaCalculator_Base.MinZoneArea) return;
+                var sz = new SceneZone
+                {
+                    ZoneId = id, Label = label, Description = ZoneDescriptions.Describe(label, SurfaceKind.Wall, analysis),
+                    Face = wall.Face, Kind = SurfaceKind.Wall, SurfaceName = wall.Name, AreaFt2 = Math.Abs(PolygonOps.SignedArea(poly)),
+                    Normal = wall.Normal, PressurePsf = pressures != null && pressures.TryGetValue(id, out var p) ? p.NetPressure : double.NaN,
+                };
+                foreach (var q in PolygonOps.Triangulate(poly)) sz.Triangles.Add(wall.FromWallFrame(q));
+                for (int i = 0, n = poly.Count; i < n; i++) sz.Edges.Add((wall.FromWallFrame(poly[i]), wall.FromWallFrame(poly[(i + 1) % n])));
+                scene.Zones.Add(sz);
+            }
+
+            if (facesByLabel != null)
+            {
+                foreach (var kv in zones.effWindAreas)
+                {
+                    if (!facesByLabel.TryGetValue(kv.Value.Label_Full, out var faces)) continue;
+                    foreach (var wall in faces.SelectMany(scene.Model.WallsFacing))
+                    {
+                        var own = new EffectiveWindArea(kv.Value.Label_Full, WindGeometry.LocalOutline(wall), null);
+                        if (taper != null && kv.Value.Label_Full == "ZoneWW") AddWindwardWallBands(scene, kv.Key, own, wall, taper);
+                        else Add(kv.Key, kv.Value.Label_Full, wall, own.OuterBoundary.ToList());
+                    }
+                }
+                return;
+            }
+
+            // cladding: the zones' ids by name (the box wall's own layout may have only Zone 5 when it is short)
+            int Id(string label) => zones.effWindAreas.Where(kv => kv.Value.Label_Full == label).Select(kv => kv.Key).DefaultIfEmpty(-1).First();
+            int z4 = Id("Zone4"), z5 = Id("Zone5");
+            if (z4 < 0) z4 = z5;
+            double a = zones.CritDim_a;
+            var all = scene.Model.Walls.Where(w => w.Line != null).ToList();
+            bool Outside(BuildingSurface wall, Vec2 end)
+            {
+                // the wall meeting it there runs back behind it (an outside corner), or on out in front (re-entrant)
+                foreach (var o in all)
+                {
+                    if (o == wall) continue;
+                    bool Same(Vec2 p) => Math.Abs(p.X - end.X) + Math.Abs(p.Y - end.Y) < 1e-6;
+                    Vec2? far = Same(o.Line.A) ? o.Line.B : Same(o.Line.B) ? o.Line.A : (Vec2?)null;
+                    if (far == null) continue;
+                    var d = far.Value - end;
+                    return d.X * wall.Normal.X + d.Y * wall.Normal.Y < 0;
+                }
+                return true;
+            }
+            foreach (var wall in allFaces.SelectMany(scene.Model.WallsFacing))
+            {
+                var outline = WindGeometry.LocalOutline(wall);
+                double len = wall.Line.Length, lo = outline.Min(p => p.Y) - 1, hi = outline.Max(p => p.Y) + 1;
+                double s0 = Outside(wall, wall.Line.A) ? Math.Min(a, len) : 0, s1 = Outside(wall, wall.Line.B) ? Math.Max(len - a, s0) : len;
+                List<Vec2> Strip(double u0, double u1) => u1 - u0 < 1e-9 ? new List<Vec2>() :
+                    PolygonOps.ClipToConvex(outline, new List<Vec2> { new Vec2(u0, lo), new Vec2(u1, lo), new Vec2(u1, hi), new Vec2(u0, hi) });
+                // the wall's u runs from Line.A (its Origin) to Line.B
+                Add(z5, "Zone5", wall, Strip(0, s0));
+                Add(z4, "Zone4", wall, Strip(s0, s1));
+                Add(z5, "Zone5", wall, Strip(s1, len));
             }
         }
 

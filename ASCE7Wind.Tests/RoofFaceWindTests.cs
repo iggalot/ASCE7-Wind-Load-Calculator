@@ -183,6 +183,129 @@ namespace ASCE7Wind.Tests
             Assert.AreEqual(without.Vy + expected, withWalls.Vy, 1e-9);
             Assert.AreEqual(without.Mt, withWalls.Mt, 1e-9, "the dormer on the plan's center line (x = 20): no torsion of its own");
         }
+        /// <summary>
+        /// Tutorial 8's L-shaped house (owner 2026-11-13, "the wind loads are acting on the bounding box of the building, not
+        /// on the individual walls"): a hip over the main block 56 × 28, a gable wing 24 × 24 north of its east end, a dormer
+        /// (12..20, 1..8) on the south slope, 6:12, 1.5 ft eaves.
+        /// </summary>
+        internal static Building LHouse()
+        {
+            var b = Building.New();
+            var top = b.AddLevel("Level 2", 9);
+            b.AddDiaphragm(top, new Rect2(0, 0, 56, 28));
+            b.AddDiaphragm(top, new Rect2(32, 28, 56, 52)).Offset = -1;   // as the tutorial's: the wing's floor a foot down
+            b.Roof = new Roof
+            {
+                Shape = RoofShape.Hip, Pitch = Pitch, Ridge = RidgeAxis.WestEast, Overhang = 1.5,
+                Sections = new List<RoofSection>
+                {
+                    new RoofSection { Name = "main", Walls = new Rect2(0, 0, 56, 28), Shape = RoofShape.Hip, Ridge = RidgeAxis.WestEast },
+                    new RoofSection { Name = "wing", Walls = new Rect2(32, 28, 56, 52), Shape = RoofShape.Gable, Ridge = RidgeAxis.SouthNorth },
+                    new RoofSection { Name = "dormer", Walls = new Rect2(12, 1, 20, 8), Shape = RoofShape.Gable, Ridge = RidgeAxis.SouthNorth, EaveRise = 3 },
+                },
+            };
+            return b;
+        }
+
+        /// <summary>
+        /// The L's walls are its own six, not the bounding box's four: none around the empty corner (x 0..32, y 28..52). From
+        /// the west the windward walls are x = 0 (y 0..28) and the wing's x = 32 (y 28..52), each its own outline, 9 ft at the
+        /// eave (the hip's end and the wing's eave side): 28 × 9 + 24 × 9. The south wall stops at the main roof's eave (9 ft)
+        /// under the dormer too: the dormer's eave reaching past it is over the roof, not on the wall.
+        /// </summary>
+        [TestMethod]
+        public void LHouse_TheWallsAreItsOwn()
+        {
+            var d = WindAdapter.From(LHouse()).Building;
+            Assert.AreEqual(6, d.WallLines.Count, string.Join("; ", d.WallLines));
+            var g = new WindGeometry(d);
+            Assert.AreEqual(6, g.Walls.Count());
+            foreach (var w in g.Walls)
+                foreach (var p in w.Outline)
+                    Assert.IsFalse(p.X < 32 - 1e-6 && p.Y > 28 + 1e-6, $"{w.Name}: nothing in the empty corner ({p.X}, {p.Y})");
+            var south = g.WallsFacing(BuildingFace.SouthWall).Single();
+            Assert.AreEqual(9, south.Outline.Max(p => p.Z), 1e-6, "the dormer's eave is not the south wall's top");
+            Assert.AreEqual(56 * 9, south.Area, 1e-6);
+
+            var west = WindCases.Build(Run(d)).First(c => c.FigureCase == 1 && c.From == "W");
+            var ww = west.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneWW")).ToList();
+            Assert.AreEqual(28 * 9 + 24 * 9, ww.Sum(z => z.Area), 1e-6);
+            Assert.AreEqual(2, ww.Select(z => z.Surface).Distinct().Count(), "both walls facing west");
+            Assert.IsTrue(ww.Any(z => z.Surface.Line.A.X == 32), "the wing's west wall, set back");
+        }
+
+        /// <summary>Every piece of the L's roof takes a zone in every wind (none left without a pressure).</summary>
+        [TestMethod]
+        public void LHouse_EveryRoofPieceTakesTheWind() => EveryRoofPieceTakesTheWind(LHouse());
+
+        /// <summary>
+        /// The result made from the three calculations alone (as the 3D view and SWC make it) works out the winds from the east
+        /// and north itself: its cases are the full run's, not the west's and south's mirrored.
+        /// </summary>
+        [TestMethod]
+        public void LHouse_ThreeCalculations_TheFullRunsCases()
+        {
+            var d = WindAdapter.From(LHouse()).Building;
+            var full = Run(d);
+            var three = new WindAnalysisResult(full.Cladding, full.MwfrsAlongLength, full.MwfrsAlongWidth);
+            Assert.IsNotNull(three.MwfrsFromEast);
+            Assert.IsNotNull(three.MwfrsFromNorth);
+            var a = WindCases.Build(full);
+            var b = WindCases.Build(three);
+            Assert.AreEqual(a.Count, b.Count);
+            for (int i = 0; i < a.Count; i++)
+            {
+                Assert.AreEqual(a[i].Vx, b[i].Vx, 1e-9, a[i].Name);
+                Assert.AreEqual(a[i].Vy, b[i].Vy, 1e-9, a[i].Name);
+                Assert.AreEqual(a[i].Mt, b[i].Mt, 1e-9, a[i].Name);
+                Assert.AreEqual(a[i].Zones.Count, b[i].Zones.Count, a[i].Name);
+            }
+        }
+
+        /// <summary>The same on a saved project named by LHOUSE_FILE (a look at a real file; skipped without it).</summary>
+        [TestMethod]
+        public void LHouseFile_EveryRoofPieceTakesTheWind()
+        {
+            var path = Environment.GetEnvironmentVariable("LHOUSE_FILE");
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) Assert.Inconclusive("LHOUSE_FILE not set");
+            EveryRoofPieceTakesTheWind(BuildingModel.Serialization.ModelFile.Load(path).Building);
+        }
+
+        private static void EveryRoofPieceTakesTheWind(Building b)
+        {
+            var d = WindAdapter.From(b).Building;
+            var g = new WindGeometry(d);
+            var faces = g.Roofs.GroupBy(r => r.RoofFace.Id).ToList();
+            foreach (var c in WindCases.Build(Run(d)).Where(c => c.Zones.Any(z => z.Kind == SurfaceKind.Roof)))
+                foreach (var f in faces)
+                {
+                    double plan = f.Sum(r => Math.Abs(PolygonOps.SignedArea(r.PlanRegion.ToList())));
+                    double covered = c.Zones.Where(z => z.Kind == SurfaceKind.Roof && z.Surface.RoofFace?.Id == f.Key)
+                        .Sum(z => Math.Abs(PolygonOps.SignedArea(z.Outline.Select(p => new Vec2(p.X, p.Y)).ToList())));
+                    Assert.AreEqual(plan, covered, 0.01 * plan + 0.01, $"{c.Name}: {f.First().Name}");
+                }
+            // and the envelope of them all (the Results page's picture): every roof piece in cells, none left out
+            var cases = WindCases.Build(Run(d));
+            var cells = WindCaseEnvelope.Build(cases);
+            foreach (var s in cases.SelectMany(c => c.Zones).Where(z => z.Kind == SurfaceKind.Roof).Select(z => z.Surface).Distinct())
+            {
+                double plan = Math.Abs(PolygonOps.SignedArea(s.PlanRegion.ToList()));
+                double inCells = cells.Where(x => x.Surface == s).Sum(x => Math.Abs(PolygonOps.SignedArea(x.Outline.ToList())));
+                Assert.AreEqual(plan, inCells, 0.01 * plan + 0.01, $"{s.Name}: the envelope's cells");
+            }
+            // each cell drawn whole: its triangles (as the picture draws it) add up to it
+            foreach (var x in cells)
+            {
+                double a = Math.Abs(PolygonOps.SignedArea(x.Outline.ToList()));
+                var tris = PolygonOps.Triangulate(x.Outline.ToList());
+                double t = 0;
+                for (int i = 0; i + 2 < tris.Count; i += 3) t += Math.Abs(PolygonOps.SignedArea(new List<Vec2> { tris[i], tris[i + 1], tris[i + 2] }));
+                Assert.AreEqual(a, t, 0.01 * a + 0.01, $"{x.Surface.Name}: a cell of {x.Outline.Count} corners drawn short");
+            }
+            var unloaded = cells.Where(x => x.Kind == SurfaceKind.Roof && (x.MinBy == null || x.MaxBy == null)).ToList();
+            Assert.AreEqual(0, unloaded.Count, string.Join("; ", unloaded.Take(8).Select(x => $"{x.Surface.Name} at ({WindCaseEnvelope.Centroid(x.Outline).X:0.#}, {WindCaseEnvelope.Centroid(x.Outline).Y:0.#}) min {x.MinBy?.Name} max {x.MaxBy?.Name}")));
+        }
+
         /// <summary>Chapter 28 chosen on a roof of several sections: not applied (C28.2), Chapter 27 face by face, said why.</summary>
         [TestMethod]
         public void Chapter28_OnARoofOfSections_FallsBackToChapter27FaceByFace()
