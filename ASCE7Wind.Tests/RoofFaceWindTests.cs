@@ -190,6 +190,8 @@ namespace ASCE7Wind.Tests
             var walls = d.RoofWalls;
             var front = walls.Single(x => x.Name.StartsWith("dormer, south"));
             Assert.AreEqual(42.5, front.Area, 1e-6);
+            // drawn as strips from the roof up to its own (the Building page): they add up to it
+            Assert.AreEqual(42.5, front.Strips.Sum(q => Math.Abs((q[1].X - q[0].X) + (q[1].Y - q[0].Y)) * ((q[3].Z - q[0].Z) + (q[2].Z - q[1].Z)) / 2), 0.05);
             Assert.AreEqual(-1, front.Normal.Y, 1e-12);
             Assert.AreEqual(20, front.Centroid.X, 1e-6);
             Assert.AreEqual(9, walls.Single(x => x.Name.StartsWith("dormer, west")).Area, 1e-6);

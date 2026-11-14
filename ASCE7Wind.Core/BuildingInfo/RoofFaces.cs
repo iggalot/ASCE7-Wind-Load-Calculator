@@ -215,14 +215,22 @@ namespace ASCE7WindLoadCalculator
         public Vec2 Centroid { get; set; }
         public double CentroidZ { get; set; }
 
+        /// <summary>
+        /// Its shape, to draw it (owner 2026-11-13: the dormers' walls shown on the Building page): strips along its line from
+        /// the roof under it up to its own roof, each a quadrilateral (x, y, z above grade), in the engine's frame.
+        /// </summary>
+        public List<List<Vec3>> Strips { get; set; } = new List<List<Vec3>>();
+
         public RoofWallPiece Swapped() => new RoofWallPiece
         {
             Name = Name, Area = Area, CentroidZ = CentroidZ, Normal = new Vec2(Normal.Y, Normal.X), Centroid = new Vec2(Centroid.Y, Centroid.X),
+            Strips = Strips.Select(s => s.Select(p => new Vec3(p.Y, p.X, p.Z)).ToList()).ToList(),
         };
 
         public RoofWallPiece Mirrored(double L) => new RoofWallPiece
         {
             Name = Name, Area = Area, CentroidZ = CentroidZ, Normal = new Vec2(-Normal.X, Normal.Y), Centroid = new Vec2(L - Centroid.X, Centroid.Y),
+            Strips = Strips.Select(s => s.Select(p => new Vec3(L - p.X, p.Y, p.Z)).ToList()).ToList(),
         };
     }
 }

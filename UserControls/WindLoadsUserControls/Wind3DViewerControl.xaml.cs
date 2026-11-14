@@ -293,6 +293,14 @@ namespace ASCE7WindLoadCalculator
                     tris.Add(o[0] + shift); tris.Add(o[i] + shift); tris.Add(o[i + 1] + shift);
                 }
             }
+            // the walls standing on the roof (a dormer's front and cheeks; owner 2026-11-13: shown on the Building page too)
+            foreach (var rw in m.Building.RoofWalls ?? new List<RoofWallPiece>())
+                foreach (var q in rw.Strips)
+                {
+                    if (q.Count < 4) continue;
+                    tris.Add(q[0]); tris.Add(q[1]); tris.Add(q[2]);
+                    tris.Add(q[0]); tris.Add(q[2]); tris.Add(q[3]);
+                }
             var shell = Model(tris, Color.FromRgb(0xD8, 0xD7, 0xD0));
             envelopeModels.Add(shell);
             sceneRoot.Children.Add(shell);

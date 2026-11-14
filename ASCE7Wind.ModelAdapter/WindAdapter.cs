@@ -181,9 +181,10 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                     double len = Math.Sqrt((bEnd.X - a.X) * (bEnd.X - a.X) + (bEnd.Y - a.Y) * (bEnd.Y - a.Y));
                     int m = Math.Max(1, (int)Math.Ceiling(len / step));
                     double ds = len / m, area = 0, cx = 0, cy = 0, cz = 0;
-                    for (int i = 0; i < m; i++)
+                    // the wall at a point along it: its own roof over the roof it stands on (null: none there)
+                    (double top, double bottom)? At(double t)
                     {
-                        double t = (i + 0.5) / m, x = a.X + t * (bEnd.X - a.X), y = a.Y + t * (bEnd.Y - a.Y);
+                        double x = a.X + t * (bEnd.X - a.X), y = a.Y + t * (bEnd.Y - a.Y);
                         double top = Own(k, x, y), bottom = double.NegativeInfinity;
                         for (int j = 0; j < fr.Sections.Count; j++)
                         {
@@ -192,15 +193,29 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
                             if (x <= r.X0 + 1e-6 || x >= r.X1 - 1e-6 || y <= r.Y0 + 1e-6 || y >= r.Y1 - 1e-6) continue;   // strictly inside: on its wall line it is the building's edge (a wing meeting it there: inside the attic)
                             bottom = Math.Max(bottom, Own(j, x, y));
                         }
-                        if (double.IsNaN(top) || double.IsNegativeInfinity(bottom) || top - bottom <= 1e-6) continue;
+                        if (double.IsNaN(top) || double.IsNegativeInfinity(bottom)) return null;
+                        return (Math.Max(top, bottom), bottom);
+                    }
+                    var strips = new List<List<Vec3>>();
+                    Vec3 P(double t, double z) => new Vec3(a.X + t * (bEnd.X - a.X) - x0, a.Y + t * (bEnd.Y - a.Y) - y0, eave + z);
+                    for (int i = 0; i < m; i++)
+                    {
+                        double t = (i + 0.5) / m, x = a.X + t * (bEnd.X - a.X), y = a.Y + t * (bEnd.Y - a.Y);
+                        var mid = At(t);
+                        if (mid == null || mid.Value.top - mid.Value.bottom <= 1e-6) continue;
+                        double top = mid.Value.top, bottom = mid.Value.bottom;
                         double hgt = top - bottom, da = hgt * ds;
                         area += da; cx += da * x; cy += da * y; cz += da * (eave + (top + bottom) / 2);
+                        // to draw: the strip's two ends (at a wall line's end the middle's values)
+                        double t0 = (double)i / m, t1 = (double)(i + 1) / m;
+                        var e0 = At(t0) ?? mid.Value; var e1 = At(t1) ?? mid.Value;
+                        strips.Add(new List<Vec3> { P(t0, e0.bottom), P(t1, e1.bottom), P(t1, e1.top), P(t0, e0.top) });
                     }
                     if (area < 0.5) continue;
                     list.Add(new RoofWallPiece
                     {
                         Name = $"{fr.Sections[k].Name ?? "section"}, {name} wall on the roof", Normal = n, Area = area,
-                        Centroid = new Vec2(cx / area - x0, cy / area - y0), CentroidZ = cz / area,
+                        Centroid = new Vec2(cx / area - x0, cy / area - y0), CentroidZ = cz / area, Strips = strips,
                     });
                 }
             }
