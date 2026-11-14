@@ -78,8 +78,8 @@ namespace ASCE7WindLoadCalculator.ModelAdapter
         /// <summary>
         /// A roof of several sections (wings, cross gables, dormers; owner 2026-11-13): its faces for the engine
         /// (<see cref="BuildingData.RoofFaces"/>), each taking the wind by its own section's ridge, and the walls standing on a
-        /// lower roof (<see cref="BuildingData.RoofWalls"/>). The walls of the building stay on the bounding box; so do h and
-        /// qh. The main section (the largest at the wall tops) takes the building's h and L; a wing or a dormer its own (ASCE
+        /// lower roof (<see cref="BuildingData.RoofWalls"/>). The walls are the plan's own outline (<see cref="BuildingData.WallLines"/>); h and qh
+        /// the building's. The main section (the largest at the wall tops) takes the building's h and L; a wing or a dormer its own (ASCE
         /// 7 gives none for them: owner 2026-11-13, "use the wing's own"). A plain roof (no sections) is left as it was.
         /// </summary>
         public static void Faces(Building b, BuildingEnvelope env, BuildingData data, List<string> notes)

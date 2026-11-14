@@ -54,6 +54,31 @@ namespace ASCE7Wind.Tests
         }
 
         /// <summary>
+        /// A hip 60 × 30 (ridge W-E), plain and as one section, the same (owner 2026-11-13: the hip end facing a wind along the
+        /// ridge takes the distance bands, the ASCE 7 subcommittee's reading, in both): from the west no windward or leeward
+        /// roof at all; from the south the long slopes are.
+        /// </summary>
+        [TestMethod]
+        public void Hip_TheEndsAlongTheRidge_TakeTheBands_PlainOrSections()
+        {
+            var b = Box(60, 30);
+            b.Roof = new Roof { Shape = RoofShape.Hip, Pitch = Pitch, Ridge = RidgeAxis.WestEast };
+            var plain = WindCases.Build(Run(WindAdapter.From(b).Building));
+            b.Roof.Sections = new List<RoofSection> { new RoofSection { Name = "main", Walls = new Rect2(0, 0, 60, 30), Shape = RoofShape.Hip, Ridge = RidgeAxis.WestEast } };
+            var faces = WindCases.Build(Run(WindAdapter.From(b).Building));
+            foreach (var cases in new[] { plain, faces })
+            {
+                var west = cases.First(c => c.FigureCase == 1 && c.From == "W");
+                Assert.IsFalse(west.Zones.Any(z => z.Kind == SurfaceKind.Roof && (z.Label.StartsWith("ZoneWWR") || z.Label.StartsWith("ZoneLWR"))), "along the ridge: bands only, the ends too");
+                var south = cases.First(c => c.FigureCase == 1 && c.From == "S");
+                Assert.IsTrue(south.Zones.Any(z => z.Kind == SurfaceKind.Roof && z.Label.StartsWith("ZoneWWR")));
+            }
+            var w1 = plain.First(c => c.FigureCase == 1 && c.From == "W");
+            var w2 = faces.First(c => c.Name == w1.Name);
+            Assert.AreEqual(w1.Vx, w2.Vx, 1e-6, "plain and one section alike");
+        }
+
+        /// <summary>
         /// An L: the main gable 60 × 30 ft W-E and a wing (40..60, 30..50) with its ridge S-N, both 6:12. From the west the
         /// main roof is parallel to its ridge (the distance bands) and the wing normal to its own (windward and leeward roof);
         /// from the south the other way round, the wing's bands from its own windward edge (y = 30). The wing sits off the

@@ -37,10 +37,16 @@ namespace ASCE7WindLoadCalculator
             var edges = new[] { 0.0, 0.5 * h, h, 2 * h, double.PositiveInfinity };
             var bandLabels = new[] { "Zone4", "Zone3", "Zone2", "Zone1" };
 
+            // a hip whose ridge runs along the wind (L > B: the engine lays the ridge along the longer side): its ends face the
+            // wind but take the distance bands, the ASCE 7 subcommittee's reading (ASCE Standards Exchange, "MWFRS wind
+            // pressures on hipped end, wind parallel to ridge"; owner 2026-11-13, as the roof of sections). A square hip has
+            // no ridge: each slope facing a wind takes the windward or leeward roof.
+            bool hipAlongWind = buildingData.RoofType == RoofTypes.ROOF_TYPE_HIP && L > buildingData.BuildingWidth + 1e-9;
+
             int id = 1;
             foreach (var plane in model.Roofs)
             {
-                bool facesWind = Math.Abs(plane.Zx) > 1e-12; // plane rises or falls along the wind
+                bool facesWind = Math.Abs(plane.Zx) > 1e-12 && !hipAlongWind; // plane rises or falls along the wind
                 if (steep && facesWind)
                 {
                     string label = plane.Zx > 0 ? "ZoneWWR" : "ZoneLWR"; // rising toward downwind faces the wind

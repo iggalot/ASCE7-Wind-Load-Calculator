@@ -6,7 +6,7 @@ namespace ASCE7WindLoadCalculator
     /// <summary>
     /// One face of a roof of several sections (owner 2026-11-13: hips, wings and dormers each take the wind by their own
     /// ridge), in the engine's frame: x along <see cref="BuildingData.BuildingLength"/> from the bounding box's south-west
-    /// corner, y along its width, z above grade. The walls stay on the bounding box; only the roof is taken face by face.
+    /// corner, y along its width, z above grade. The walls are the plan's own (<see cref="WallLine"/>).
     /// </summary>
     public sealed class RoofFacePlane
     {
