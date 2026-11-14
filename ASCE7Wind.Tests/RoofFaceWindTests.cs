@@ -234,8 +234,8 @@ namespace ASCE7Wind.Tests
 
         /// <summary>
         /// The L's walls are its own six, not the bounding box's four: none around the empty corner (x 0..32, y 28..52). From
-        /// the west the windward walls are x = 0 (y 0..28) and the wing's x = 32 (y 28..52), each its own outline, 9 ft at the
-        /// eave (the hip's end and the wing's eave side): 28 × 9 + 24 × 9. The south wall stops at the main roof's eave (9 ft)
+        /// the west the windward walls are x = 0 (y 0..28) and the wing's x = 32 (y 28..52), each its own outline, up to its
+        /// eave (the hip's end 9 ft; the wing's eave side 8, its floor a foot down): 28 × 9 + 24 × 8. The south wall stops at the main roof's eave (9 ft)
         /// under the dormer too: the dormer's eave reaching past it is over the roof, not on the wall.
         /// </summary>
         [TestMethod]
@@ -254,9 +254,20 @@ namespace ASCE7Wind.Tests
 
             var west = WindCases.Build(Run(d)).First(c => c.FigureCase == 1 && c.From == "W");
             var ww = west.Zones.Where(z => z.Kind == SurfaceKind.Wall && z.Label.StartsWith("ZoneWW")).ToList();
-            Assert.AreEqual(28 * 9 + 24 * 9, ww.Sum(z => z.Area), 1e-6);
+            // the wing's west wall 8 ft (its floor a foot down), but for the 1.5 ft at the inside corner where the main roof's
+            // higher eave reaches over its top
+            Assert.AreEqual(28 * 9 + 24 * 8, ww.Sum(z => z.Area), 1.2);
             Assert.AreEqual(2, ww.Select(z => z.Surface).Distinct().Count(), "both walls facing west");
             Assert.IsTrue(ww.Any(z => z.Surface.Line.A.X == 32), "the wing's west wall, set back");
+
+            // the wing's gable end (north, x 32..56): one piece per zone in the envelope, not split into triangles
+            var cells = WindCaseEnvelope.Build(WindCases.Build(Run(d)));
+            var gable = cells.Where(x => x.Kind == SurfaceKind.Wall && x.Surface.Face == BuildingFace.NorthWall && x.Surface.Line.A.X >= 32 - 1e-6).ToList();
+            var outline = WindGeometry.LocalOutline(gable[0].Surface);
+            // its own floor a foot down: 8 ft to its eave, its gable 6 ft over it (12 ft half-span at 6:12), one pentagon
+            Assert.AreEqual(24 * 8 + 0.5 * 24 * 6, Math.Abs(PolygonOps.SignedArea(outline)), 1e-6, "the wing's gable end, from its own eave");
+            Assert.AreEqual(1, gable.Count, $"{gable.Count} cells: " + string.Join(" | ", gable.Select(x => string.Join(" ", x.Outline.Select(p => $"({p.X:0.##},{p.Y:0.##})"))))
+                + " — wall " + string.Join(" ", outline.Select(p => $"({p.X:0.###},{p.Y:0.###})")));
         }
 
         /// <summary>Every piece of the L's roof takes a zone in every wind (none left without a pressure).</summary>

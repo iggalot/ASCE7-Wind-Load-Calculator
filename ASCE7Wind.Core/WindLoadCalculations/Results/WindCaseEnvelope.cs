@@ -89,6 +89,10 @@ namespace ASCE7WindLoadCalculator
 
         private static IEnumerable<List<Vec2>> ConvexParts(List<Vec2> poly)
         {
+            // repeated corners and corners on a straight edge first (clipping leaves them): they read as turns either way and
+            // a plain pentagon (a gable end) was cut into triangles
+            poly = Simplified(poly);
+            if (poly.Count < 3) yield break;
             bool convex = true;
             for (int i = 0, n = poly.Count; i < n && convex; i++)
             {
@@ -98,6 +102,28 @@ namespace ASCE7WindLoadCalculator
             if (convex) { yield return PolygonOps.CounterClockwise(poly); yield break; }
             var tris = PolygonOps.Triangulate(poly);
             for (int i = 0; i + 2 < tris.Count; i += 3) yield return PolygonOps.CounterClockwise(new List<Vec2> { tris[i], tris[i + 1], tris[i + 2] });
+        }
+
+        /// <summary>The polygon without repeated corners or corners on a straight edge (to 1e-7 ft).</summary>
+        internal static List<Vec2> Simplified(List<Vec2> poly)
+        {
+            var pts = new List<Vec2>();
+            foreach (var p in poly)
+                if (pts.Count == 0 || Math.Abs(p.X - pts[pts.Count - 1].X) + Math.Abs(p.Y - pts[pts.Count - 1].Y) > 1e-7) pts.Add(p);
+            if (pts.Count > 1 && Math.Abs(pts[0].X - pts[pts.Count - 1].X) + Math.Abs(pts[0].Y - pts[pts.Count - 1].Y) <= 1e-7) pts.RemoveAt(pts.Count - 1);
+            bool removed = true;
+            while (removed && pts.Count > 3)
+            {
+                removed = false;
+                for (int i = 0; i < pts.Count && pts.Count > 3; i++)
+                {
+                    Vec2 a = pts[(i + pts.Count - 1) % pts.Count], b = pts[i], c = pts[(i + 1) % pts.Count];
+                    double cross = (b.X - a.X) * (c.Y - b.Y) - (b.Y - a.Y) * (c.X - b.X);
+                    double len = Math.Abs(c.X - a.X) + Math.Abs(c.Y - a.Y);
+                    if (Math.Abs(cross) <= 1e-7 * Math.Max(1, len)) { pts.RemoveAt(i); removed = true; i--; }
+                }
+            }
+            return pts;
         }
 
         internal static Vec2 Centroid(IReadOnlyList<Vec2> p)

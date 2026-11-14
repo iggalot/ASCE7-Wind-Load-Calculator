@@ -65,13 +65,15 @@ namespace ASCE7WindLoadCalculator
         /// <summary>The faces over (<paramref name="qx"/>, <paramref name="qy"/>), their height at (x, y): a wall's edge.</summary>
         private static double TopAt(BuildingData b, double x, double y, double qx, double qy, bool groundWall)
         {
-            double top = b.BuildingHeight;
-            if (b.RoofFaces == null) return top;
+            // the faces' own height, even below the building's eave (a wing whose floor is a foot down: its eave and gable
+            // start lower, owner 2026-11-13); no face over it, the eave
+            if (b.RoofFaces == null) return b.BuildingHeight;
+            double top = double.NegativeInfinity;
             var q = new Vec2(qx, qy);
             foreach (var f in b.RoofFaces.Where(f => !(groundWall && f.OnRoof)))
                 foreach (var p in f.Pieces)
                     if (PolygonOps.ContainsPoint(PolygonOps.CounterClockwise(p), q, 1e-9)) { top = System.Math.Max(top, f.Z0 + f.Zx * x + f.Zy * y); break; }
-            return top;
+            return double.IsNegativeInfinity(top) ? b.BuildingHeight : top;
         }
 
         /// <summary>
